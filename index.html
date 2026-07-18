@@ -4,256 +4,287 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>키즈 컬러링 - 사진을 그림으로!</title>
+<title>키즈 컬러링</title>
 <link rel="manifest" href="manifest.json">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
+html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Noto Sans KR', sans-serif; background: #fff; }
 canvas { touch-action: none; }
-.upload-area, .mode-btn, .tool-btn, .color-dot, .top-btn, .demo-btn { touch-action: manipulation; }
-html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Noto Sans KR', sans-serif; background: #f0f4ff; }
+button { touch-action: manipulation; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
-.screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; }
-.screen.active { display: flex; }
+.screen { display: none; width: 100%; height: 100%; position: absolute; inset: 0; }
+.screen.active { display: block; }
 
-/* Upload Screen */
+/* ===== UPLOAD SCREEN ===== */
 #upload-screen {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  gap: 24px;
-  padding: 40px;
+  background: linear-gradient(160deg, #43e97b 0%, #38f9d7 50%, #667eea 100%);
+  display: none; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
 }
-#upload-screen h1 { color: white; font-size: 28px; text-align: center; line-height: 1.4; }
-#upload-screen p { color: rgba(255,255,255,0.8); font-size: 16px; text-align: center; }
+#upload-screen.active { display: flex; }
 
-.upload-area {
-  width: 240px; height: 240px;
-  border: 4px dashed rgba(255,255,255,0.6);
-  border-radius: 32px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 16px; cursor: pointer;
-  transition: all 0.3s;
+.app-title {
+  font-size: 42px; font-weight: 900; color: #fff;
+  text-shadow: 3px 3px 0 rgba(0,0,0,0.1);
+  text-align: center; line-height: 1.3;
 }
-.upload-area:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
-.upload-icon { font-size: 64px; }
-.upload-text { color: white; font-size: 18px; font-weight: 600; }
+.app-subtitle { font-size: 18px; color: rgba(255,255,255,0.85); text-align: center; }
+
+.upload-btn-big {
+  width: 180px; height: 180px; border-radius: 50%;
+  background: #fff; box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; transition: transform 0.2s;
+}
+.upload-btn-big:active { transform: scale(0.9); }
+.upload-btn-big .icon { font-size: 72px; line-height: 1; }
+.upload-btn-big .label { font-size: 16px; font-weight: 700; color: #667eea; }
+
+.demo-pill {
+  padding: 16px 36px; border-radius: 50px;
+  background: rgba(255,255,255,0.3); backdrop-filter: blur(8px);
+  color: #fff; font-size: 17px; font-weight: 700;
+  transition: transform 0.2s;
+}
+.demo-pill:active { transform: scale(0.92); }
 #photo-input { display: none; }
 
-.demo-btn {
-  padding: 14px 32px; border-radius: 50px;
-  background: rgba(255,255,255,0.2); color: white;
-  border: 2px solid rgba(255,255,255,0.4);
-  font-size: 16px; cursor: pointer;
+/* Floating decorations */
+.deco { position: absolute; font-size: 48px; opacity: 0.25; animation: float 4s ease-in-out infinite; pointer-events: none; }
+.deco:nth-child(1) { top: 8%; left: 8%; animation-delay: 0s; }
+.deco:nth-child(2) { top: 12%; right: 10%; animation-delay: 1s; }
+.deco:nth-child(3) { bottom: 18%; left: 12%; animation-delay: 2s; }
+.deco:nth-child(4) { bottom: 10%; right: 8%; animation-delay: 0.5s; }
+@keyframes float {
+  0%,100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-12px) rotate(8deg); }
 }
 
-/* Processing Screen */
-#processing-screen { background: #f0f4ff; gap: 24px; }
-.spinner {
-  width: 80px; height: 80px;
-  border: 6px solid #e0e7ff; border-top-color: #667eea;
-  border-radius: 50%; animation: spin 1s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-#processing-screen p { color: #667eea; font-size: 20px; font-weight: 600; }
+/* ===== PROCESSING ===== */
+#processing-screen { display: none; align-items: center; justify-content: center; flex-direction: column; gap: 24px; background: #f0f4ff; }
+#processing-screen.active { display: flex; }
+.loading-anim { font-size: 80px; animation: bounce 0.6s ease-in-out infinite alternate; }
+@keyframes bounce { from { transform: scale(1); } to { transform: scale(1.2); } }
+.loading-text { font-size: 22px; font-weight: 700; color: #667eea; }
 
-/* Mode Select Screen */
-#mode-screen { background: #f0f4ff; gap: 20px; padding: 32px; }
-#preview-img { max-width: 200px; max-height: 200px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-#lineart-preview { max-width: 200px; max-height: 200px; border-radius: 16px; border: 3px solid #667eea; }
-.preview-row { display: flex; gap: 16px; align-items: center; }
-.arrow-icon { font-size: 32px; color: #667eea; }
-.mode-btn {
-  width: 260px; padding: 20px;
-  border-radius: 20px; border: none;
-  font-size: 20px; font-weight: 700;
-  cursor: pointer; transition: transform 0.2s;
-  display: flex; align-items: center; gap: 12px;
-  justify-content: center;
-}
-.mode-btn:active { transform: scale(0.95); }
-.mode-trace { background: #fbbf24; color: #78350f; }
-.mode-color { background: #34d399; color: #064e3b; }
-.mode-back { background: #e0e7ff; color: #4338ca; font-size: 16px; padding: 14px; }
+/* ===== MODE SELECT ===== */
+#mode-screen { display: none; flex-direction: column; align-items: center; justify-content: center; gap: 20px; background: #f8f9ff; padding: 24px; }
+#mode-screen.active { display: flex; }
 
-/* Canvas Screen */
-#canvas-screen { background: white; position: relative; }
-#drawing-canvas { display: block; }
-
-/* Toolbar */
-.toolbar {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: white; border-top: 2px solid #e0e7ff;
-  padding: 8px 12px; padding-bottom: max(8px, env(safe-area-inset-bottom));
-  display: flex; align-items: center; gap: 8px;
-  z-index: 100;
+.preview-box {
+  display: flex; gap: 12px; align-items: center;
+  background: #fff; padding: 16px; border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
 }
-.tool-btn {
-  width: 48px; height: 48px; border-radius: 14px;
-  border: 2px solid #e0e7ff; background: white;
-  font-size: 24px; cursor: pointer;
+.preview-box img, .preview-box canvas { width: 120px; height: 120px; object-fit: contain; border-radius: 16px; }
+.preview-arrow { font-size: 36px; color: #667eea; }
+
+.mode-card {
+  width: 280px; padding: 24px; border-radius: 28px;
+  display: flex; align-items: center; gap: 16px;
+  font-size: 22px; font-weight: 800;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  transition: transform 0.2s;
+}
+.mode-card:active { transform: scale(0.94); }
+.mode-card .card-icon { font-size: 44px; }
+.mode-trace-card { background: #fff3cd; color: #7c5e10; }
+.mode-color-card { background: #d1fae5; color: #065f46; }
+
+.back-circle {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: #e8eaff; font-size: 28px;
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
+  margin-top: 8px; transition: transform 0.2s;
 }
-.tool-btn:active { transform: scale(0.9); }
-.tool-btn.active { border-color: #667eea; background: #eef2ff; }
+.back-circle:active { transform: scale(0.9); }
 
-.color-palette {
-  display: flex; gap: 6px; flex: 1;
-  overflow-x: auto; padding: 4px;
+/* ===== CANVAS SCREEN ===== */
+#canvas-screen { position: relative; }
+#drawing-canvas { display: block; position: absolute; top: 0; left: 0; }
+
+/* Round icon buttons — kid-friendly */
+.round-btn {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; box-shadow: 0 3px 12px rgba(0,0,0,0.12);
+  transition: transform 0.15s; position: absolute; z-index: 50;
+}
+.round-btn:active { transform: scale(0.85); }
+
+#btn-go-back { top: 16px; left: 16px; background: #fee2e2; }
+#btn-undo { top: 16px; left: 82px; background: #e0e7ff; }
+#btn-clear { top: 16px; right: 82px; background: #fef3c7; }
+#btn-save { top: 16px; right: 16px; background: #d1fae5; }
+
+/* Color palette — vertical right side, big circles */
+.side-palette {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 8px; z-index: 50;
+  background: rgba(255,255,255,0.85); backdrop-filter: blur(8px);
+  padding: 10px 8px; border-radius: 32px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  max-height: 70vh; overflow-y: auto;
   scrollbar-width: none;
 }
-.color-palette::-webkit-scrollbar { display: none; }
-.color-dot {
-  width: 36px; height: 36px; min-width: 36px;
-  border-radius: 50%; cursor: pointer;
-  border: 3px solid transparent;
-  transition: all 0.2s;
-}
-.color-dot.active { border-color: #1e293b; transform: scale(1.15); }
+.side-palette::-webkit-scrollbar { display: none; }
 
-.brush-sizes { display: flex; gap: 6px; }
-.brush-size {
-  width: 36px; height: 36px; border-radius: 50%;
-  border: 2px solid #e0e7ff; background: white;
-  cursor: pointer; display: flex;
-  align-items: center; justify-content: center;
+.cdot {
+  width: 44px; height: 44px; min-height: 44px; border-radius: 50%;
+  border: 4px solid transparent; transition: all 0.15s;
+  flex-shrink: 0;
 }
-.brush-size.active { border-color: #667eea; background: #eef2ff; }
-.brush-dot { border-radius: 50%; background: #1e293b; }
+.cdot.active { border-color: #1e293b; transform: scale(1.15); box-shadow: 0 0 0 3px rgba(30,41,59,0.2); }
 
-/* Top bar */
-.top-bar {
-  position: fixed; top: 0; left: 0; right: 0;
-  padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top));
-  display: flex; justify-content: space-between; align-items: center;
-  background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
-  z-index: 100;
+/* Eraser in palette */
+.eraser-dot {
+  width: 44px; height: 44px; min-height: 44px; border-radius: 50%;
+  background: #fff; border: 4px solid #e2e8f0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; transition: all 0.15s; flex-shrink: 0;
 }
-.top-btn {
-  padding: 8px 16px; border-radius: 12px;
-  border: none; font-size: 16px; font-weight: 600;
-  cursor: pointer;
-}
-.btn-back { background: #fee2e2; color: #dc2626; }
-.btn-mode { background: #e0e7ff; color: #4338ca; }
-.btn-save { background: #d1fae5; color: #059669; }
+.eraser-dot.active { border-color: #1e293b; transform: scale(1.15); box-shadow: 0 0 0 3px rgba(30,41,59,0.2); }
 
-/* Trace guide */
+/* Brush size selector — bottom center */
+.brush-bar {
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 12px; z-index: 50;
+  background: rgba(255,255,255,0.9); backdrop-filter: blur(8px);
+  padding: 10px 20px; border-radius: 28px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+.brush-pick {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: #f1f5f9; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.brush-pick:active { transform: scale(0.9); }
+.brush-pick.active { background: #e0e7ff; box-shadow: inset 0 0 0 3px #667eea; }
+.bdot { border-radius: 50%; background: #1e293b; }
+
+/* Trace hint */
 .trace-hint {
-  position: fixed; top: 80px; left: 50%;
-  transform: translateX(-50%);
-  background: rgba(251, 191, 36, 0.9); color: #78350f;
-  padding: 8px 20px; border-radius: 20px;
-  font-size: 14px; font-weight: 600;
-  z-index: 100; pointer-events: none;
-  animation: pulse 2s infinite;
+  position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+  background: #fbbf24; color: #78350f; padding: 10px 24px;
+  border-radius: 24px; font-size: 16px; font-weight: 700;
+  z-index: 60; pointer-events: none;
+  animation: hint-pulse 2s infinite; white-space: nowrap;
 }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+@keyframes hint-pulse { 0%,100% { opacity: 1; transform: translateX(-50%) scale(1); } 50% { opacity: 0.7; transform: translateX(-50%) scale(0.96); } }
 
-/* Completion overlay */
-.completion-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.5);
-  display: none; align-items: center; justify-content: center;
-  z-index: 200;
+/* Save toast */
+.save-toast {
+  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+  background: #065f46; color: #fff; padding: 14px 28px;
+  border-radius: 20px; font-size: 18px; font-weight: 700;
+  z-index: 200; display: none; animation: toast-in 0.3s ease-out;
 }
-.completion-overlay.active { display: flex; }
-.completion-card {
-  background: white; border-radius: 24px;
-  padding: 32px; text-align: center;
-  max-width: 300px; width: 90%;
+@keyframes toast-in { from { opacity: 0; transform: translateX(-50%) translateY(20px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+/* Stars celebration */
+.stars-celebration {
+  position: fixed; inset: 0; z-index: 300; pointer-events: none; display: none;
 }
-.completion-card h2 { font-size: 24px; margin-bottom: 8px; }
-.completion-card p { color: #64748b; margin-bottom: 20px; }
-.completion-stars { font-size: 40px; margin: 16px 0; }
-.completion-btns { display: flex; gap: 12px; justify-content: center; }
-.completion-btns button {
-  padding: 12px 24px; border-radius: 14px;
-  border: none; font-size: 16px; font-weight: 600; cursor: pointer;
+.stars-celebration.active { display: block; }
+.star-particle {
+  position: absolute; font-size: 36px;
+  animation: star-fall 1.5s ease-out forwards;
+}
+@keyframes star-fall {
+  0% { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+  100% { opacity: 0; transform: translateY(60vh) rotate(360deg) scale(0.3); }
 }
 </style>
 </head>
 <body>
 
-<!-- 1. Upload Screen -->
+<!-- UPLOAD -->
 <div id="upload-screen" class="screen active">
-  <h1>사진을 그림으로!<br>따라 그리고 색칠해요</h1>
-  <div class="upload-area" onclick="document.getElementById('photo-input').click()">
-    <div class="upload-icon">📸</div>
-    <div class="upload-text">사진 선택하기</div>
-  </div>
+  <div class="deco">🖍️</div>
+  <div class="deco">🎨</div>
+  <div class="deco">⭐</div>
+  <div class="deco">🌈</div>
+  <div class="app-title">사진을 그림으로!<br>🎨</div>
+  <button class="upload-btn-big" onclick="document.getElementById('photo-input').click()">
+    <span class="icon">📸</span>
+    <span class="label">사진 고르기</span>
+  </button>
   <input type="file" id="photo-input" accept="image/*" capture="environment">
-  <p>사진을 넣으면 따라그리기 & 색칠공부가 돼요!</p>
-  <button class="demo-btn" onclick="loadDemoImage()">데모 이미지로 체험</button>
+  <button class="demo-pill" onclick="loadDemoImage()">🐱 체험해보기</button>
 </div>
 
-<!-- 2. Processing Screen -->
+<!-- PROCESSING -->
 <div id="processing-screen" class="screen">
-  <div class="spinner"></div>
-  <p>그림으로 바꾸는 중...</p>
+  <div class="loading-anim">🖍️</div>
+  <div class="loading-text">그림으로 바꾸는 중...</div>
 </div>
 
-<!-- 3. Mode Select Screen -->
+<!-- MODE SELECT -->
 <div id="mode-screen" class="screen">
-  <h2 style="color:#4338ca; font-size:22px;">변환 완료!</h2>
-  <div class="preview-row">
+  <div class="preview-box">
     <img id="preview-img">
-    <div class="arrow-icon">→</div>
+    <div class="preview-arrow">→</div>
     <canvas id="lineart-preview"></canvas>
   </div>
-  <button class="mode-btn mode-trace" onclick="startTrace()">✏️ 따라 그리기</button>
-  <button class="mode-btn mode-color" onclick="startColor()">🎨 색칠하기</button>
-  <button class="mode-btn mode-back" onclick="goHome()">← 다른 사진</button>
+  <button class="mode-card mode-trace-card" onclick="startTrace()">
+    <span class="card-icon">✏️</span> 따라 그리기
+  </button>
+  <button class="mode-card mode-color-card" onclick="startColor()">
+    <span class="card-icon">🎨</span> 색칠하기
+  </button>
+  <button class="back-circle" onclick="goHome()">↩️</button>
 </div>
 
-<!-- 4. Canvas Screen -->
+<!-- CANVAS -->
 <div id="canvas-screen" class="screen">
-  <div class="top-bar">
-    <button class="top-btn btn-back" onclick="goToModeSelect()">← 뒤로</button>
-    <span id="mode-label" style="font-weight:700; color:#4338ca;"></span>
-    <button class="top-btn btn-save" onclick="saveImage()">💾 저장</button>
-  </div>
   <canvas id="drawing-canvas"></canvas>
-  <div id="trace-hint" class="trace-hint" style="display:none;">점선을 따라 그려보세요! ✏️</div>
-  <div class="toolbar" id="toolbar">
-    <button class="tool-btn" onclick="undo()" title="되돌리기">↩️</button>
-    <button class="tool-btn" onclick="clearDrawing()" title="지우기">🗑️</button>
-    <div class="color-palette" id="color-palette"></div>
-    <button class="tool-btn" onclick="toggleEraser()" id="eraser-btn" title="지우개">🧹</button>
-  </div>
+
+  <!-- Top buttons — big round icons, no text -->
+  <button class="round-btn" id="btn-go-back" onclick="goToModeSelect()">↩️</button>
+  <button class="round-btn" id="btn-undo" onclick="undo()">⬅️</button>
+  <button class="round-btn" id="btn-clear" onclick="clearDrawing()">🗑️</button>
+  <button class="round-btn" id="btn-save" onclick="saveImage()">💾</button>
+
+  <!-- Right side color palette — vertical, big dots -->
+  <div class="side-palette" id="side-palette"></div>
+
+  <!-- Bottom brush sizes -->
+  <div class="brush-bar" id="brush-bar"></div>
+
+  <!-- Trace hint -->
+  <div class="trace-hint" id="trace-hint" style="display:none;">점선을 따라 그려봐요! ✏️</div>
 </div>
 
-<!-- Completion Overlay -->
-<div class="completion-overlay" id="completion-overlay">
-  <div class="completion-card">
-    <div class="completion-stars">⭐⭐⭐</div>
-    <h2>잘했어요!</h2>
-    <p>멋진 그림이 완성됐어요!</p>
-    <div class="completion-btns">
-      <button style="background:#e0e7ff; color:#4338ca;" onclick="hideCompletion()">계속 그리기</button>
-      <button style="background:#667eea; color:white;" onclick="saveImage()">저장하기</button>
-    </div>
-  </div>
-</div>
+<!-- Save toast -->
+<div class="save-toast" id="save-toast">💾 저장 완료!</div>
 
-<!-- Hidden canvases for processing -->
+<!-- Star celebration -->
+<div class="stars-celebration" id="stars-celebration"></div>
+
+<!-- Hidden processing canvases -->
 <canvas id="source-canvas" style="display:none;"></canvas>
 <canvas id="lineart-canvas" style="display:none;"></canvas>
 
 <script>
 const COLORS = [
-  '#ef4444','#f97316','#eab308','#22c55e','#06b6d4',
-  '#3b82f6','#8b5cf6','#ec4899','#78350f','#1e293b',
-  '#f5f5f4','#fde68a','#bbf7d0','#bae6fd','#e9d5ff'
+  '#ef4444','#f97316','#facc15','#22c55e','#06b6d4',
+  '#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b',
+  '#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'
+];
+const BRUSH_SIZES = [
+  { size: 4, dot: 8, label: 'S' },
+  { size: 10, dot: 14, label: 'M' },
+  { size: 22, dot: 22, label: 'L' },
 ];
 
-let currentMode = 'trace'; // 'trace' or 'color'
+let currentMode = 'trace';
 let currentColor = '#ef4444';
-let brushSize = 8;
+let brushSize = 10;
 let isEraser = false;
 let isDrawing = false;
-let history = [];
+let historyStack = [];
 let lineartImageData = null;
 let sourceImage = null;
+let canvasOffsetX = 0, canvasOffsetY = 0;
 
 const photoInput = document.getElementById('photo-input');
 const drawingCanvas = document.getElementById('drawing-canvas');
@@ -263,28 +294,57 @@ const sourceCtx = sourceCanvas.getContext('2d');
 const lineartCanvas = document.getElementById('lineart-canvas');
 const lineartCtx = lineartCanvas.getContext('2d');
 
-// Init color palette
-const palette = document.getElementById('color-palette');
-COLORS.forEach((c, i) => {
-  const dot = document.createElement('div');
-  dot.className = 'color-dot' + (i === 0 ? ' active' : '');
-  dot.style.background = c;
-  dot.onclick = () => selectColor(c, dot);
-  palette.appendChild(dot);
-});
+// Build side palette
+(function buildPalette() {
+  const pal = document.getElementById('side-palette');
+  COLORS.forEach((c, i) => {
+    const d = document.createElement('button');
+    d.className = 'cdot' + (i === 0 ? ' active' : '');
+    d.style.background = c;
+    d.onclick = () => pickColor(c, d);
+    pal.appendChild(d);
+  });
+  const eraser = document.createElement('button');
+  eraser.className = 'eraser-dot';
+  eraser.id = 'eraser-btn';
+  eraser.textContent = '🧹';
+  eraser.onclick = toggleEraser;
+  pal.appendChild(eraser);
+})();
 
-function selectColor(color, el) {
+// Build brush bar
+(function buildBrushBar() {
+  const bar = document.getElementById('brush-bar');
+  BRUSH_SIZES.forEach((b, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'brush-pick' + (i === 1 ? ' active' : '');
+    const dot = document.createElement('div');
+    dot.className = 'bdot';
+    dot.style.width = b.dot + 'px';
+    dot.style.height = b.dot + 'px';
+    btn.appendChild(dot);
+    btn.onclick = () => {
+      brushSize = b.size;
+      document.querySelectorAll('.brush-pick').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+    };
+    bar.appendChild(btn);
+  });
+})();
+
+function pickColor(color, el) {
   currentColor = color;
   isEraser = false;
   document.getElementById('eraser-btn').classList.remove('active');
-  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+  document.querySelectorAll('.cdot').forEach(d => d.classList.remove('active'));
   el.classList.add('active');
 }
 
 function toggleEraser() {
   isEraser = !isEraser;
-  document.getElementById('eraser-btn').classList.toggle('active', isEraser);
-  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+  const btn = document.getElementById('eraser-btn');
+  btn.classList.toggle('active', isEraser);
+  if (isEraser) document.querySelectorAll('.cdot').forEach(d => d.classList.remove('active'));
 }
 
 // Screen management
@@ -292,438 +352,308 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-
 function goHome() {
   showScreen('upload-screen');
   photoInput.value = '';
 }
-
 function goToModeSelect() { showScreen('mode-screen'); }
 
 // Photo handling
 photoInput.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  processFile(file);
-});
-
-function processFile(file) {
   showScreen('processing-screen');
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = (ev) => {
     const img = new Image();
-    img.onload = () => {
-      sourceImage = img;
-      setTimeout(() => convertToLineart(img), 500);
-    };
-    img.src = e.target.result;
+    img.onload = () => { sourceImage = img; setTimeout(() => convertToLineart(img), 400); };
+    img.src = ev.target.result;
   };
   reader.readAsDataURL(file);
-}
+});
 
 function loadDemoImage() {
   showScreen('processing-screen');
-  const canvas = document.createElement('canvas');
-  canvas.width = 400; canvas.height = 400;
-  const c = canvas.getContext('2d');
-
-  // Draw a simple demo: cute cat face
-  c.fillStyle = '#87CEEB'; c.fillRect(0, 0, 400, 400);
-  // Body
-  c.fillStyle = '#FFA500';
-  c.beginPath(); c.ellipse(200, 260, 120, 140, 0, 0, Math.PI * 2); c.fill();
-  // Head
-  c.beginPath(); c.arc(200, 150, 90, 0, Math.PI * 2); c.fill();
-  // Ears
-  c.beginPath(); c.moveTo(130, 80); c.lineTo(110, 20); c.lineTo(160, 60); c.fill();
-  c.beginPath(); c.moveTo(270, 80); c.lineTo(290, 20); c.lineTo(240, 60); c.fill();
-  // Eyes
-  c.fillStyle = '#fff';
-  c.beginPath(); c.arc(170, 140, 20, 0, Math.PI * 2); c.fill();
-  c.beginPath(); c.arc(230, 140, 20, 0, Math.PI * 2); c.fill();
-  c.fillStyle = '#333';
-  c.beginPath(); c.arc(175, 142, 10, 0, Math.PI * 2); c.fill();
-  c.beginPath(); c.arc(235, 142, 10, 0, Math.PI * 2); c.fill();
-  // Nose + mouth
-  c.fillStyle = '#FF69B4';
-  c.beginPath(); c.moveTo(200, 165); c.lineTo(193, 175); c.lineTo(207, 175); c.fill();
-  c.strokeStyle = '#333'; c.lineWidth = 2;
-  c.beginPath(); c.moveTo(200, 175); c.lineTo(200, 185);
-  c.moveTo(200, 185); c.quadraticCurveTo(185, 195, 175, 185);
-  c.moveTo(200, 185); c.quadraticCurveTo(215, 195, 225, 185);
-  c.stroke();
-  // Whiskers
-  c.beginPath();
-  c.moveTo(120, 160); c.lineTo(165, 170);
-  c.moveTo(120, 180); c.lineTo(165, 178);
-  c.moveTo(235, 170); c.lineTo(280, 160);
-  c.moveTo(235, 178); c.lineTo(280, 180);
-  c.stroke();
-
+  const c = document.createElement('canvas');
+  c.width = 400; c.height = 400;
+  const g = c.getContext('2d');
+  g.fillStyle = '#87CEEB'; g.fillRect(0,0,400,400);
+  g.fillStyle = '#FFA500';
+  g.beginPath(); g.ellipse(200,260,120,140,0,0,Math.PI*2); g.fill();
+  g.beginPath(); g.arc(200,150,90,0,Math.PI*2); g.fill();
+  g.beginPath(); g.moveTo(130,80); g.lineTo(110,20); g.lineTo(160,60); g.fill();
+  g.beginPath(); g.moveTo(270,80); g.lineTo(290,20); g.lineTo(240,60); g.fill();
+  g.fillStyle='#fff';
+  g.beginPath(); g.arc(170,140,20,0,Math.PI*2); g.fill();
+  g.beginPath(); g.arc(230,140,20,0,Math.PI*2); g.fill();
+  g.fillStyle='#333';
+  g.beginPath(); g.arc(175,142,10,0,Math.PI*2); g.fill();
+  g.beginPath(); g.arc(235,142,10,0,Math.PI*2); g.fill();
+  g.fillStyle='#FF69B4';
+  g.beginPath(); g.moveTo(200,165); g.lineTo(193,175); g.lineTo(207,175); g.fill();
+  g.strokeStyle='#333'; g.lineWidth=2;
+  g.beginPath(); g.moveTo(200,175); g.lineTo(200,185);
+  g.moveTo(200,185); g.quadraticCurveTo(185,195,175,185);
+  g.moveTo(200,185); g.quadraticCurveTo(215,195,225,185); g.stroke();
+  g.beginPath();
+  g.moveTo(120,160); g.lineTo(165,170); g.moveTo(120,180); g.lineTo(165,178);
+  g.moveTo(235,170); g.lineTo(280,160); g.moveTo(235,178); g.lineTo(280,180); g.stroke();
   const img = new Image();
-  img.onload = () => {
-    sourceImage = img;
-    setTimeout(() => convertToLineart(img), 500);
-  };
-  img.src = canvas.toDataURL();
+  img.onload = () => { sourceImage = img; setTimeout(() => convertToLineart(img), 400); };
+  img.src = c.toDataURL();
 }
 
-// Edge detection → line art
+// Edge detection
 function convertToLineart(img) {
   const MAX = 600;
   let w = img.width, h = img.height;
   if (w > MAX || h > MAX) {
-    const ratio = Math.min(MAX / w, MAX / h);
-    w = Math.floor(w * ratio);
-    h = Math.floor(h * ratio);
+    const r = Math.min(MAX/w, MAX/h);
+    w = Math.floor(w*r); h = Math.floor(h*r);
   }
-
   sourceCanvas.width = w; sourceCanvas.height = h;
   sourceCtx.drawImage(img, 0, 0, w, h);
+  const id = sourceCtx.getImageData(0, 0, w, h);
+  const px = id.data;
+  const gray = new Float32Array(w*h);
+  for (let i = 0; i < w*h; i++) { const j=i*4; gray[i] = 0.299*px[j]+0.587*px[j+1]+0.114*px[j+2]; }
 
-  const imageData = sourceCtx.getImageData(0, 0, w, h);
-  const pixels = imageData.data;
-
-  // Grayscale
-  const gray = new Float32Array(w * h);
-  for (let i = 0; i < w * h; i++) {
-    const idx = i * 4;
-    gray[i] = 0.299 * pixels[idx] + 0.587 * pixels[idx+1] + 0.114 * pixels[idx+2];
+  const blur = new Float32Array(w*h);
+  const k = [1,2,1,2,4,2,1,2,1];
+  for (let y=1;y<h-1;y++) for (let x=1;x<w-1;x++) {
+    let s=0;
+    for (let ky=-1;ky<=1;ky++) for (let kx=-1;kx<=1;kx++) s += gray[(y+ky)*w+(x+kx)]*k[(ky+1)*3+(kx+1)];
+    blur[y*w+x] = s/16;
   }
 
-  // Gaussian blur (3x3)
-  const blurred = new Float32Array(w * h);
-  const kernel = [1,2,1, 2,4,2, 1,2,1];
-  for (let y = 1; y < h-1; y++) {
-    for (let x = 1; x < w-1; x++) {
-      let sum = 0;
-      for (let ky = -1; ky <= 1; ky++) {
-        for (let kx = -1; kx <= 1; kx++) {
-          sum += gray[(y+ky)*w + (x+kx)] * kernel[(ky+1)*3 + (kx+1)];
-        }
-      }
-      blurred[y*w+x] = sum / 16;
+  const edges = new Float32Array(w*h);
+  const sx=[-1,0,1,-2,0,2,-1,0,1], sy=[-1,-2,-1,0,0,0,1,2,1];
+  let mx = 0;
+  for (let y=1;y<h-1;y++) for (let x=1;x<w-1;x++) {
+    let gx=0,gy=0;
+    for (let ky=-1;ky<=1;ky++) for (let kx=-1;kx<=1;kx++) {
+      const v=blur[(y+ky)*w+(x+kx)], ki=(ky+1)*3+(kx+1);
+      gx+=v*sx[ki]; gy+=v*sy[ki];
     }
+    const m=Math.sqrt(gx*gx+gy*gy); edges[y*w+x]=m; if(m>mx) mx=m;
   }
 
-  // Sobel edge detection
-  const edges = new Float32Array(w * h);
-  const sobelX = [-1,0,1, -2,0,2, -1,0,1];
-  const sobelY = [-1,-2,-1, 0,0,0, 1,2,1];
-  let maxEdge = 0;
+  lineartCanvas.width=w; lineartCanvas.height=h;
+  const od=lineartCtx.createImageData(w,h), o=od.data;
+  const th=mx*0.15;
+  for (let i=0;i<w*h;i++) { const v=edges[i]>th?40:255; o[i*4]=v; o[i*4+1]=v; o[i*4+2]=v; o[i*4+3]=255; }
+  lineartCtx.putImageData(od,0,0);
 
-  for (let y = 1; y < h-1; y++) {
-    for (let x = 1; x < w-1; x++) {
-      let gx = 0, gy = 0;
-      for (let ky = -1; ky <= 1; ky++) {
-        for (let kx = -1; kx <= 1; kx++) {
-          const val = blurred[(y+ky)*w + (x+kx)];
-          const ki = (ky+1)*3 + (kx+1);
-          gx += val * sobelX[ki];
-          gy += val * sobelY[ki];
-        }
-      }
-      const mag = Math.sqrt(gx*gx + gy*gy);
-      edges[y*w+x] = mag;
-      if (mag > maxEdge) maxEdge = mag;
-    }
-  }
-
-  // Normalize and threshold → black lines on white
-  lineartCanvas.width = w; lineartCanvas.height = h;
-  const outData = lineartCtx.createImageData(w, h);
-  const out = outData.data;
-  const threshold = maxEdge * 0.15;
-
-  for (let i = 0; i < w * h; i++) {
-    const isEdge = edges[i] > threshold;
-    const val = isEdge ? 40 : 255;
-    out[i*4] = val; out[i*4+1] = val; out[i*4+2] = val; out[i*4+3] = 255;
-  }
-  lineartCtx.putImageData(outData, 0, 0);
-
-  // Thicken lines (dilate)
-  const thickData = lineartCtx.getImageData(0, 0, w, h);
-  const thick = new Uint8ClampedArray(thickData.data);
-  for (let y = 1; y < h-1; y++) {
-    for (let x = 1; x < w-1; x++) {
-      const idx = (y*w+x)*4;
-      if (outData.data[idx] < 128) {
-        for (let dy = -1; dy <= 1; dy++) {
-          for (let dx = -1; dx <= 1; dx++) {
-            const ni = ((y+dy)*w+(x+dx))*4;
-            thick[ni] = 40; thick[ni+1] = 40; thick[ni+2] = 40;
-          }
-        }
+  const td=lineartCtx.getImageData(0,0,w,h), t=new Uint8ClampedArray(td.data);
+  for (let y=1;y<h-1;y++) for (let x=1;x<w-1;x++) {
+    if (od.data[(y*w+x)*4]<128) {
+      for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) {
+        const ni=((y+dy)*w+(x+dx))*4; t[ni]=40; t[ni+1]=40; t[ni+2]=40;
       }
     }
   }
-  thickData.data.set(thick);
-  lineartCtx.putImageData(thickData, 0, 0);
+  td.data.set(t); lineartCtx.putImageData(td,0,0);
+  lineartImageData = lineartCtx.getImageData(0,0,w,h);
 
-  lineartImageData = lineartCtx.getImageData(0, 0, w, h);
-
-  // Show previews
-  const previewImg = document.getElementById('preview-img');
-  previewImg.src = sourceCanvas.toDataURL();
-  const lineartPreview = document.getElementById('lineart-preview');
-  lineartPreview.width = w; lineartPreview.height = h;
-  lineartPreview.getContext('2d').putImageData(lineartImageData, 0, 0);
-
+  document.getElementById('preview-img').src = sourceCanvas.toDataURL();
+  const lp = document.getElementById('lineart-preview');
+  lp.width=w; lp.height=h; lp.getContext('2d').putImageData(lineartImageData,0,0);
   showScreen('mode-screen');
 }
 
-// Start trace mode
+// Setup canvas
+function setupCanvas() {
+  drawingCanvas.width = window.innerWidth;
+  drawingCanvas.height = window.innerHeight;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  historyStack = [];
+  showScreen('canvas-screen');
+}
+
 function startTrace() {
   currentMode = 'trace';
-  document.getElementById('mode-label').textContent = '✏️ 따라 그리기';
   document.getElementById('trace-hint').style.display = 'block';
   setupCanvas();
+  const w=lineartCanvas.width, h=lineartCanvas.height;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,drawingCanvas.width,drawingCanvas.height);
+  canvasOffsetX = Math.floor((drawingCanvas.width - w)/2);
+  canvasOffsetY = Math.floor((drawingCanvas.height - h)/2);
 
-  // Draw dashed lineart
-  const w = lineartCanvas.width, h = lineartCanvas.height;
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-
-  // Center the image
-  const offsetX = Math.floor((drawingCanvas.width - w) / 2);
-  const offsetY = Math.floor((drawingCanvas.height - h) / 2) + 30;
-
-  // Draw dashed outline
   const ld = lineartImageData.data;
-  ctx.fillStyle = 'rgba(180,180,220,0.4)';
-  for (let y = 0; y < h; y += 3) {
-    for (let x = 0; x < w; x += 3) {
-      const idx = (y * w + x) * 4;
-      if (ld[idx] < 128) {
-        // Dashed effect
-        if ((x + y) % 8 < 5) {
-          ctx.fillRect(offsetX + x, offsetY + y, 3, 3);
-        }
-      }
-    }
+  ctx.fillStyle = 'rgba(170,170,210,0.35)';
+  for (let y=0;y<h;y+=3) for (let x=0;x<w;x+=3) {
+    if (ld[(y*w+x)*4]<128 && (x+y)%8<5)
+      ctx.fillRect(canvasOffsetX+x, canvasOffsetY+y, 3, 3);
   }
-
   saveState();
   brushSize = 6;
   currentColor = '#1e293b';
   isEraser = false;
-  document.getElementById('eraser-btn').classList.remove('active');
-  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+  syncPaletteUI();
 }
 
-// Start color mode
 function startColor() {
   currentMode = 'color';
-  document.getElementById('mode-label').textContent = '🎨 색칠하기';
   document.getElementById('trace-hint').style.display = 'none';
   setupCanvas();
+  const w=lineartCanvas.width, h=lineartCanvas.height;
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,drawingCanvas.width,drawingCanvas.height);
+  canvasOffsetX = Math.floor((drawingCanvas.width - w)/2);
+  canvasOffsetY = Math.floor((drawingCanvas.height - h)/2);
 
-  const w = lineartCanvas.width, h = lineartCanvas.height;
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-
-  const offsetX = Math.floor((drawingCanvas.width - w) / 2);
-  const offsetY = Math.floor((drawingCanvas.height - h) / 2) + 30;
-
-  // Draw solid lineart (thicker for coloring regions)
   const ld = lineartImageData.data;
   ctx.fillStyle = '#1e293b';
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const idx = (y * w + x) * 4;
-      if (ld[idx] < 128) {
-        ctx.fillRect(offsetX + x, offsetY + y, 1, 1);
-      }
-    }
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++) {
+    if (ld[(y*w+x)*4]<128) ctx.fillRect(canvasOffsetX+x, canvasOffsetY+y, 1, 1);
   }
-
   saveState();
-  brushSize = 20;
+  brushSize = 10;
   currentColor = '#ef4444';
   isEraser = false;
+  syncPaletteUI();
+}
+
+function syncPaletteUI() {
   document.getElementById('eraser-btn').classList.remove('active');
-  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-  document.querySelector('.color-dot').classList.add('active');
+  document.querySelectorAll('.cdot').forEach(d => d.classList.remove('active'));
+  if (!isEraser) {
+    const dots = document.querySelectorAll('.cdot');
+    const idx = COLORS.indexOf(currentColor);
+    if (idx >= 0 && dots[idx]) dots[idx].classList.add('active');
+  }
 }
 
-function setupCanvas() {
-  const topBarH = 56;
-  const toolbarH = 72;
-  drawingCanvas.width = window.innerWidth;
-  drawingCanvas.height = window.innerHeight - topBarH - toolbarH;
-  drawingCanvas.style.marginTop = topBarH + 'px';
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  history = [];
-  showScreen('canvas-screen');
-}
-
-// Drawing logic
-let lastX = 0, lastY = 0;
-
+// Drawing
+let lastX=0, lastY=0;
 function getPos(e) {
-  const rect = drawingCanvas.getBoundingClientRect();
-  const touch = e.touches ? e.touches[0] : e;
-  return {
-    x: touch.clientX - rect.left,
-    y: touch.clientY - rect.top
-  };
+  const r = drawingCanvas.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX - r.left, y: t.clientY - r.top };
 }
 
-drawingCanvas.addEventListener('touchstart', startDraw, { passive: false });
-drawingCanvas.addEventListener('mousedown', startDraw);
-drawingCanvas.addEventListener('touchmove', draw, { passive: false });
-drawingCanvas.addEventListener('mousemove', draw);
-drawingCanvas.addEventListener('touchend', endDraw);
-drawingCanvas.addEventListener('mouseup', endDraw);
-drawingCanvas.addEventListener('mouseleave', endDraw);
+drawingCanvas.addEventListener('touchstart', onStart, {passive:false});
+drawingCanvas.addEventListener('mousedown', onStart);
+drawingCanvas.addEventListener('touchmove', onMove, {passive:false});
+drawingCanvas.addEventListener('mousemove', onMove);
+drawingCanvas.addEventListener('touchend', onEnd);
+drawingCanvas.addEventListener('mouseup', onEnd);
+drawingCanvas.addEventListener('mouseleave', onEnd);
 
-function startDraw(e) {
+function onStart(e) {
   e.preventDefault();
-
-  if (currentMode === 'color' && !isEraser) {
-    // Flood fill on tap
-    const pos = getPos(e);
-    floodFill(Math.floor(pos.x), Math.floor(pos.y), currentColor);
+  if (currentMode==='color' && !isEraser) {
+    const p = getPos(e);
+    floodFill(Math.floor(p.x), Math.floor(p.y), currentColor);
     saveState();
     return;
   }
-
   isDrawing = true;
-  const pos = getPos(e);
-  lastX = pos.x; lastY = pos.y;
-  ctx.beginPath();
-  ctx.moveTo(lastX, lastY);
+  const p = getPos(e);
+  lastX = p.x; lastY = p.y;
 }
 
-function draw(e) {
+function onMove(e) {
   e.preventDefault();
   if (!isDrawing) return;
-  const pos = getPos(e);
-
+  const p = getPos(e);
   ctx.globalCompositeOperation = 'source-over';
   ctx.strokeStyle = isEraser ? '#ffffff' : currentColor;
-  ctx.lineWidth = isEraser ? brushSize * 3 : brushSize;
-
-  ctx.beginPath();
-  ctx.moveTo(lastX, lastY);
-  ctx.lineTo(pos.x, pos.y);
-  ctx.stroke();
-  lastX = pos.x; lastY = pos.y;
+  ctx.lineWidth = isEraser ? brushSize*3 : brushSize;
+  ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(p.x,p.y); ctx.stroke();
+  lastX=p.x; lastY=p.y;
 }
 
-function endDraw(e) {
+function onEnd() {
   if (!isDrawing) return;
   isDrawing = false;
   saveState();
 }
 
 // Flood fill
-function floodFill(startX, startY, fillColor) {
-  const w = drawingCanvas.width, h = drawingCanvas.height;
-  const imageData = ctx.getImageData(0, 0, w, h);
-  const data = imageData.data;
-
-  if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
-
-  const startIdx = (startY * w + startX) * 4;
-  const startR = data[startIdx], startG = data[startIdx+1], startB = data[startIdx+2];
-
-  // Parse fill color
-  const fc = hexToRgb(fillColor);
-  if (!fc) return;
-
-  // Don't fill if same color
-  if (Math.abs(startR - fc.r) < 10 && Math.abs(startG - fc.g) < 10 && Math.abs(startB - fc.b) < 10) return;
-
-  // Don't fill if clicking on line (dark pixels)
-  if (startR < 60 && startG < 60 && startB < 60) return;
-
-  const tolerance = 40;
-  const stack = [[startX, startY]];
-  const visited = new Uint8Array(w * h);
-
-  function matches(idx) {
-    return Math.abs(data[idx] - startR) < tolerance &&
-           Math.abs(data[idx+1] - startG) < tolerance &&
-           Math.abs(data[idx+2] - startB) < tolerance;
+function floodFill(sx, sy, fc) {
+  const w=drawingCanvas.width, h=drawingCanvas.height;
+  const id=ctx.getImageData(0,0,w,h), d=id.data;
+  if (sx<0||sx>=w||sy<0||sy>=h) return;
+  const si=(sy*w+sx)*4, sr=d[si], sg=d[si+1], sb=d[si+2];
+  const c = hexRgb(fc); if(!c) return;
+  if (Math.abs(sr-c.r)<10 && Math.abs(sg-c.g)<10 && Math.abs(sb-c.b)<10) return;
+  if (sr<60 && sg<60 && sb<60) return;
+  const tol=40, stk=[[sx,sy]], vis=new Uint8Array(w*h);
+  let cnt=0; const mx=w*h*0.5;
+  while (stk.length>0 && cnt<mx) {
+    const [x,y]=stk.pop(), pos=y*w+x;
+    if (x<0||x>=w||y<0||y>=h||vis[pos]) continue;
+    const i=pos*4;
+    if (!(Math.abs(d[i]-sr)<tol && Math.abs(d[i+1]-sg)<tol && Math.abs(d[i+2]-sb)<tol)) continue;
+    vis[pos]=1; d[i]=c.r; d[i+1]=c.g; d[i+2]=c.b; d[i+3]=255; cnt++;
+    stk.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
   }
-
-  let count = 0;
-  const maxPixels = w * h * 0.5;
-
-  while (stack.length > 0 && count < maxPixels) {
-    const [x, y] = stack.pop();
-    const pos = y * w + x;
-    if (x < 0 || x >= w || y < 0 || y >= h || visited[pos]) continue;
-    const idx = pos * 4;
-    if (!matches(idx)) continue;
-
-    visited[pos] = 1;
-    data[idx] = fc.r; data[idx+1] = fc.g; data[idx+2] = fc.b; data[idx+3] = 255;
-    count++;
-
-    stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
-  }
-
-  ctx.putImageData(imageData, 0, 0);
+  ctx.putImageData(id,0,0);
 }
 
-function hexToRgb(hex) {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16)
-  } : null;
+function hexRgb(h) {
+  const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(h);
+  return m ? {r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16)} : null;
 }
 
-// History (undo)
+// History
 function saveState() {
-  history.push(ctx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height));
-  if (history.length > 30) history.shift();
+  historyStack.push(ctx.getImageData(0,0,drawingCanvas.width,drawingCanvas.height));
+  if (historyStack.length > 30) historyStack.shift();
 }
-
 function undo() {
-  if (history.length > 1) {
-    history.pop();
-    ctx.putImageData(history[history.length - 1], 0, 0);
+  if (historyStack.length > 1) {
+    historyStack.pop();
+    ctx.putImageData(historyStack[historyStack.length-1], 0, 0);
   }
 }
-
 function clearDrawing() {
-  if (currentMode === 'trace') startTrace();
-  else startColor();
+  if (currentMode==='trace') startTrace(); else startColor();
 }
 
 // Save
 function saveImage() {
   const link = document.createElement('a');
-  link.download = 'my-coloring-' + Date.now() + '.png';
+  link.download = 'coloring-' + Date.now() + '.png';
   link.href = drawingCanvas.toDataURL();
   link.click();
-  hideCompletion();
+  showToast();
+  celebrate();
 }
 
-function hideCompletion() {
-  document.getElementById('completion-overlay').classList.remove('active');
+function showToast() {
+  const t = document.getElementById('save-toast');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2000);
 }
 
-// Handle resize — preserve drawing
-window.addEventListener('resize', () => {
-  if (document.getElementById('canvas-screen').classList.contains('active')) {
-    const saved = ctx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height);
-    const oldW = drawingCanvas.width, oldH = drawingCanvas.height;
-    const topBarH = 56, toolbarH = 72;
-    drawingCanvas.width = window.innerWidth;
-    drawingCanvas.height = window.innerHeight - topBarH - toolbarH;
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-    ctx.putImageData(saved, 0, 0);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+function celebrate() {
+  const el = document.getElementById('stars-celebration');
+  el.innerHTML = '';
+  el.classList.add('active');
+  const emojis = ['⭐','🌟','✨','🎉','🎨','💫'];
+  for (let i = 0; i < 20; i++) {
+    const s = document.createElement('div');
+    s.className = 'star-particle';
+    s.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    s.style.left = (Math.random()*100)+'%';
+    s.style.top = '-5%';
+    s.style.animationDelay = (Math.random()*0.8)+'s';
+    s.style.fontSize = (24+Math.random()*24)+'px';
+    el.appendChild(s);
   }
+  setTimeout(() => el.classList.remove('active'), 2500);
+}
+
+// Resize
+window.addEventListener('resize', () => {
+  if (!document.getElementById('canvas-screen').classList.contains('active')) return;
+  const saved = ctx.getImageData(0,0,drawingCanvas.width,drawingCanvas.height);
+  drawingCanvas.width = window.innerWidth;
+  drawingCanvas.height = window.innerHeight;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,drawingCanvas.width,drawingCanvas.height);
+  ctx.putImageData(saved, 0, 0);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
 });
 </script>
 </body>
