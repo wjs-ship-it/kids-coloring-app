@@ -97,6 +97,17 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 
 /* Save toast */
 .save-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#065f46;color:#fff;padding:14px 28px;border-radius:20px;font-size:18px;font-weight:700;z-index:200;display:none}
+
+/* Mode selection */
+#mode-screen{background:linear-gradient(160deg,#667eea 0%,#764ba2 100%);gap:20px;padding:24px}
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:340px;width:100%}
+.mode-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 12px;border-radius:24px;background:rgba(255,255,255,.92);box-shadow:0 4px 20px rgba(0,0,0,.08);transition:transform .15s}
+.mode-card:active{transform:scale(.9)}
+.mode-card .mode-icon{font-size:44px}
+.mode-card .mode-name{font-size:14px;font-weight:800;color:#4c1d95;text-align:center}
+.mode-card.full-width{grid-column:1/-1}
+.mode-back{padding:12px 28px;border-radius:50px;background:rgba(255,255,255,.25);color:#fff;font-size:15px;font-weight:700;margin-top:8px}
+.mode-back:active{transform:scale(.92)}
 </style>
 </head>
 <body>
@@ -109,6 +120,7 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
   </button>
   <input type="file" id="photo-input" accept="image/*" capture="environment">
   <button class="demo-pill" id="btn-demo">🐱 체험해보기</button>
+  <button class="demo-pill" id="btn-creative" style="background:rgba(255,255,255,.5);color:#4c1d95">🎨 창의적 그리기</button>
 </div>
 
 <div id="processing-screen" class="screen">
@@ -122,6 +134,18 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
   </div>
   <button class="start-btn" id="btn-begin"><span class="si">▶️</span>시작!</button>
   <button class="demo-pill" id="btn-other-photo" style="background:rgba(100,100,200,.15);color:#667eea">↩️ 다른 사진</button>
+</div>
+
+<div id="mode-screen" class="screen">
+  <div class="app-title" style="color:#fff;font-size:32px">어떻게 놀까?</div>
+  <div class="mode-grid">
+    <button class="mode-card" data-mode="trace"><span class="mode-icon">✏️</span><span class="mode-name">따라 그리기</span></button>
+    <button class="mode-card" data-mode="color"><span class="mode-icon">🎨</span><span class="mode-name">색칠하기</span></button>
+    <button class="mode-card" data-mode="sketch"><span class="mode-icon">🖍️</span><span class="mode-name">자유 그리기</span></button>
+    <button class="mode-card" data-mode="kaleidoscope"><span class="mode-icon">🔮</span><span class="mode-name">만화경</span></button>
+    <button class="mode-card full-width" data-mode="neon"><span class="mode-icon">✨</span><span class="mode-name">네온 매직</span></button>
+  </div>
+  <button class="mode-back" id="btn-mode-back">↩️ 돌아가기</button>
 </div>
 
 <div id="canvas-screen" class="screen">

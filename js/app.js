@@ -1,5 +1,7 @@
 import { removeBackground } from './bg-remove.js';
 import { createDemoCatBlob } from './demo.js';
+import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonBg, rebuildPalette } from './creative.js';
+import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showScreen, setLoadingText } from './ui-utils.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -16,6 +18,8 @@ let historyStack = [];
 let isProcessing = false;
 let lastProcessTime = 0;
 let edgeWorker = null;
+let creativeMode = null;
+let hasPhoto = false;
 
 const DC = document.getElementById('drawing-canvas');
 const cx = DC.getContext('2d');
@@ -23,21 +27,7 @@ const SC = document.createElement('canvas');
 const sx = SC.getContext('2d');
 
 function buildPalette() {
-  const p = document.getElementById('side-palette');
-  COLORS.forEach((c, i) => {
-    const d = document.createElement('button');
-    d.className = 'cdot' + (i === 0 ? ' active' : '');
-    d.style.background = c;
-    d.addEventListener('click', () => pickColor(c, d));
-    p.appendChild(d);
-  });
-  const e = document.createElement('button');
-  e.className = 'eraser-dot';
-  e.id = 'eraser-btn';
-  e.textContent = '🧹';
-  e.addEventListener('click', toggleEraser);
-  p.appendChild(e);
-
+  rebuildPaletteForColors(COLORS);
   const b = document.getElementById('brush-bar');
   BRUSHES.forEach((br, i) => {
     const btn = document.createElement('button');
@@ -69,14 +59,12 @@ function toggleEraser() {
   if (isEraser) document.querySelectorAll('.cdot').forEach(d => d.classList.remove('active'));
 }
 
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
 
 function goHome() {
   if (edgeWorker) { edgeWorker.terminate(); edgeWorker = null; }
   isProcessing = false;
+  creativeMode = null;
+  hasPhoto = false;
   showScreen('upload-screen');
   document.getElementById('photo-input').value = '';
 }
@@ -108,9 +96,6 @@ async function processPhoto(blob) {
   }
 }
 
-function setLoadingText(text) {
-  document.getElementById('loading-text').textContent = text;
-}
 
 function convertToLineart(img) {
   const MAX = 800;
@@ -312,6 +297,50 @@ function transitionToColor() {
   traceZone = null; colorMask = null;
 }
 
+function beginColorDirect() {
+  if (!lineartData) { beginActivity(); return; }
+  DC.width = window.innerWidth; DC.height = window.innerHeight;
+  cx.lineCap = 'round'; cx.lineJoin = 'round';
+  offX = Math.floor((DC.width - laW) / 2);
+  offY = Math.floor((DC.height - laH) / 2);
+  creativeMode = null;
+  transitionToColor();
+  showScreen('canvas-screen');
+}
+
+function startCreativeMode(mode) {
+  showScreen('canvas-screen');
+  historyStack = [];
+  traceZone = null; colorMask = null;
+
+  if (mode === 'sketch') {
+    creativeMode = initFreeSketch(DC, cx);
+    appMode = 'color';
+    currentColor = '#1e293b'; brushSize = 14; isEraser = false;
+    rebuildPaletteForColors(COLORS);
+  } else if (mode === 'kaleidoscope') {
+    creativeMode = initKaleidoscope(DC, cx, 6);
+    appMode = 'color';
+    currentColor = '#667eea'; brushSize = 6; isEraser = false;
+    rebuildPaletteForColors(COLORS);
+  } else if (mode === 'neon') {
+    creativeMode = initNeonGlow(DC, cx);
+    appMode = 'color';
+    currentColor = getNeonColors()[0]; brushSize = 8; isEraser = false;
+    rebuildPaletteForColors(getNeonColors());
+  }
+
+  document.getElementById('side-palette').classList.remove('hidden');
+  document.getElementById('brush-bar').classList.remove('hidden');
+  document.getElementById('progress-fill').style.width = '100%';
+  document.getElementById('part-label').textContent = mode === 'neon' ? '✨' : mode === 'kaleidoscope' ? '🔮' : '🖍️';
+  saveState();
+}
+
+function rebuildPaletteForColors(colors) {
+  rebuildPalette(colors, pickColor, toggleEraser);
+}
+
 function buildColorMask(startX, startY) {
   const cw = DC.width, ch = DC.height;
   const id = cx.getImageData(0, 0, cw, ch), d = id.data;
@@ -349,6 +378,11 @@ function onStart(e) {
   const p = getPos(e);
   const px = Math.floor(p.x), py = Math.floor(p.y);
 
+  if (creativeMode) {
+    isDrawing = true; lastX = p.x; lastY = p.y;
+    return;
+  }
+
   if (appMode === 'color' && !isEraser) {
     colorMask = buildColorMask(px, py);
     if (!colorMask) return;
@@ -385,8 +419,15 @@ function onMove(e) {
     }
   }
 
+  if (creativeMode && creativeMode.drawStroke && !isEraser) {
+    creativeMode.drawStroke(lastX, lastY, p.x, p.y, currentColor, brushSize);
+    lastX = p.x; lastY = p.y;
+    return;
+  }
+
   cx.globalCompositeOperation = 'source-over';
-  cx.strokeStyle = isEraser ? '#ffffff' : currentColor;
+  const eraserColor = (creativeMode && creativeMode.type === 'neon') ? getNeonBg() : '#ffffff';
+  cx.strokeStyle = isEraser ? eraserColor : currentColor;
   cx.lineWidth = isEraser ? brushSize * 3 : brushSize;
   cx.beginPath(); cx.moveTo(lastX, lastY); cx.lineTo(p.x, p.y); cx.stroke();
   lastX = p.x; lastY = p.y;
@@ -400,23 +441,6 @@ function onEnd() {
   if (appMode === 'trace') checkTraceCompletion();
 }
 
-function updateProgress(pct) {
-  document.getElementById('progress-fill').style.width = Math.min(pct * 100, 100) + '%';
-}
-
-function showHint(t) {
-  const h = document.getElementById('hint-toast');
-  h.textContent = t; h.style.display = 'block'; h.style.opacity = '1';
-}
-
-function showPartDone(msg) {
-  document.getElementById('part-done-msg').textContent = msg;
-  document.getElementById('part-done-overlay').classList.add('active');
-}
-
-function hidePartDone() {
-  document.getElementById('part-done-overlay').classList.remove('active');
-}
 
 function saveState() {
   historyStack.push(cx.getImageData(0, 0, DC.width, DC.height));
@@ -441,22 +465,6 @@ function saveImage() {
   celebrate();
 }
 
-function celebrate() {
-  const el = document.getElementById('stars-celebration');
-  el.innerHTML = ''; el.classList.add('active');
-  const emojis = ['⭐', '🌟', '✨', '🎉', '🎨', '💫'];
-  for (let i = 0; i < 20; i++) {
-    const s = document.createElement('div');
-    s.className = 'star-particle';
-    s.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-    s.style.left = (Math.random() * 100) + '%';
-    s.style.top = '-5%';
-    s.style.animationDelay = (Math.random() * 0.8) + 's';
-    s.style.fontSize = (24 + Math.random() * 24) + 'px';
-    el.appendChild(s);
-  }
-  setTimeout(() => el.classList.remove('active'), 2500);
-}
 
 // Event bindings (no inline onclick)
 document.getElementById('photo-input').addEventListener('change', (e) => {
@@ -469,11 +477,26 @@ document.getElementById('btn-upload').addEventListener('click', () => {
   document.getElementById('photo-input').click();
 });
 document.getElementById('btn-demo').addEventListener('click', loadDemoImage);
-document.getElementById('btn-begin').addEventListener('click', beginActivity);
+document.getElementById('btn-begin').addEventListener('click', () => { hasPhoto = true; showScreen('mode-screen'); });
 document.getElementById('btn-other-photo').addEventListener('click', goHome);
 document.getElementById('btn-back').addEventListener('click', goHome);
 document.getElementById('btn-undo').addEventListener('click', undo);
 document.getElementById('btn-save').addEventListener('click', saveImage);
+document.getElementById('btn-creative').addEventListener('click', () => { hasPhoto = false; showScreen('mode-screen'); });
+document.getElementById('btn-mode-back').addEventListener('click', () => {
+  showScreen(hasPhoto ? 'preview-screen' : 'upload-screen');
+});
+
+document.querySelectorAll('.mode-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const mode = card.dataset.mode;
+    if (mode === 'trace') { beginActivity(); return; }
+    if (mode === 'color') { beginColorDirect(); return; }
+    if (mode === 'sketch') { startCreativeMode('sketch'); return; }
+    if (mode === 'kaleidoscope') { startCreativeMode('kaleidoscope'); return; }
+    if (mode === 'neon') { startCreativeMode('neon'); return; }
+  });
+});
 
 DC.addEventListener('touchstart', onStart, { passive: false });
 DC.addEventListener('mousedown', onStart);
