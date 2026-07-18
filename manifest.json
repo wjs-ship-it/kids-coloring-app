@@ -1,0 +1,17 @@
+{
+  "name": "키즈 컬러링",
+  "short_name": "컬러링",
+  "description": "사진을 그림으로 바꿔서 따라 그리고 색칠해요!",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0f4ff",
+  "theme_color": "#667eea",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

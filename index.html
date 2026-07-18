@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>키즈 컬러링 - 사진을 그림으로!</title>
+<link rel="manifest" href="manifest.json">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Noto Sans KR', sans-serif; background: #f0f4ff; }
+
+.screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; }
+.screen.active { display: flex; }
+
+/* Upload Screen */
+#upload-screen {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  gap: 24px;
+  padding: 40px;
+}
+#upload-screen h1 { color: white; font-size: 28px; text-align: center; line-height: 1.4; }
+#upload-screen p { color: rgba(255,255,255,0.8); font-size: 16px; text-align: center; }
+
+.upload-area {
+  width: 240px; height: 240px;
+  border: 4px dashed rgba(255,255,255,0.6);
+  border-radius: 32px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 16px; cursor: pointer;
+  transition: all 0.3s;
+}
+.upload-area:active { transform: scale(0.95); background: rgba(255,255,255,0.1); }
+.upload-icon { font-size: 64px; }
+.upload-text { color: white; font-size: 18px; font-weight: 600; }
+#photo-input { display: none; }
+
+.demo-btn {
+  padding: 14px 32px; border-radius: 50px;
+  background: rgba(255,255,255,0.2); color: white;
+  border: 2px solid rgba(255,255,255,0.4);
+  font-size: 16px; cursor: pointer;
+}
+
+/* Processing Screen */
+#processing-screen { background: #f0f4ff; gap: 24px; }
+.spinner {
+  width: 80px; height: 80px;
+  border: 6px solid #e0e7ff; border-top-color: #667eea;
+  border-radius: 50%; animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#processing-screen p { color: #667eea; font-size: 20px; font-weight: 600; }
+
+/* Mode Select Screen */
+#mode-screen { background: #f0f4ff; gap: 20px; padding: 32px; }
+#preview-img { max-width: 200px; max-height: 200px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+#lineart-preview { max-width: 200px; max-height: 200px; border-radius: 16px; border: 3px solid #667eea; }
+.preview-row { display: flex; gap: 16px; align-items: center; }
+.arrow-icon { font-size: 32px; color: #667eea; }
+.mode-btn {
+  width: 260px; padding: 20px;
+  border-radius: 20px; border: none;
+  font-size: 20px; font-weight: 700;
+  cursor: pointer; transition: transform 0.2s;
+  display: flex; align-items: center; gap: 12px;
+  justify-content: center;
+}
+.mode-btn:active { transform: scale(0.95); }
+.mode-trace { background: #fbbf24; color: #78350f; }
+.mode-color { background: #34d399; color: #064e3b; }
+.mode-back { background: #e0e7ff; color: #4338ca; font-size: 16px; padding: 14px; }
+
+/* Canvas Screen */
+#canvas-screen { background: white; position: relative; }
+#drawing-canvas { display: block; }
+
+/* Toolbar */
+.toolbar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: white; border-top: 2px solid #e0e7ff;
+  padding: 8px 12px; padding-bottom: max(8px, env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 8px;
+  z-index: 100;
+}
+.tool-btn {
+  width: 48px; height: 48px; border-radius: 14px;
+  border: 2px solid #e0e7ff; background: white;
+  font-size: 24px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.tool-btn:active { transform: scale(0.9); }
+.tool-btn.active { border-color: #667eea; background: #eef2ff; }
+
+.color-palette {
+  display: flex; gap: 6px; flex: 1;
+  overflow-x: auto; padding: 4px;
+  scrollbar-width: none;
+}
+.color-palette::-webkit-scrollbar { display: none; }
+.color-dot {
+  width: 36px; height: 36px; min-width: 36px;
+  border-radius: 50%; cursor: pointer;
+  border: 3px solid transparent;
+  transition: all 0.2s;
+}
+.color-dot.active { border-color: #1e293b; transform: scale(1.15); }
+
+.brush-sizes { display: flex; gap: 6px; }
+.brush-size {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 2px solid #e0e7ff; background: white;
+  cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+}
+.brush-size.active { border-color: #667eea; background: #eef2ff; }
+.brush-dot { border-radius: 50%; background: #1e293b; }
+
+/* Top bar */
+.top-bar {
+  position: fixed; top: 0; left: 0; right: 0;
+  padding: 12px 16px; padding-top: max(12px, env(safe-area-inset-top));
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(255,255,255,0.9); backdrop-filter: blur(10px);
+  z-index: 100;
+}
+.top-btn {
+  padding: 8px 16px; border-radius: 12px;
+  border: none; font-size: 16px; font-weight: 600;
+  cursor: pointer;
+}
+.btn-back { background: #fee2e2; color: #dc2626; }
+.btn-mode { background: #e0e7ff; color: #4338ca; }
+.btn-save { background: #d1fae5; color: #059669; }
+
+/* Trace guide */
+.trace-hint {
+  position: fixed; top: 80px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(251, 191, 36, 0.9); color: #78350f;
+  padding: 8px 20px; border-radius: 20px;
+  font-size: 14px; font-weight: 600;
+  z-index: 100; pointer-events: none;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+/* Completion overlay */
+.completion-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none; align-items: center; justify-content: center;
+  z-index: 200;
+}
+.completion-overlay.active { display: flex; }
+.completion-card {
+  background: white; border-radius: 24px;
+  padding: 32px; text-align: center;
+  max-width: 300px; width: 90%;
+}
+.completion-card h2 { font-size: 24px; margin-bottom: 8px; }
+.completion-card p { color: #64748b; margin-bottom: 20px; }
+.completion-stars { font-size: 40px; margin: 16px 0; }
+.completion-btns { display: flex; gap: 12px; justify-content: center; }
+.completion-btns button {
+  padding: 12px 24px; border-radius: 14px;
+  border: none; font-size: 16px; font-weight: 600; cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- 1. Upload Screen -->
+<div id="upload-screen" class="screen active">
+  <h1>사진을 그림으로!<br>따라 그리고 색칠해요</h1>
+  <div class="upload-area" onclick="document.getElementById('photo-input').click()">
+    <div class="upload-icon">📸</div>
+    <div class="upload-text">사진 선택하기</div>
+  </div>
+  <input type="file" id="photo-input" accept="image/*" capture="environment">
+  <p>사진을 넣으면 따라그리기 & 색칠공부가 돼요!</p>
+  <button class="demo-btn" onclick="loadDemoImage()">데모 이미지로 체험</button>
+</div>
+
+<!-- 2. Processing Screen -->
+<div id="processing-screen" class="screen">
+  <div class="spinner"></div>
+  <p>그림으로 바꾸는 중...</p>
+</div>
+
+<!-- 3. Mode Select Screen -->
+<div id="mode-screen" class="screen">
+  <h2 style="color:#4338ca; font-size:22px;">변환 완료!</h2>
+  <div class="preview-row">
+    <img id="preview-img">
+    <div class="arrow-icon">→</div>
+    <canvas id="lineart-preview"></canvas>
+  </div>
+  <button class="mode-btn mode-trace" onclick="startTrace()">✏️ 따라 그리기</button>
+  <button class="mode-btn mode-color" onclick="startColor()">🎨 색칠하기</button>
+  <button class="mode-btn mode-back" onclick="goHome()">← 다른 사진</button>
+</div>
+
+<!-- 4. Canvas Screen -->
+<div id="canvas-screen" class="screen">
+  <div class="top-bar">
+    <button class="top-btn btn-back" onclick="goToModeSelect()">← 뒤로</button>
+    <span id="mode-label" style="font-weight:700; color:#4338ca;"></span>
+    <button class="top-btn btn-save" onclick="saveImage()">💾 저장</button>
+  </div>
+  <canvas id="drawing-canvas"></canvas>
+  <div id="trace-hint" class="trace-hint" style="display:none;">점선을 따라 그려보세요! ✏️</div>
+  <div class="toolbar" id="toolbar">
+    <button class="tool-btn" onclick="undo()" title="되돌리기">↩️</button>
+    <button class="tool-btn" onclick="clearDrawing()" title="지우기">🗑️</button>
+    <div class="color-palette" id="color-palette"></div>
+    <button class="tool-btn" onclick="toggleEraser()" id="eraser-btn" title="지우개">🧹</button>
+  </div>
+</div>
+
+<!-- Completion Overlay -->
+<div class="completion-overlay" id="completion-overlay">
+  <div class="completion-card">
+    <div class="completion-stars">⭐⭐⭐</div>
+    <h2>잘했어요!</h2>
+    <p>멋진 그림이 완성됐어요!</p>
+    <div class="completion-btns">
+      <button style="background:#e0e7ff; color:#4338ca;" onclick="hideCompletion()">계속 그리기</button>
+      <button style="background:#667eea; color:white;" onclick="saveImage()">저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden canvases for processing -->
+<canvas id="source-canvas" style="display:none;"></canvas>
+<canvas id="lineart-canvas" style="display:none;"></canvas>
+
+<script>
+const COLORS = [
+  '#ef4444','#f97316','#eab308','#22c55e','#06b6d4',
+  '#3b82f6','#8b5cf6','#ec4899','#78350f','#1e293b',
+  '#f5f5f4','#fde68a','#bbf7d0','#bae6fd','#e9d5ff'
+];
+
+let currentMode = 'trace'; // 'trace' or 'color'
+let currentColor = '#ef4444';
+let brushSize = 8;
+let isEraser = false;
+let isDrawing = false;
+let history = [];
+let lineartImageData = null;
+let sourceImage = null;
+
+const photoInput = document.getElementById('photo-input');
+const drawingCanvas = document.getElementById('drawing-canvas');
+const ctx = drawingCanvas.getContext('2d');
+const sourceCanvas = document.getElementById('source-canvas');
+const sourceCtx = sourceCanvas.getContext('2d');
+const lineartCanvas = document.getElementById('lineart-canvas');
+const lineartCtx = lineartCanvas.getContext('2d');
+
+// Init color palette
+const palette = document.getElementById('color-palette');
+COLORS.forEach((c, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'color-dot' + (i === 0 ? ' active' : '');
+  dot.style.background = c;
+  dot.onclick = () => selectColor(c, dot);
+  palette.appendChild(dot);
+});
+
+function selectColor(color, el) {
+  currentColor = color;
+  isEraser = false;
+  document.getElementById('eraser-btn').classList.remove('active');
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function toggleEraser() {
+  isEraser = !isEraser;
+  document.getElementById('eraser-btn').classList.toggle('active', isEraser);
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+}
+
+// Screen management
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goHome() { showScreen('upload-screen'); }
+
+function goToModeSelect() { showScreen('mode-screen'); }
+
+// Photo handling
+photoInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  processFile(file);
+});
+
+function processFile(file) {
+  showScreen('processing-screen');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      sourceImage = img;
+      setTimeout(() => convertToLineart(img), 500);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function loadDemoImage() {
+  showScreen('processing-screen');
+  const canvas = document.createElement('canvas');
+  canvas.width = 400; canvas.height = 400;
+  const c = canvas.getContext('2d');
+
+  // Draw a simple demo: cute cat face
+  c.fillStyle = '#87CEEB'; c.fillRect(0, 0, 400, 400);
+  // Body
+  c.fillStyle = '#FFA500';
+  c.beginPath(); c.ellipse(200, 260, 120, 140, 0, 0, Math.PI * 2); c.fill();
+  // Head
+  c.beginPath(); c.arc(200, 150, 90, 0, Math.PI * 2); c.fill();
+  // Ears
+  c.beginPath(); c.moveTo(130, 80); c.lineTo(110, 20); c.lineTo(160, 60); c.fill();
+  c.beginPath(); c.moveTo(270, 80); c.lineTo(290, 20); c.lineTo(240, 60); c.fill();
+  // Eyes
+  c.fillStyle = '#fff';
+  c.beginPath(); c.arc(170, 140, 20, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.arc(230, 140, 20, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#333';
+  c.beginPath(); c.arc(175, 142, 10, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.arc(235, 142, 10, 0, Math.PI * 2); c.fill();
+  // Nose + mouth
+  c.fillStyle = '#FF69B4';
+  c.beginPath(); c.moveTo(200, 165); c.lineTo(193, 175); c.lineTo(207, 175); c.fill();
+  c.strokeStyle = '#333'; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(200, 175); c.lineTo(200, 185);
+  c.moveTo(200, 185); c.quadraticCurveTo(185, 195, 175, 185);
+  c.moveTo(200, 185); c.quadraticCurveTo(215, 195, 225, 185);
+  c.stroke();
+  // Whiskers
+  c.beginPath();
+  c.moveTo(120, 160); c.lineTo(165, 170);
+  c.moveTo(120, 180); c.lineTo(165, 178);
+  c.moveTo(235, 170); c.lineTo(280, 160);
+  c.moveTo(235, 178); c.lineTo(280, 180);
+  c.stroke();
+
+  const img = new Image();
+  img.onload = () => {
+    sourceImage = img;
+    setTimeout(() => convertToLineart(img), 500);
+  };
+  img.src = canvas.toDataURL();
+}
+
+// Edge detection → line art
+function convertToLineart(img) {
+  const MAX = 600;
+  let w = img.width, h = img.height;
+  if (w > MAX || h > MAX) {
+    const ratio = Math.min(MAX / w, MAX / h);
+    w = Math.floor(w * ratio);
+    h = Math.floor(h * ratio);
+  }
+
+  sourceCanvas.width = w; sourceCanvas.height = h;
+  sourceCtx.drawImage(img, 0, 0, w, h);
+
+  const imageData = sourceCtx.getImageData(0, 0, w, h);
+  const pixels = imageData.data;
+
+  // Grayscale
+  const gray = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const idx = i * 4;
+    gray[i] = 0.299 * pixels[idx] + 0.587 * pixels[idx+1] + 0.114 * pixels[idx+2];
+  }
+
+  // Gaussian blur (3x3)
+  const blurred = new Float32Array(w * h);
+  const kernel = [1,2,1, 2,4,2, 1,2,1];
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 1; x < w-1; x++) {
+      let sum = 0;
+      for (let ky = -1; ky <= 1; ky++) {
+        for (let kx = -1; kx <= 1; kx++) {
+          sum += gray[(y+ky)*w + (x+kx)] * kernel[(ky+1)*3 + (kx+1)];
+        }
+      }
+      blurred[y*w+x] = sum / 16;
+    }
+  }
+
+  // Sobel edge detection
+  const edges = new Float32Array(w * h);
+  const sobelX = [-1,0,1, -2,0,2, -1,0,1];
+  const sobelY = [-1,-2,-1, 0,0,0, 1,2,1];
+  let maxEdge = 0;
+
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 1; x < w-1; x++) {
+      let gx = 0, gy = 0;
+      for (let ky = -1; ky <= 1; ky++) {
+        for (let kx = -1; kx <= 1; kx++) {
+          const val = blurred[(y+ky)*w + (x+kx)];
+          const ki = (ky+1)*3 + (kx+1);
+          gx += val * sobelX[ki];
+          gy += val * sobelY[ki];
+        }
+      }
+      const mag = Math.sqrt(gx*gx + gy*gy);
+      edges[y*w+x] = mag;
+      if (mag > maxEdge) maxEdge = mag;
+    }
+  }
+
+  // Normalize and threshold → black lines on white
+  lineartCanvas.width = w; lineartCanvas.height = h;
+  const outData = lineartCtx.createImageData(w, h);
+  const out = outData.data;
+  const threshold = maxEdge * 0.15;
+
+  for (let i = 0; i < w * h; i++) {
+    const isEdge = edges[i] > threshold;
+    const val = isEdge ? 40 : 255;
+    out[i*4] = val; out[i*4+1] = val; out[i*4+2] = val; out[i*4+3] = 255;
+  }
+  lineartCtx.putImageData(outData, 0, 0);
+
+  // Thicken lines (dilate)
+  const thickData = lineartCtx.getImageData(0, 0, w, h);
+  const thick = new Uint8ClampedArray(thickData.data);
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 1; x < w-1; x++) {
+      const idx = (y*w+x)*4;
+      if (outData.data[idx] < 128) {
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const ni = ((y+dy)*w+(x+dx))*4;
+            thick[ni] = 40; thick[ni+1] = 40; thick[ni+2] = 40;
+          }
+        }
+      }
+    }
+  }
+  thickData.data.set(thick);
+  lineartCtx.putImageData(thickData, 0, 0);
+
+  lineartImageData = lineartCtx.getImageData(0, 0, w, h);
+
+  // Show previews
+  const previewImg = document.getElementById('preview-img');
+  previewImg.src = sourceCanvas.toDataURL();
+  const lineartPreview = document.getElementById('lineart-preview');
+  lineartPreview.width = w; lineartPreview.height = h;
+  lineartPreview.getContext('2d').putImageData(lineartImageData, 0, 0);
+
+  showScreen('mode-screen');
+}
+
+// Start trace mode
+function startTrace() {
+  currentMode = 'trace';
+  document.getElementById('mode-label').textContent = '✏️ 따라 그리기';
+  document.getElementById('trace-hint').style.display = 'block';
+  setupCanvas();
+
+  // Draw dashed lineart
+  const w = lineartCanvas.width, h = lineartCanvas.height;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+
+  // Center the image
+  const offsetX = Math.floor((drawingCanvas.width - w) / 2);
+  const offsetY = Math.floor((drawingCanvas.height - h) / 2) + 30;
+
+  // Draw dashed outline
+  const ld = lineartImageData.data;
+  ctx.fillStyle = 'rgba(180,180,220,0.4)';
+  for (let y = 0; y < h; y += 3) {
+    for (let x = 0; x < w; x += 3) {
+      const idx = (y * w + x) * 4;
+      if (ld[idx] < 128) {
+        // Dashed effect
+        if ((x + y) % 8 < 5) {
+          ctx.fillRect(offsetX + x, offsetY + y, 3, 3);
+        }
+      }
+    }
+  }
+
+  saveState();
+  brushSize = 6;
+  currentColor = '#1e293b';
+}
+
+// Start color mode
+function startColor() {
+  currentMode = 'color';
+  document.getElementById('mode-label').textContent = '🎨 색칠하기';
+  document.getElementById('trace-hint').style.display = 'none';
+  setupCanvas();
+
+  const w = lineartCanvas.width, h = lineartCanvas.height;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+
+  const offsetX = Math.floor((drawingCanvas.width - w) / 2);
+  const offsetY = Math.floor((drawingCanvas.height - h) / 2) + 30;
+
+  // Draw solid lineart (thicker for coloring regions)
+  const ld = lineartImageData.data;
+  ctx.fillStyle = '#1e293b';
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      if (ld[idx] < 128) {
+        ctx.fillRect(offsetX + x, offsetY + y, 1, 1);
+      }
+    }
+  }
+
+  saveState();
+  brushSize = 20;
+  currentColor = '#ef4444';
+}
+
+function setupCanvas() {
+  const topBarH = 56;
+  const toolbarH = 72;
+  drawingCanvas.width = window.innerWidth;
+  drawingCanvas.height = window.innerHeight - topBarH - toolbarH;
+  drawingCanvas.style.marginTop = topBarH + 'px';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  history = [];
+  showScreen('canvas-screen');
+}
+
+// Drawing logic
+let lastX = 0, lastY = 0;
+
+function getPos(e) {
+  const rect = drawingCanvas.getBoundingClientRect();
+  const touch = e.touches ? e.touches[0] : e;
+  return {
+    x: touch.clientX - rect.left,
+    y: touch.clientY - rect.top
+  };
+}
+
+drawingCanvas.addEventListener('touchstart', startDraw, { passive: false });
+drawingCanvas.addEventListener('mousedown', startDraw);
+drawingCanvas.addEventListener('touchmove', draw, { passive: false });
+drawingCanvas.addEventListener('mousemove', draw);
+drawingCanvas.addEventListener('touchend', endDraw);
+drawingCanvas.addEventListener('mouseup', endDraw);
+drawingCanvas.addEventListener('mouseleave', endDraw);
+
+function startDraw(e) {
+  e.preventDefault();
+
+  if (currentMode === 'color' && !isEraser) {
+    // Flood fill on tap
+    const pos = getPos(e);
+    floodFill(Math.floor(pos.x), Math.floor(pos.y), currentColor);
+    saveState();
+    return;
+  }
+
+  isDrawing = true;
+  const pos = getPos(e);
+  lastX = pos.x; lastY = pos.y;
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+}
+
+function draw(e) {
+  e.preventDefault();
+  if (!isDrawing) return;
+  const pos = getPos(e);
+
+  ctx.strokeStyle = isEraser ? '#ffffff' : currentColor;
+  ctx.lineWidth = isEraser ? brushSize * 3 : brushSize;
+  ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+
+  ctx.globalCompositeOperation = 'source-over';
+  lastX = pos.x; lastY = pos.y;
+}
+
+function endDraw(e) {
+  if (!isDrawing) return;
+  isDrawing = false;
+  saveState();
+}
+
+// Flood fill
+function floodFill(startX, startY, fillColor) {
+  const w = drawingCanvas.width, h = drawingCanvas.height;
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const data = imageData.data;
+
+  if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
+
+  const startIdx = (startY * w + startX) * 4;
+  const startR = data[startIdx], startG = data[startIdx+1], startB = data[startIdx+2];
+
+  // Parse fill color
+  const fc = hexToRgb(fillColor);
+  if (!fc) return;
+
+  // Don't fill if same color
+  if (Math.abs(startR - fc.r) < 10 && Math.abs(startG - fc.g) < 10 && Math.abs(startB - fc.b) < 10) return;
+
+  // Don't fill if clicking on line (dark pixels)
+  if (startR < 60 && startG < 60 && startB < 60) return;
+
+  const tolerance = 40;
+  const stack = [[startX, startY]];
+  const visited = new Uint8Array(w * h);
+
+  function matches(idx) {
+    return Math.abs(data[idx] - startR) < tolerance &&
+           Math.abs(data[idx+1] - startG) < tolerance &&
+           Math.abs(data[idx+2] - startB) < tolerance;
+  }
+
+  let count = 0;
+  const maxPixels = w * h * 0.5;
+
+  while (stack.length > 0 && count < maxPixels) {
+    const [x, y] = stack.pop();
+    const pos = y * w + x;
+    if (x < 0 || x >= w || y < 0 || y >= h || visited[pos]) continue;
+    const idx = pos * 4;
+    if (!matches(idx)) continue;
+
+    visited[pos] = 1;
+    data[idx] = fc.r; data[idx+1] = fc.g; data[idx+2] = fc.b; data[idx+3] = 255;
+    count++;
+
+    stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
+// History (undo)
+function saveState() {
+  history.push(ctx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height));
+  if (history.length > 30) history.shift();
+}
+
+function undo() {
+  if (history.length > 1) {
+    history.pop();
+    ctx.putImageData(history[history.length - 1], 0, 0);
+  }
+}
+
+function clearDrawing() {
+  if (currentMode === 'trace') startTrace();
+  else startColor();
+}
+
+// Save
+function saveImage() {
+  const link = document.createElement('a');
+  link.download = 'my-coloring-' + Date.now() + '.png';
+  link.href = drawingCanvas.toDataURL();
+  link.click();
+  hideCompletion();
+}
+
+function hideCompletion() {
+  document.getElementById('completion-overlay').classList.remove('active');
+}
+
+// Handle resize
+window.addEventListener('resize', () => {
+  if (document.getElementById('canvas-screen').classList.contains('active')) {
+    // Preserve drawing on resize
+  }
+});
+</script>
+</body>
+</html>
