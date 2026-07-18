@@ -5,7 +5,10 @@ async function loadModule() {
   if (loadAttempted) return bgRemovalModule;
   loadAttempted = true;
   try {
-    bgRemovalModule = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1/dist/index.mjs');
+    bgRemovalModule = await Promise.race([
+      import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1/dist/index.mjs'),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+    ]);
   } catch {
     bgRemovalModule = null;
   }

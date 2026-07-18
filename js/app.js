@@ -75,6 +75,8 @@ function showScreen(id) {
 }
 
 function goHome() {
+  if (edgeWorker) { edgeWorker.terminate(); edgeWorker = null; }
+  isProcessing = false;
   showScreen('upload-screen');
   document.getElementById('photo-input').value = '';
 }
@@ -418,7 +420,7 @@ function hidePartDone() {
 
 function saveState() {
   historyStack.push(cx.getImageData(0, 0, DC.width, DC.height));
-  if (historyStack.length > 25) historyStack.shift();
+  if (historyStack.length > 10) historyStack.shift();
 }
 
 function undo() {
@@ -481,13 +483,18 @@ DC.addEventListener('touchend', onEnd);
 DC.addEventListener('mouseup', onEnd);
 DC.addEventListener('mouseleave', onEnd);
 
+let resizeTimer = null;
 window.addEventListener('resize', () => {
   if (!document.getElementById('canvas-screen').classList.contains('active')) return;
-  const saved = cx.getImageData(0, 0, DC.width, DC.height);
-  DC.width = window.innerWidth; DC.height = window.innerHeight;
-  cx.fillStyle = '#fff'; cx.fillRect(0, 0, DC.width, DC.height);
-  cx.putImageData(saved, 0, 0);
-  cx.lineCap = 'round'; cx.lineJoin = 'round';
+  if (resizeTimer) clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const saved = cx.getImageData(0, 0, DC.width, DC.height);
+    DC.width = window.innerWidth; DC.height = window.innerHeight;
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, DC.width, DC.height);
+    cx.putImageData(saved, 0, 0);
+    cx.lineCap = 'round'; cx.lineJoin = 'round';
+    resizeTimer = null;
+  }, 250);
 });
 
 buildPalette();
