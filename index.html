@@ -7,7 +7,9 @@
 <title>키즈 컬러링 - 사진을 그림으로!</title>
 <link rel="manifest" href="manifest.json">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+canvas { touch-action: none; }
+.upload-area, .mode-btn, .tool-btn, .color-dot, .top-btn, .demo-btn { touch-action: manipulation; }
 html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Noto Sans KR', sans-serif; background: #f0f4ff; }
 
 .screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; }
@@ -291,7 +293,10 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
 }
 
-function goHome() { showScreen('upload-screen'); }
+function goHome() {
+  showScreen('upload-screen');
+  photoInput.value = '';
+}
 
 function goToModeSelect() { showScreen('mode-screen'); }
 
@@ -502,6 +507,9 @@ function startTrace() {
   saveState();
   brushSize = 6;
   currentColor = '#1e293b';
+  isEraser = false;
+  document.getElementById('eraser-btn').classList.remove('active');
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
 }
 
 // Start color mode
@@ -533,6 +541,10 @@ function startColor() {
   saveState();
   brushSize = 20;
   currentColor = '#ef4444';
+  isEraser = false;
+  document.getElementById('eraser-btn').classList.remove('active');
+  document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+  document.querySelector('.color-dot').classList.add('active');
 }
 
 function setupCanvas() {
@@ -590,16 +602,14 @@ function draw(e) {
   if (!isDrawing) return;
   const pos = getPos(e);
 
+  ctx.globalCompositeOperation = 'source-over';
   ctx.strokeStyle = isEraser ? '#ffffff' : currentColor;
   ctx.lineWidth = isEraser ? brushSize * 3 : brushSize;
-  ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
 
   ctx.beginPath();
   ctx.moveTo(lastX, lastY);
   ctx.lineTo(pos.x, pos.y);
   ctx.stroke();
-
-  ctx.globalCompositeOperation = 'source-over';
   lastX = pos.x; lastY = pos.y;
 }
 
@@ -700,10 +710,19 @@ function hideCompletion() {
   document.getElementById('completion-overlay').classList.remove('active');
 }
 
-// Handle resize
+// Handle resize — preserve drawing
 window.addEventListener('resize', () => {
   if (document.getElementById('canvas-screen').classList.contains('active')) {
-    // Preserve drawing on resize
+    const saved = ctx.getImageData(0, 0, drawingCanvas.width, drawingCanvas.height);
+    const oldW = drawingCanvas.width, oldH = drawingCanvas.height;
+    const topBarH = 56, toolbarH = 72;
+    drawingCanvas.width = window.innerWidth;
+    drawingCanvas.height = window.innerHeight - topBarH - toolbarH;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+    ctx.putImageData(saved, 0, 0);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
   }
 });
 </script>
