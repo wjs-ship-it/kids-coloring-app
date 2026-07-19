@@ -330,6 +330,8 @@ function beginActivity() {
     parts = buildEmergencyParts(lineartData, laW, laH);
   }
 
+  parts = ensureFullCoverage(parts, lineartData, laW, laH);
+
   curPartIdx = 0;
   appMode = 'trace';
   historyStack = [];
@@ -399,6 +401,54 @@ function buildEmergencyParts(ld, w, h) {
     });
   }
   return result;
+}
+
+function ensureFullCoverage(parts, ld, w, h) {
+  const data = ld.data;
+  const allEdge = [];
+  for (let i = 0; i < w * h; i++) {
+    if (data[i * 4] < 128) allEdge.push(i);
+  }
+  if (allEdge.length < 20) return parts;
+
+  const covered = new Uint8Array(w * h);
+  let coveredCount = 0;
+  for (const p of parts) {
+    for (const pos of p.boundaryPos) {
+      if (!covered[pos]) { covered[pos] = 1; coveredCount++; }
+    }
+  }
+
+  const coverage = coveredCount / allEdge.length;
+  if (coverage >= 0.7) return parts;
+
+  const uncovered = allEdge.filter(pos => !covered[pos]);
+  const targetSegSize = Math.max(30, Math.floor(allEdge.length / 6));
+  const segCount = Math.max(1, Math.ceil(uncovered.length / targetSegSize));
+
+  uncovered.sort((a, b) => {
+    const ay = Math.floor(a / w), by = Math.floor(b / w);
+    return ay !== by ? ay - by : (a % w) - (b % w);
+  });
+
+  const segSize = Math.ceil(uncovered.length / segCount);
+  for (let s = 0; s < segCount; s++) {
+    const pxs = uncovered.slice(s * segSize, Math.min((s + 1) * segSize, uncovered.length));
+    if (pxs.length < 5) continue;
+    let sy = 0;
+    for (const pos of pxs) sy += Math.floor(pos / w);
+    parts.push({
+      pixels: pxs,
+      boundaryPos: pxs,
+      samplePoints: pxs.filter((_, i) => i % 5 === 0),
+      touchesBorder: false,
+      isBand: true,
+      centerY: sy / pxs.length
+    });
+  }
+
+  parts.sort((a, b) => a.centerY - b.centerY);
+  return parts;
 }
 
 function drawTraceBackground() {
@@ -756,8 +806,8 @@ function onMove(e) {
     cx.lineWidth = brushSize;
     cx.beginPath(); cx.moveTo(lastX, lastY); cx.lineTo(snap.x, snap.y); cx.stroke();
     const now = Date.now();
-    if (now - particleThrottle > 60) {
-      spawnParticles(snap.x, snap.y, 4 + Math.floor(Math.random() * 4));
+    if (now - particleThrottle > 80) {
+      spawnParticles(snap.x, snap.y, 1 + Math.floor(Math.random() * 2));
       particleThrottle = now;
     }
     lastX = snap.x; lastY = snap.y;
@@ -807,41 +857,48 @@ function onEnd() {
   if (appMode === 'trace') checkTraceCompletion();
 }
 
-// --- Particle Effect System ---
-const PARTICLE_COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#ff6b9d','#00d2ff'];
+// --- Particle Effect System (overlay canvas) ---
+const PARTICLE_COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
 const particles = [];
 let particleAnimId = null;
+
+const PC = document.createElement('canvas');
+PC.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+document.body.appendChild(PC);
+const pcx = PC.getContext('2d');
+
+function resizeParticleCanvas() { PC.width = window.innerWidth; PC.height = window.innerHeight; }
+resizeParticleCanvas();
+window.addEventListener('resize', resizeParticleCanvas);
 
 class Particle {
   constructor(x, y) {
     this.x = x;
     this.y = y;
     const angle = Math.random() * Math.PI * 2;
-    const speed = 2 + Math.random() * 5;
+    const speed = 1.5 + Math.random() * 3;
     this.vx = Math.cos(angle) * speed;
-    this.vy = Math.sin(angle) * speed - 2;
-    this.size = 3 + Math.random() * 5;
+    this.vy = Math.sin(angle) * speed - 1.5;
+    this.size = 1.5 + Math.random() * 2;
     this.color = PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
-    this.life = 1.0;
-    this.decay = 0.02 + Math.random() * 0.03;
-    this.gravity = 0.12;
+    this.life = 0.8;
+    this.decay = 0.04 + Math.random() * 0.04;
+    this.gravity = 0.08;
   }
   update() {
     this.x += this.vx;
     this.y += this.vy;
     this.vy += this.gravity;
     this.life -= this.decay;
-    this.size *= 0.97;
+    this.size *= 0.96;
   }
   draw(ctx) {
-    if (this.life <= 0 || this.size < 0.5) return;
-    ctx.save();
+    if (this.life <= 0 || this.size < 0.3) return;
     ctx.globalAlpha = this.life;
     ctx.fillStyle = this.color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
 }
 
@@ -851,14 +908,16 @@ function spawnParticles(x, y, count) {
 }
 
 function particleLoop() {
+  pcx.clearRect(0, 0, PC.width, PC.height);
   for (let i = particles.length - 1; i >= 0; i--) {
     particles[i].update();
-    particles[i].draw(cx);
-    if (particles[i].life <= 0 || particles[i].size < 0.5) particles.splice(i, 1);
+    particles[i].draw(pcx);
+    if (particles[i].life <= 0 || particles[i].size < 0.3) particles.splice(i, 1);
   }
   if (particles.length > 0) {
     particleAnimId = requestAnimationFrame(particleLoop);
   } else {
+    pcx.clearRect(0, 0, PC.width, PC.height);
     particleAnimId = null;
   }
 }
