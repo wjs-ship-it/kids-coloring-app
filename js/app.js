@@ -132,9 +132,21 @@ function applyAILineart(img) {
   const imgData = sx.getImageData(0, 0, w, h);
   const d = imgData.data;
 
+  let darkCount = 0;
   for (let i = 0; i < d.length; i += 4) {
     const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    const v = gray < 128 ? 40 : 255;
+    if (gray < 128) darkCount++;
+  }
+  const isWhiteOnBlack = darkCount > (d.length / 4) * 0.5;
+
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    let v;
+    if (isWhiteOnBlack) {
+      v = gray >= 128 ? 40 : 255;
+    } else {
+      v = gray < 128 ? 40 : 255;
+    }
     d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
   }
 
@@ -142,13 +154,18 @@ function applyAILineart(img) {
   laW = w; laH = h;
   parts = detectParts(imgData, w, h);
 
+  _sourceImgData = null;
+  _sourceW = w;
+  _sourceH = h;
+
   document.getElementById('preview-img').src = SC.toDataURL();
   const lp = document.getElementById('lineart-preview');
   lp.width = w; lp.height = h;
   lp.getContext('2d').putImageData(lineartData, 0, 0);
+  document.getElementById('detail-slider').value = 50;
+  document.getElementById('detail-slider-wrap').style.display = '';
   showScreen('preview-screen');
   isProcessing = false;
-  document.getElementById('detail-slider-wrap').style.display = 'none';
 }
 
 function convertToLineart(img) {
@@ -218,8 +235,33 @@ function runEdgeWorker(rawData, w, h, isFirstRun) {
 
 function onDetailChange(val) {
   detailLevel = parseInt(val, 10);
-  if (!_sourceImgData) return;
   if (detailTimer) clearTimeout(detailTimer);
+
+  if (!_sourceImgData && lineartData) {
+    const sliderWrap = document.getElementById('detail-slider-wrap');
+    sliderWrap.classList.add('processing');
+    sliderWrap.querySelector('.detail-label').textContent = '🔄 적용 중...';
+    detailTimer = setTimeout(() => {
+      const d = lineartData.data;
+      const threshold = Math.round(80 + (detailLevel / 100) * 140);
+      for (let i = 0; i < d.length; i += 4) {
+        const cur = d[i];
+        const isLine = cur < 128;
+        const v = isLine ? Math.max(10, 40 - Math.floor((detailLevel - 50) * 0.4)) : 255;
+        d[i] = v; d[i + 1] = v; d[i + 2] = v;
+      }
+      parts = detectParts(lineartData, laW, laH);
+      const lp = document.getElementById('lineart-preview');
+      lp.width = laW; lp.height = laH;
+      lp.getContext('2d').putImageData(lineartData, 0, 0);
+      sliderWrap.classList.remove('processing');
+      sliderWrap.querySelector('.detail-label').textContent = '🔍 디테일 조절';
+      detailTimer = null;
+    }, 100);
+    return;
+  }
+
+  if (!_sourceImgData) return;
   if (edgeWorker) { edgeWorker.terminate(); edgeWorker = null; }
   const sliderWrap = document.getElementById('detail-slider-wrap');
   sliderWrap.classList.add('processing');
