@@ -310,6 +310,79 @@ export function adaptiveClose(edges, w, h) {
   return result;
 }
 
+export function bridgeEndpoints(edges, w, h, maxGap = 12) {
+  const result = new Uint8Array(edges);
+  const dx8 = [-1, 0, 1, -1, 1, -1, 0, 1];
+  const dy8 = [-1, -1, -1, 0, 0, 1, 1, 1];
+
+  const endpoints = [];
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      if (!edges[y * w + x]) continue;
+      let nCount = 0;
+      let nx1 = 0, ny1 = 0;
+      for (let k = 0; k < 8; k++) {
+        const nx = x + dx8[k], ny = y + dy8[k];
+        if (edges[ny * w + nx]) {
+          nCount++;
+          nx1 = dx8[k]; ny1 = dy8[k];
+        }
+      }
+      if (nCount === 1) {
+        endpoints.push({ x, y, dx: -nx1, dy: -ny1 });
+      }
+    }
+  }
+
+  const used = new Set();
+  for (let i = 0; i < endpoints.length; i++) {
+    if (used.has(i)) continue;
+    const ep = endpoints[i];
+    let bestJ = -1, bestDist = maxGap + 1;
+    for (let j = i + 1; j < endpoints.length; j++) {
+      if (used.has(j)) continue;
+      const ep2 = endpoints[j];
+      const ddx = ep2.x - ep.x, ddy = ep2.y - ep.y;
+      const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+      if (dist > maxGap || dist < 2) continue;
+
+      const len = dist || 1;
+      const ux = ddx / len, uy = ddy / len;
+      const dot1 = ep.dx * ux + ep.dy * uy;
+      const dot2 = ep2.dx * (-ux) + ep2.dy * (-uy);
+
+      if (dot1 > -0.3 && dot2 > -0.3 && dist < bestDist) {
+        bestDist = dist;
+        bestJ = j;
+      }
+    }
+    if (bestJ !== -1) {
+      used.add(i);
+      used.add(bestJ);
+      const ep2 = endpoints[bestJ];
+      const steps = Math.ceil(bestDist);
+      for (let s = 0; s <= steps; s++) {
+        const t = s / (steps || 1);
+        const px = Math.round(ep.x + (ep2.x - ep.x) * t);
+        const py = Math.round(ep.y + (ep2.y - ep.y) * t);
+        if (px >= 0 && px < w && py >= 0 && py < h) {
+          result[py * w + px] = 1;
+        }
+      }
+    }
+  }
+  return result;
+}
+
+export function multiPassClose(edges, w, h, passes = 2) {
+  let result = edges;
+  for (let i = 0; i < passes; i++) {
+    result = bridgeEndpoints(result, w, h, 15 - i * 3);
+    result = morphClose(result, w, h, 3);
+  }
+  return result;
+}
+
 export function detectParts(lineartData, w, h) {
   const isEdge = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) isEdge[i] = lineartData[i * 4] < 128 ? 1 : 0;
@@ -427,23 +500,17 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
     step6 = cannyEdge(smoothed, w, h, thHi, thLo);
   }
 
-  const step7 = adaptiveClose(step6, w, h);
+  const step7 = multiPassClose(step6, w, h, 2);
+  const step7b = adaptiveClose(step7, w, h);
   const minArea = mode === 'portrait' ? (80 - t * 50) : 30;
-  const step8 = removeSmallComponents(step7, w, h, Math.max(10, minArea));
+  const step8 = removeSmallComponents(step7b, w, h, Math.max(10, minArea));
   const step9 = normalizeLineWidth(step8, w, h, mode === 'portrait' ? 3 : 2);
 
   const { leakCount } = validateFloodFillIntegrity(step9, w, h);
   let final = step9;
   if (leakCount > 0) {
-    for (const pos of validateFloodFillIntegrity(step9, w, h).leakPositions) {
-      const r = 2;
-      for (let dy = -r; dy <= r; dy++) {
-        for (let dx = -r; dx <= r; dx++) {
-          const ny = pos.y + dy, nx = pos.x + dx;
-          if (ny >= 0 && ny < h && nx >= 0 && nx < w) final[ny * w + nx] = 1;
-        }
-      }
-    }
+    const bridged = bridgeEndpoints(step8, w, h, 20);
+    final = normalizeLineWidth(bridged, w, h, mode === 'portrait' ? 3 : 2);
   }
 
   const outData = new Uint8ClampedArray(w * h * 4);

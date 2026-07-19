@@ -220,12 +220,14 @@ function onDetailChange(val) {
   detailLevel = parseInt(val, 10);
   if (!_sourceImgData) return;
   if (detailTimer) clearTimeout(detailTimer);
+  if (edgeWorker) { edgeWorker.terminate(); edgeWorker = null; }
   const sliderWrap = document.getElementById('detail-slider-wrap');
   sliderWrap.classList.add('processing');
+  sliderWrap.querySelector('.detail-label').textContent = '🔄 적용 중...';
   detailTimer = setTimeout(() => {
     runEdgeWorker(_sourceImgData.slice(), _sourceW, _sourceH, false);
     detailTimer = null;
-  }, 200);
+  }, 300);
 }
 
 function snapToLine(tx, ty, part) {
