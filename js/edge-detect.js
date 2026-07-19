@@ -390,7 +390,7 @@ export function detectParts(lineartData, w, h) {
   return meaningful;
 }
 
-export function runFullPipeline(imageData, w, h) {
+export function runFullPipeline(imageData, w, h, mode = 'object') {
   const px = imageData;
   const gray = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) {
@@ -398,13 +398,25 @@ export function runFullPipeline(imageData, w, h) {
     gray[i] = 0.299 * px[j] + 0.587 * px[j + 1] + 0.114 * px[j + 2];
   }
 
-  const step1 = applyCLAHE(gray, w, h);
-  const step2a = bilateralFilter(step1, w, h);
-  const step2b = bilateralFilter(step2a, w, h);
-  const step6 = dualPassEdge(step2b, w, h);
+  let smoothed;
+  if (mode === 'portrait') {
+    const s1 = applyCLAHE(gray, w, h, 8, 1.5);
+    const s2 = bilateralFilter(s1, w, h, 13, 120, 120);
+    const s3 = bilateralFilter(s2, w, h, 13, 120, 120);
+    smoothed = bilateralFilter(s3, w, h, 13, 120, 120);
+  } else {
+    const s1 = applyCLAHE(gray, w, h);
+    const s2 = bilateralFilter(s1, w, h);
+    smoothed = bilateralFilter(s2, w, h);
+  }
+
+  const thHi = mode === 'portrait' ? 0.25 : 0.15;
+  const thLo = mode === 'portrait' ? 0.12 : 0.06;
+  const step6 = cannyEdge(smoothed, w, h, thHi, thLo);
   const step7 = adaptiveClose(step6, w, h);
-  const step8 = removeSmallComponents(step7, w, h);
-  const step9 = normalizeLineWidth(step8, w, h, 2);
+  const minArea = mode === 'portrait' ? 80 : 30;
+  const step8 = removeSmallComponents(step7, w, h, minArea);
+  const step9 = normalizeLineWidth(step8, w, h, mode === 'portrait' ? 3 : 2);
 
   const { leakCount } = validateFloodFillIntegrity(step9, w, h);
   let final = step9;

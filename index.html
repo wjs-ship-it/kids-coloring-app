@@ -126,7 +126,11 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
   <button class="upload-btn-big" id="btn-upload">
     <span class="icon">📸</span><span class="label">사진 고르기</span>
   </button>
-  <input type="file" id="photo-input" accept="image/*" capture="environment">
+  <input type="file" id="photo-input" accept="image/*">
+  <div id="mode-toggle" style="display:flex;gap:0;border-radius:50px;overflow:hidden;background:rgba(0,0,0,.12)">
+    <button class="mtbtn active" data-edge="object" style="padding:10px 22px;font-size:14px;font-weight:700;border:none;border-radius:50px;transition:all .2s;background:rgba(255,255,255,.85);color:#4c1d95">🧸 사물</button>
+    <button class="mtbtn" data-edge="portrait" style="padding:10px 22px;font-size:14px;font-weight:700;border:none;border-radius:50px;transition:all .2s;background:transparent;color:rgba(255,255,255,.8)">👤 인물</button>
+  </div>
   <button class="demo-pill" id="btn-demo">🐱 체험해보기</button>
   <button class="demo-pill" id="btn-presets" style="background:rgba(255,255,255,.5);color:#78350f">🖼️ 그림 고르기</button>
   <button class="demo-pill" id="btn-creative" style="background:rgba(255,255,255,.3);color:#4c1d95">✨ 자유롭게 놀기</button>

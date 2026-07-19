@@ -22,6 +22,7 @@ let lastProcessTime = 0;
 let edgeWorker = null;
 let creativeMode = null;
 let hasPhoto = false;
+let edgeMode = 'object';
 let lineBoundary = null;
 let _maskCvs = null, _drawCvs = null, _baseCvs = null;
 let lineartOverlay = null;
@@ -148,7 +149,7 @@ function convertToLineart(img) {
     goHome();
   };
 
-  edgeWorker.postMessage({ imageData: imageData.data, w, h });
+  edgeWorker.postMessage({ imageData: imageData.data, w, h, mode: edgeMode });
 }
 
 function snapToLine(tx, ty, part) {
@@ -645,6 +646,20 @@ document.getElementById('btn-save').addEventListener('click', saveImage);
 document.getElementById('btn-creative').addEventListener('click', () => { hasPhoto = false; showScreen('mode-screen'); });
 document.getElementById('btn-mode-back').addEventListener('click', () => {
   showScreen(hasPhoto ? 'preview-screen' : 'upload-screen');
+});
+
+document.querySelectorAll('.mtbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    edgeMode = btn.dataset.edge;
+    document.querySelectorAll('.mtbtn').forEach(b => {
+      b.classList.remove('active');
+      b.style.background = 'transparent';
+      b.style.color = 'rgba(255,255,255,.8)';
+    });
+    btn.classList.add('active');
+    btn.style.background = 'rgba(255,255,255,.85)';
+    btn.style.color = '#4c1d95';
+  });
 });
 
 document.querySelectorAll('.mode-card').forEach(card => {
