@@ -341,34 +341,62 @@ function beginActivity() {
 }
 
 function buildEmergencyParts(ld, w, h) {
-  const edgePixels = [];
   const data = ld.data;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (data[(y * w + x) * 4] < 128) edgePixels.push(y * w + x);
+  const isEdge = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) isEdge[i] = data[i * 4] < 128 ? 1 : 0;
+
+  const contour = [];
+  const visited = new Uint8Array(w * h);
+  const dx8 = [1, 1, 0, -1, -1, -1, 0, 1];
+  const dy8 = [0, 1, 1, 1, 0, -1, -1, -1];
+
+  let sx = -1, sy2 = -1;
+  for (let y = 0; y < h && sx < 0; y++) {
+    for (let x = 0; x < w && sx < 0; x++) {
+      if (isEdge[y * w + x]) { sx = x; sy2 = y; }
     }
   }
-  if (edgePixels.length < 10) return [];
+  if (sx < 0) return [];
 
-  edgePixels.sort((a, b) => Math.floor(a / w) - Math.floor(b / w));
-  const segCount = Math.min(5, Math.max(2, Math.floor(edgePixels.length / 300)));
-  const segSize = Math.ceil(edgePixels.length / segCount);
+  let cx2 = sx, cy2 = sy2;
+  for (let step = 0; step < w * h; step++) {
+    const pos = cy2 * w + cx2;
+    if (visited[pos]) break;
+    visited[pos] = 1;
+    contour.push(pos);
+    let found = false;
+    for (let k = 0; k < 8; k++) {
+      const nx = cx2 + dx8[k], ny = cy2 + dy8[k];
+      if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx] && !visited[ny * w + nx]) {
+        cx2 = nx; cy2 = ny; found = true; break;
+      }
+    }
+    if (!found) break;
+  }
+
+  if (contour.length < 10) return [];
+
+  const sampled = [];
+  const step = Math.max(1, Math.floor(contour.length / 400));
+  for (let i = 0; i < contour.length; i += step) sampled.push(contour[i]);
+
+  const segCount = Math.min(4, Math.max(2, Math.floor(sampled.length / 30)));
+  const segSize = Math.ceil(sampled.length / segCount);
   const result = [];
 
   for (let s = 0; s < segCount; s++) {
-    const pxs = edgePixels.slice(s * segSize, Math.min((s + 1) * segSize, edgePixels.length));
-    if (pxs.length > 5) {
-      let sy = 0;
-      for (const pos of pxs) sy += Math.floor(pos / w);
-      result.push({
-        pixels: pxs,
-        boundaryPos: pxs,
-        samplePoints: pxs.filter((_, i) => i % 5 === 0),
-        touchesBorder: false,
-        isBand: true,
-        centerY: sy / pxs.length
-      });
-    }
+    const pxs = sampled.slice(s * segSize, Math.min((s + 1) * segSize, sampled.length));
+    if (pxs.length < 3) continue;
+    let sy = 0;
+    for (const pos of pxs) sy += Math.floor(pos / w);
+    result.push({
+      pixels: pxs,
+      boundaryPos: pxs,
+      samplePoints: pxs.filter((_, i) => i % 3 === 0),
+      touchesBorder: false,
+      isBand: true,
+      centerY: sy / pxs.length
+    });
   }
   return result;
 }

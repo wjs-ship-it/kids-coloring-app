@@ -521,36 +521,121 @@ export function detectParts(lineartData, w, h) {
   return meaningful;
 }
 
-function generateEdgeSegments(isEdge, w, h) {
-  const allEdgePixels = [];
-  for (let y = 0; y < h; y++) {
+function traceOuterContour(isEdge, w, h) {
+  const contour = [];
+  const visited = new Uint8Array(w * h);
+  const dx8 = [1, 1, 0, -1, -1, -1, 0, 1];
+  const dy8 = [0, 1, 1, 1, 0, -1, -1, -1];
+
+  let sx = -1, sy = -1;
+  outer: for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      if (isEdge[y * w + x]) allEdgePixels.push(y * w + x);
+      if (isEdge[y * w + x]) {
+        let hasNonEdge = false;
+        for (let k = 0; k < 8; k++) {
+          const nx = x + dx8[k], ny = y + dy8[k];
+          if (nx < 0 || nx >= w || ny < 0 || ny >= h || !isEdge[ny * w + nx]) {
+            hasNonEdge = true;
+            break;
+          }
+        }
+        if (hasNonEdge) { sx = x; sy = y; break outer; }
+      }
     }
   }
-  if (allEdgePixels.length < 10) return [];
+  if (sx < 0) return [];
 
-  const segCount = Math.min(6, Math.max(3, Math.floor(allEdgePixels.length / 200)));
+  let cx = sx, cy = sy;
+  const maxSteps = w * h;
+  for (let step = 0; step < maxSteps; step++) {
+    const pos = cy * w + cx;
+    if (visited[pos]) {
+      if (cx === sx && cy === sy) break;
+      let found = false;
+      for (let k = 0; k < 8; k++) {
+        const nx = cx + dx8[k], ny = cy + dy8[k];
+        if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx] && !visited[ny * w + nx]) {
+          cx = nx; cy = ny; found = true; break;
+        }
+      }
+      if (!found) break;
+      continue;
+    }
+    visited[pos] = 1;
+    contour.push(pos);
+
+    let found = false;
+    for (let k = 0; k < 8; k++) {
+      const nx = cx + dx8[k], ny = cy + dy8[k];
+      if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx] && !visited[ny * w + nx]) {
+        let onBorder = false;
+        for (let j = 0; j < 8; j++) {
+          const bx = nx + dx8[j], by = ny + dy8[j];
+          if (bx < 0 || bx >= w || by < 0 || by >= h || !isEdge[by * w + bx]) {
+            onBorder = true; break;
+          }
+        }
+        if (onBorder) { cx = nx; cy = ny; found = true; break; }
+      }
+    }
+    if (!found) {
+      for (let k = 0; k < 8; k++) {
+        const nx = cx + dx8[k], ny = cy + dy8[k];
+        if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx] && !visited[ny * w + nx]) {
+          cx = nx; cy = ny; found = true; break;
+        }
+      }
+    }
+    if (!found) break;
+  }
+  return contour;
+}
+
+function generateEdgeSegments(isEdge, w, h) {
+  const contour = traceOuterContour(isEdge, w, h);
+
+  if (contour.length < 20) {
+    const allEdge = [];
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (isEdge[y * w + x]) allEdge.push(y * w + x);
+      }
+    }
+    if (allEdge.length < 10) return [];
+    const sampled = [];
+    const step = Math.max(1, Math.floor(allEdge.length / 500));
+    for (let i = 0; i < allEdge.length; i += step) sampled.push(allEdge[i]);
+    return [{
+      pixels: sampled,
+      boundaryPos: sampled,
+      samplePoints: sampled.filter((_, i) => i % 3 === 0),
+      touchesBorder: false,
+      isBand: true,
+      centerY: h / 2
+    }];
+  }
+
+  const sampled = [];
+  const sampleStep = Math.max(1, Math.floor(contour.length / 600));
+  for (let i = 0; i < contour.length; i += sampleStep) sampled.push(contour[i]);
+
+  const segCount = Math.min(5, Math.max(3, Math.floor(sampled.length / 40)));
+  const segSize = Math.ceil(sampled.length / segCount);
   const segments = [];
-  const segSize = Math.ceil(allEdgePixels.length / segCount);
-
-  allEdgePixels.sort((a, b) => {
-    const ay = Math.floor(a / w), by = Math.floor(b / w);
-    return ay - by || (a % w) - (b % w);
-  });
 
   for (let s = 0; s < segCount; s++) {
-    const start = s * segSize;
-    const end = Math.min(start + segSize, allEdgePixels.length);
-    const pxs = allEdgePixels.slice(start, end);
-    if (pxs.length > 5) {
-      segments.push({
-        pixels: pxs,
-        boundaryPos: pxs,
-        touchesBorder: false,
-        isBand: true
-      });
-    }
+    const pxs = sampled.slice(s * segSize, Math.min((s + 1) * segSize, sampled.length));
+    if (pxs.length < 3) continue;
+    let sy = 0;
+    for (const pos of pxs) sy += Math.floor(pos / w);
+    segments.push({
+      pixels: pxs,
+      boundaryPos: pxs,
+      samplePoints: pxs.filter((_, i) => i % 3 === 0),
+      touchesBorder: false,
+      isBand: true,
+      centerY: sy / pxs.length
+    });
   }
   return segments;
 }
