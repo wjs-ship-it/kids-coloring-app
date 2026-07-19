@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kids-coloring-v2';
+const CACHE_NAME = 'kids-coloring-v3';
 const WASM_CACHE = 'kids-coloring-wasm-v1';
 
 const CORE_ASSETS = [

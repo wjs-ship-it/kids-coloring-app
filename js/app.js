@@ -23,7 +23,7 @@ let edgeWorker = null;
 let creativeMode = null;
 let hasPhoto = false;
 let lineBoundary = null;
-let _maskCvs = null, _drawCvs = null, _compCvs = null, _baseCvs = null;
+let _maskCvs = null, _drawCvs = null, _baseCvs = null;
 let lineartOverlay = null;
 let activeClip = false;
 
@@ -412,13 +412,11 @@ function ensureOffscreen(cw, ch) {
   if (!_maskCvs) {
     _maskCvs = document.createElement('canvas');
     _drawCvs = document.createElement('canvas');
-    _compCvs = document.createElement('canvas');
     _baseCvs = document.createElement('canvas');
   }
   if (_maskCvs.width !== cw || _maskCvs.height !== ch) {
     _maskCvs.width = cw; _maskCvs.height = ch;
     _drawCvs.width = cw; _drawCvs.height = ch;
-    _compCvs.width = cw; _compCvs.height = ch;
     _baseCvs.width = cw; _baseCvs.height = ch;
   }
 }
@@ -562,21 +560,18 @@ function onMove(e) {
 
   if (activeClip) {
     const dc = _drawCvs.getContext('2d');
+    dc.globalCompositeOperation = 'source-over';
     dc.strokeStyle = currentColor;
     dc.lineWidth = brushSize;
     dc.beginPath(); dc.moveTo(lastX, lastY); dc.lineTo(p.x, p.y); dc.stroke();
 
-    const cc = _compCvs.getContext('2d');
-    cc.clearRect(0, 0, _compCvs.width, _compCvs.height);
-    cc.globalCompositeOperation = 'source-over';
-    cc.drawImage(_drawCvs, 0, 0);
-    cc.globalCompositeOperation = 'destination-in';
-    cc.drawImage(_maskCvs, 0, 0);
-    cc.globalCompositeOperation = 'source-over';
+    dc.globalCompositeOperation = 'destination-in';
+    dc.drawImage(_maskCvs, 0, 0);
+    dc.globalCompositeOperation = 'source-over';
 
     cx.clearRect(0, 0, DC.width, DC.height);
     cx.drawImage(_baseCvs, 0, 0);
-    cx.drawImage(_compCvs, 0, 0);
+    cx.drawImage(_drawCvs, 0, 0);
     if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
 
     lastX = p.x; lastY = p.y;
