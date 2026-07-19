@@ -22,6 +22,7 @@ let lastProcessTime = 0;
 let edgeWorker = null;
 let creativeMode = null;
 let hasPhoto = false;
+let lineBoundary = null;
 
 const DC = document.getElementById('drawing-canvas');
 const cx = DC.getContext('2d');
@@ -67,6 +68,7 @@ function goHome() {
   isProcessing = false;
   creativeMode = null;
   hasPhoto = false;
+  lineBoundary = null;
   showScreen('upload-screen');
   document.getElementById('photo-input').value = '';
 }
@@ -182,6 +184,7 @@ function buildTraceZone(part) {
 function beginActivity() {
   DC.width = window.innerWidth; DC.height = window.innerHeight;
   cx.lineCap = 'round'; cx.lineJoin = 'round';
+  fitLineartToCanvas();
   offX = Math.floor((DC.width - laW) / 2);
   offY = Math.floor((DC.height - laH) / 2);
   curPartIdx = 0;
@@ -278,6 +281,7 @@ function transitionToColor() {
   hidePartDone();
   appMode = 'color';
   historyStack = [];
+  buildLineBoundary();
   cx.fillStyle = '#fff'; cx.fillRect(0, 0, DC.width, DC.height);
   const ld = lineartData.data;
   cx.fillStyle = '#1e293b';
@@ -303,6 +307,7 @@ function beginColorDirect() {
   if (!lineartData) { beginActivity(); return; }
   DC.width = window.innerWidth; DC.height = window.innerHeight;
   cx.lineCap = 'round'; cx.lineJoin = 'round';
+  fitLineartToCanvas();
   offX = Math.floor((DC.width - laW) / 2);
   offY = Math.floor((DC.height - laH) / 2);
   creativeMode = null;
@@ -343,10 +348,85 @@ function rebuildPaletteForColors(colors) {
   rebuildPalette(colors, pickColor, toggleEraser);
 }
 
+function fitLineartToCanvas() {
+  const pad = 40;
+  const maxW = DC.width - pad;
+  const maxH = DC.height - pad * 4;
+  if (laW <= maxW && laH <= maxH) return;
+
+  const scale = Math.min(maxW / laW, maxH / laH);
+  const newW = Math.floor(laW * scale);
+  const newH = Math.floor(laH * scale);
+
+  const tmp = document.createElement('canvas');
+  tmp.width = laW; tmp.height = laH;
+  tmp.getContext('2d').putImageData(lineartData, 0, 0);
+
+  const sc = document.createElement('canvas');
+  sc.width = newW; sc.height = newH;
+  const sCtx = sc.getContext('2d');
+  sCtx.imageSmoothingEnabled = false;
+  sCtx.drawImage(tmp, 0, 0, newW, newH);
+
+  const sd = sCtx.getImageData(0, 0, newW, newH);
+  const d = sd.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = d[i] < 128 ? 40 : 255;
+    d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
+  }
+
+  lineartData = sd;
+  laW = newW;
+  laH = newH;
+  parts = detectParts(sd, newW, newH);
+}
+
+function buildLineBoundary() {
+  if (!lineartData) { lineBoundary = null; return; }
+  const cw = DC.width, ch = DC.height;
+  lineBoundary = new Uint8Array(cw * ch);
+  const ld = lineartData.data;
+  for (let y = 0; y < laH; y++) {
+    for (let x = 0; x < laW; x++) {
+      if (ld[(y * laW + x) * 4] < 128) {
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const bx = offX + x + dx, by = offY + y + dy;
+            if (bx >= 0 && bx < cw && by >= 0 && by < ch) {
+              lineBoundary[by * cw + bx] = 1;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 function buildColorMask(startX, startY) {
   const cw = DC.width, ch = DC.height;
-  const id = cx.getImageData(0, 0, cw, ch), d = id.data;
   if (startX < 0 || startX >= cw || startY < 0 || startY >= ch) return null;
+
+  if (lineBoundary) {
+    if (lineBoundary[startY * cw + startX]) return null;
+    const mask = new Uint8Array(cw * ch);
+    const queue = [[startX, startY]]; let front = 0;
+    mask[startY * cw + startX] = 1;
+    const maxPx = cw * ch * 0.4; let cnt = 0;
+    while (front < queue.length && cnt < maxPx) {
+      const [x, y] = queue[front++]; cnt++;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || nx >= cw || ny < 0 || ny >= ch) continue;
+        const np = ny * cw + nx;
+        if (mask[np] || lineBoundary[np]) continue;
+        mask[np] = 1;
+        queue.push([nx, ny]);
+      }
+    }
+    return mask;
+  }
+
+  const id = cx.getImageData(0, 0, cw, ch), d = id.data;
   const si = (startY * cw + startX) * 4;
   if (d[si] < 50 && d[si + 1] < 50 && d[si + 2] < 50) return null;
   const mask = new Uint8Array(cw * ch);
