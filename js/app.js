@@ -23,6 +23,9 @@ let edgeWorker = null;
 let creativeMode = null;
 let hasPhoto = false;
 let lineBoundary = null;
+let _maskCvs = null, _drawCvs = null, _compCvs = null, _baseCvs = null;
+let lineartOverlay = null;
+let activeClip = false;
 
 const DC = document.getElementById('drawing-canvas');
 const cx = DC.getContext('2d');
@@ -69,6 +72,8 @@ function goHome() {
   creativeMode = null;
   hasPhoto = false;
   lineBoundary = null;
+  lineartOverlay = null;
+  activeClip = false;
   showScreen('upload-screen');
   document.getElementById('photo-input').value = '';
 }
@@ -282,6 +287,7 @@ function transitionToColor() {
   appMode = 'color';
   historyStack = [];
   buildLineBoundary();
+  createLineartOverlay();
   cx.fillStyle = '#fff'; cx.fillRect(0, 0, DC.width, DC.height);
   const ld = lineartData.data;
   cx.fillStyle = '#1e293b';
@@ -402,6 +408,42 @@ function buildLineBoundary() {
   }
 }
 
+function ensureOffscreen(cw, ch) {
+  if (!_maskCvs) {
+    _maskCvs = document.createElement('canvas');
+    _drawCvs = document.createElement('canvas');
+    _compCvs = document.createElement('canvas');
+    _baseCvs = document.createElement('canvas');
+  }
+  if (_maskCvs.width !== cw || _maskCvs.height !== ch) {
+    _maskCvs.width = cw; _maskCvs.height = ch;
+    _drawCvs.width = cw; _drawCvs.height = ch;
+    _compCvs.width = cw; _compCvs.height = ch;
+    _baseCvs.width = cw; _baseCvs.height = ch;
+  }
+}
+
+function createLineartOverlay() {
+  if (!lineartData) { lineartOverlay = null; return; }
+  const oc = document.createElement('canvas');
+  oc.width = DC.width; oc.height = DC.height;
+  const tmp = document.createElement('canvas');
+  tmp.width = laW; tmp.height = laH;
+  const tc = tmp.getContext('2d');
+  const id = tc.createImageData(laW, laH);
+  const ld = lineartData.data;
+  const dd = id.data;
+  for (let i = 0; i < laW * laH; i++) {
+    if (ld[i * 4] < 128) {
+      const j = i * 4;
+      dd[j] = 30; dd[j + 1] = 41; dd[j + 2] = 59; dd[j + 3] = 255;
+    }
+  }
+  tc.putImageData(id, 0, 0);
+  oc.getContext('2d').drawImage(tmp, offX, offY);
+  lineartOverlay = oc;
+}
+
 function buildColorMask(startX, startY) {
   const cw = DC.width, ch = DC.height;
   if (startX < 0 || startX >= cw || startY < 0 || startY >= ch) return null;
@@ -468,6 +510,29 @@ function onStart(e) {
   if (appMode === 'color' && !isEraser) {
     colorMask = buildColorMask(px, py);
     if (!colorMask) return;
+
+    const cw = DC.width, ch = DC.height;
+    ensureOffscreen(cw, ch);
+
+    const mc = _maskCvs.getContext('2d');
+    mc.clearRect(0, 0, cw, ch);
+    const mId = mc.createImageData(cw, ch);
+    const md = mId.data;
+    for (let i = 0; i < colorMask.length; i++) {
+      if (colorMask[i]) {
+        const j = i * 4;
+        md[j] = 255; md[j + 1] = 255; md[j + 2] = 255; md[j + 3] = 255;
+      }
+    }
+    mc.putImageData(mId, 0, 0);
+
+    const dc = _drawCvs.getContext('2d');
+    dc.clearRect(0, 0, cw, ch);
+    dc.lineCap = 'round'; dc.lineJoin = 'round';
+
+    _baseCvs.getContext('2d').drawImage(DC, 0, 0);
+
+    activeClip = true;
     isDrawing = true; lastX = p.x; lastY = p.y;
     return;
   }
@@ -495,10 +560,27 @@ function onMove(e) {
     return;
   }
 
-  if (appMode === 'color' && colorMask) {
-    if (px < 0 || px >= DC.width || py < 0 || py >= DC.height || !colorMask[py * DC.width + px]) {
-      lastX = p.x; lastY = p.y; return;
-    }
+  if (activeClip) {
+    const dc = _drawCvs.getContext('2d');
+    dc.strokeStyle = currentColor;
+    dc.lineWidth = brushSize;
+    dc.beginPath(); dc.moveTo(lastX, lastY); dc.lineTo(p.x, p.y); dc.stroke();
+
+    const cc = _compCvs.getContext('2d');
+    cc.clearRect(0, 0, _compCvs.width, _compCvs.height);
+    cc.globalCompositeOperation = 'source-over';
+    cc.drawImage(_drawCvs, 0, 0);
+    cc.globalCompositeOperation = 'destination-in';
+    cc.drawImage(_maskCvs, 0, 0);
+    cc.globalCompositeOperation = 'source-over';
+
+    cx.clearRect(0, 0, DC.width, DC.height);
+    cx.drawImage(_baseCvs, 0, 0);
+    cx.drawImage(_compCvs, 0, 0);
+    if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
+
+    lastX = p.x; lastY = p.y;
+    return;
   }
 
   if (creativeMode && creativeMode.drawStroke && !isEraser) {
@@ -518,6 +600,7 @@ function onMove(e) {
 function onEnd() {
   if (!isDrawing) return;
   isDrawing = false;
+  activeClip = false;
   colorMask = null;
   saveState();
   if (appMode === 'trace') checkTraceCompletion();
