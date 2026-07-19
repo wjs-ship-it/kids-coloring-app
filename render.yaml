@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: kids-coloring-app
+    runtime: static
+    buildCommand: echo "static site - no build needed"
+    staticPublishPath: .
+    headers:
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=86400
