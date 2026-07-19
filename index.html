@@ -116,6 +116,15 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 .preset-card:active{transform:scale(.9)}
 .preset-card .preset-emoji{font-size:42px}
 .preset-card .preset-name{font-size:13px;font-weight:800;color:#78350f}
+
+/* Detail slider */
+.detail-slider-wrap{width:100%;max-width:300px;display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(255,255,255,.85);padding:14px 20px;border-radius:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.detail-label{font-size:15px;font-weight:800;color:#667eea}
+.detail-range{-webkit-appearance:none;appearance:none;width:100%;height:10px;border-radius:5px;background:linear-gradient(90deg,#e2e8f0,#667eea);outline:none}
+.detail-range::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:3px solid #667eea;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer}
+.detail-range::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:3px solid #667eea;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer}
+.detail-ends{display:flex;justify-content:space-between;width:100%;font-size:12px;font-weight:600;color:#94a3b8}
+.detail-slider-wrap.processing{opacity:.5;pointer-events:none}
 </style>
 </head>
 <body>
@@ -150,6 +159,11 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 <div id="preview-screen" class="screen">
   <div class="preview-box">
     <img id="preview-img"><div class="preview-arrow">→</div><canvas id="lineart-preview"></canvas>
+  </div>
+  <div class="detail-slider-wrap" id="detail-slider-wrap">
+    <label class="detail-label">🔍 디테일 조절</label>
+    <input type="range" id="detail-slider" min="0" max="100" value="50" class="detail-range">
+    <div class="detail-ends"><span>부드럽게</span><span>선명하게</span></div>
   </div>
   <button class="start-btn" id="btn-begin"><span class="si">▶️</span>시작!</button>
   <button class="demo-pill" id="btn-other-photo" style="background:rgba(100,100,200,.15);color:#667eea">↩️ 다른 사진</button>

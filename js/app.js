@@ -4,6 +4,7 @@ import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonB
 import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showScreen, setLoadingText } from './ui-utils.js';
 import { PRESETS, renderPreset } from './presets.js';
 import { detectParts } from './edge-detect.js';
+import { convertWithAI } from './ai-bridge.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -23,6 +24,9 @@ let edgeWorker = null;
 let creativeMode = null;
 let hasPhoto = false;
 let edgeMode = 'object';
+let detailLevel = 50;
+let _sourceImgData = null, _sourceW = 0, _sourceH = 0;
+let detailTimer = null;
 let lineBoundary = null;
 let _maskCvs = null, _drawCvs = null, _baseCvs = null;
 let lineartOverlay = null;
@@ -92,8 +96,18 @@ async function processPhoto(blob) {
   lastProcessTime = now;
   isProcessing = true;
   showScreen('processing-screen');
-  setLoadingText('배경을 지우는 중... 🧹');
+  setLoadingText('AI 요정이 그림을 그리고 있어요... ✨');
 
+  try {
+    const aiResult = await convertWithAI(blob);
+    if (aiResult) {
+      const img = await createImageBitmap(aiResult);
+      convertToLineart(img);
+      return;
+    }
+  } catch { /* fall through to local */ }
+
+  setLoadingText('배경을 지우는 중... 🧹');
   try {
     const cleanBlob = await removeBackground(blob);
     const img = await createImageBitmap(cleanBlob);
@@ -107,6 +121,7 @@ async function processPhoto(blob) {
 }
 
 
+
 function convertToLineart(img) {
   const MAX = 800;
   let w = img.width, h = img.height;
@@ -118,12 +133,25 @@ function convertToLineart(img) {
   sx.drawImage(img, 0, 0, w, h);
   const imageData = sx.getImageData(0, 0, w, h);
 
+  _sourceImgData = imageData.data.slice();
+  _sourceW = w;
+  _sourceH = h;
+  detailLevel = 50;
+  document.getElementById('detail-slider').value = 50;
+  document.getElementById('detail-slider-wrap').style.display = '';
+
+  runEdgeWorker(imageData.data, w, h, true);
+}
+
+function runEdgeWorker(rawData, w, h, isFirstRun) {
   if (edgeWorker) edgeWorker.terminate();
   edgeWorker = new Worker('./js/edge-worker.js', { type: 'module' });
 
+  const sliderWrap = document.getElementById('detail-slider-wrap');
+
   edgeWorker.onmessage = (e) => {
     if (e.data.type === 'progress') {
-      setLoadingText(e.data.message);
+      if (isFirstRun) setLoadingText(e.data.message);
       return;
     }
     if (e.data.type === 'result') {
@@ -131,12 +159,16 @@ function convertToLineart(img) {
       parts = e.data.parts;
       laW = e.data.w; laH = e.data.h;
 
-      document.getElementById('preview-img').src = SC.toDataURL();
+      if (isFirstRun) {
+        document.getElementById('preview-img').src = SC.toDataURL();
+      }
       const lp = document.getElementById('lineart-preview');
       lp.width = laW; lp.height = laH;
       lp.getContext('2d').putImageData(lineartData, 0, 0);
-      showScreen('preview-screen');
+
+      if (isFirstRun) showScreen('preview-screen');
       isProcessing = false;
+      sliderWrap.classList.remove('processing');
       edgeWorker.terminate();
       edgeWorker = null;
     }
@@ -144,12 +176,27 @@ function convertToLineart(img) {
 
   edgeWorker.onerror = () => {
     isProcessing = false;
+    sliderWrap.classList.remove('processing');
     edgeWorker = null;
-    alert('변환에 실패했어요. 다시 시도해주세요!');
-    goHome();
+    if (isFirstRun) {
+      alert('변환에 실패했어요. 다시 시도해주세요!');
+      goHome();
+    }
   };
 
-  edgeWorker.postMessage({ imageData: imageData.data, w, h, mode: edgeMode });
+  edgeWorker.postMessage({ imageData: rawData, w, h, mode: edgeMode, detail: detailLevel });
+}
+
+function onDetailChange(val) {
+  detailLevel = parseInt(val, 10);
+  if (!_sourceImgData) return;
+  if (detailTimer) clearTimeout(detailTimer);
+  const sliderWrap = document.getElementById('detail-slider-wrap');
+  sliderWrap.classList.add('processing');
+  detailTimer = setTimeout(() => {
+    runEdgeWorker(_sourceImgData.slice(), _sourceW, _sourceH, false);
+    detailTimer = null;
+  }, 200);
 }
 
 function snapToLine(tx, ty, part) {
@@ -720,6 +767,10 @@ window.addEventListener('resize', () => {
     cx.lineCap = 'round'; cx.lineJoin = 'round';
     resizeTimer = null;
   }, 250);
+});
+
+document.getElementById('detail-slider').addEventListener('input', (e) => {
+  onDetailChange(e.target.value);
 });
 
 buildPalette();

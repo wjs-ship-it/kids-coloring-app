@@ -153,12 +153,12 @@ export function cannyEdge(gray, w, h, thHigh = 0.12, thLow = 0.04) {
   return result;
 }
 
-export function dualPassEdge(gray, w, h) {
-  const outer = cannyEdge(gray, w, h, 0.15, 0.06);
-  const inner = cannyEdge(gray, w, h, 0.08, 0.03);
+export function dualPassEdge(gray, w, h, outerHi = 0.15, outerLo = 0.06, innerHi = 0.06, innerLo = 0.02, roiScale = 0.4) {
+  const outer = cannyEdge(gray, w, h, outerHi, outerLo);
+  const inner = cannyEdge(gray, w, h, innerHi, innerLo);
 
   const cx = Math.floor(w / 2), cy = Math.floor(h / 2);
-  const rw = Math.floor(w * 0.35), rh = Math.floor(h * 0.35);
+  const rw = Math.floor(w * roiScale), rh = Math.floor(h * roiScale);
   const result = new Uint8Array(w * h);
 
   for (let y = 0; y < h; y++) {
@@ -390,7 +390,7 @@ export function detectParts(lineartData, w, h) {
   return meaningful;
 }
 
-export function runFullPipeline(imageData, w, h, mode = 'object') {
+export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
   const px = imageData;
   const gray = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) {
@@ -398,24 +398,38 @@ export function runFullPipeline(imageData, w, h, mode = 'object') {
     gray[i] = 0.299 * px[j] + 0.587 * px[j + 1] + 0.114 * px[j + 2];
   }
 
+  const t = detail / 100;
+
   let smoothed;
   if (mode === 'portrait') {
+    const sigC = 120 - t * 60;
+    const sigS = 120 - t * 60;
     const s1 = applyCLAHE(gray, w, h, 8, 1.5);
-    const s2 = bilateralFilter(s1, w, h, 13, 120, 120);
-    const s3 = bilateralFilter(s2, w, h, 13, 120, 120);
-    smoothed = bilateralFilter(s3, w, h, 13, 120, 120);
+    const s2 = bilateralFilter(s1, w, h, 13, sigC, sigS);
+    smoothed = bilateralFilter(s2, w, h, 13, sigC, sigS);
   } else {
     const s1 = applyCLAHE(gray, w, h);
     const s2 = bilateralFilter(s1, w, h);
     smoothed = bilateralFilter(s2, w, h);
   }
 
-  const thHi = mode === 'portrait' ? 0.25 : 0.15;
-  const thLo = mode === 'portrait' ? 0.12 : 0.06;
-  const step6 = cannyEdge(smoothed, w, h, thHi, thLo);
+  const baseHi = mode === 'portrait' ? 0.20 : 0.15;
+  const baseLo = mode === 'portrait' ? 0.08 : 0.06;
+  const thHi = baseHi * (1.4 - t * 0.8);
+  const thLo = baseLo * (1.4 - t * 0.8);
+
+  let step6;
+  if (mode === 'portrait') {
+    const innerHi = thHi * 0.4;
+    const innerLo = thLo * 0.4;
+    step6 = dualPassEdge(smoothed, w, h, thHi, thLo, innerHi, innerLo, 0.4);
+  } else {
+    step6 = cannyEdge(smoothed, w, h, thHi, thLo);
+  }
+
   const step7 = adaptiveClose(step6, w, h);
-  const minArea = mode === 'portrait' ? 80 : 30;
-  const step8 = removeSmallComponents(step7, w, h, minArea);
+  const minArea = mode === 'portrait' ? (80 - t * 50) : 30;
+  const step8 = removeSmallComponents(step7, w, h, Math.max(10, minArea));
   const step9 = normalizeLineWidth(step8, w, h, mode === 'portrait' ? 3 : 2);
 
   const { leakCount } = validateFloodFillIntegrity(step9, w, h);
