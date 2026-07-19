@@ -324,8 +324,10 @@ function beginActivity() {
   offX = Math.floor((DC.width - laW) / 2);
   offY = Math.floor((DC.height - laH) / 2);
 
+  parts = detectParts(lineartData, laW, laH);
+
   if (!parts || parts.length === 0) {
-    parts = detectParts(lineartData, laW, laH);
+    parts = buildEmergencyParts(lineartData, laW, laH);
   }
 
   curPartIdx = 0;
@@ -336,6 +338,39 @@ function beginActivity() {
   drawTraceBackground();
   showCurrentPart();
   showScreen('canvas-screen');
+}
+
+function buildEmergencyParts(ld, w, h) {
+  const edgePixels = [];
+  const data = ld.data;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (data[(y * w + x) * 4] < 128) edgePixels.push(y * w + x);
+    }
+  }
+  if (edgePixels.length < 10) return [];
+
+  edgePixels.sort((a, b) => Math.floor(a / w) - Math.floor(b / w));
+  const segCount = Math.min(5, Math.max(2, Math.floor(edgePixels.length / 300)));
+  const segSize = Math.ceil(edgePixels.length / segCount);
+  const result = [];
+
+  for (let s = 0; s < segCount; s++) {
+    const pxs = edgePixels.slice(s * segSize, Math.min((s + 1) * segSize, edgePixels.length));
+    if (pxs.length > 5) {
+      let sy = 0;
+      for (const pos of pxs) sy += Math.floor(pos / w);
+      result.push({
+        pixels: pxs,
+        boundaryPos: pxs,
+        samplePoints: pxs.filter((_, i) => i % 5 === 0),
+        touchesBorder: false,
+        isBand: true,
+        centerY: sy / pxs.length
+      });
+    }
+  }
+  return result;
 }
 
 function drawTraceBackground() {

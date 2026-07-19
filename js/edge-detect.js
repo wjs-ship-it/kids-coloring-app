@@ -483,30 +483,18 @@ export function detectParts(lineartData, w, h) {
   }
 
   let meaningful = regions.filter(r => !r.touchesBorder && r.pixels.length > 50);
-  if (meaningful.length < 2) {
-    const smaller = regions.filter(r => !r.touchesBorder && r.pixels.length > 20);
-    if (smaller.length >= 2) {
-      meaningful = smaller;
-    } else {
-      meaningful = [];
-      const bandCount = 4, bandH = Math.floor(h / bandCount);
-      for (let b = 0; b < bandCount; b++) {
-        const pxs = [];
-        const y0 = b * bandH, y1 = Math.min((b + 1) * bandH, h);
-        for (let y = y0; y < y1; y++) {
-          for (let x = 0; x < w; x++) {
-            if (isEdge[y * w + x]) pxs.push(x + y * w);
-          }
-        }
-        if (pxs.length > 30) meaningful.push({ pixels: pxs, touchesBorder: false, isBand: true });
-      }
-    }
+  if (meaningful.length < 1) {
+    meaningful = regions.filter(r => !r.touchesBorder && r.pixels.length > 10);
+  }
+
+  if (meaningful.length < 1) {
+    meaningful = generateEdgeSegments(isEdge, w, h);
   }
 
   for (const reg of meaningful) {
     if (reg.isBand) {
       reg.boundaryPos = reg.pixels;
-    } else {
+    } else if (!reg.boundaryPos) {
       const boundary = new Set();
       for (const pos of reg.pixels) {
         const x = pos % w, y = Math.floor(pos / w);
@@ -517,9 +505,12 @@ export function detectParts(lineartData, w, h) {
       }
       reg.boundaryPos = [...boundary];
     }
+    if (!reg.boundaryPos || reg.boundaryPos.length === 0) {
+      reg.boundaryPos = reg.pixels.slice(0, Math.min(reg.pixels.length, 500));
+    }
     let sy = 0;
     for (const pos of reg.boundaryPos) sy += Math.floor(pos / w);
-    reg.centerY = sy / reg.boundaryPos.length;
+    reg.centerY = reg.boundaryPos.length > 0 ? sy / reg.boundaryPos.length : 0;
 
     reg.samplePoints = [];
     for (let i = 0; i < reg.boundaryPos.length; i += 5) reg.samplePoints.push(reg.boundaryPos[i]);
@@ -528,6 +519,40 @@ export function detectParts(lineartData, w, h) {
   meaningful.sort((a, b) => a.centerY - b.centerY);
   if (meaningful.length > 8) meaningful = meaningful.slice(0, 8);
   return meaningful;
+}
+
+function generateEdgeSegments(isEdge, w, h) {
+  const allEdgePixels = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (isEdge[y * w + x]) allEdgePixels.push(y * w + x);
+    }
+  }
+  if (allEdgePixels.length < 10) return [];
+
+  const segCount = Math.min(6, Math.max(3, Math.floor(allEdgePixels.length / 200)));
+  const segments = [];
+  const segSize = Math.ceil(allEdgePixels.length / segCount);
+
+  allEdgePixels.sort((a, b) => {
+    const ay = Math.floor(a / w), by = Math.floor(b / w);
+    return ay - by || (a % w) - (b % w);
+  });
+
+  for (let s = 0; s < segCount; s++) {
+    const start = s * segSize;
+    const end = Math.min(start + segSize, allEdgePixels.length);
+    const pxs = allEdgePixels.slice(start, end);
+    if (pxs.length > 5) {
+      segments.push({
+        pixels: pxs,
+        boundaryPos: pxs,
+        touchesBorder: false,
+        isBand: true
+      });
+    }
+  }
+  return segments;
 }
 
 export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
