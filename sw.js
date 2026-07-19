@@ -1,4 +1,6 @@
-const CACHE_NAME = 'kids-coloring-v1';
+const CACHE_NAME = 'kids-coloring-v2';
+const WASM_CACHE = 'kids-coloring-wasm-v1';
+
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -12,9 +14,18 @@ const CORE_ASSETS = [
   './js/demo.js',
   './js/ai-bridge.js',
   './js/presets.js',
+  './js/particles.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
+
+const WASM_CDN_ORIGINS = [
+  'cdn.jsdelivr.net'
+];
+
+function isWasmAsset(url) {
+  return WASM_CDN_ORIGINS.some((origin) => url.hostname.includes(origin));
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -24,9 +35,10 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  const keep = new Set([CACHE_NAME, WASM_CACHE]);
   event.waitUntil(
     caches.keys().then((names) =>
-      Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
+      Promise.all(names.filter((n) => !keep.has(n)).map((n) => caches.delete(n)))
     )
   );
   self.clients.claim();
@@ -34,6 +46,25 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+
+  if (isWasmAsset(url)) {
+    event.respondWith(
+      caches.open(WASM_CACHE).then((cache) =>
+        cache.match(event.request).then((cached) => {
+          if (cached) return cached;
+          return fetch(event.request).then((response) => {
+            if (response && response.status === 200) {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          });
+        })
+      )
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
