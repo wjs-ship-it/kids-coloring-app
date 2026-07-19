@@ -2,6 +2,8 @@ import { removeBackground } from './bg-remove.js';
 import { createDemoCatBlob } from './demo.js';
 import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonBg, rebuildPalette } from './creative.js';
 import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showScreen, setLoadingText } from './ui-utils.js';
+import { PRESETS, renderPreset } from './presets.js';
+import { detectParts } from './edge-detect.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -498,6 +500,33 @@ document.querySelectorAll('.mode-card').forEach(card => {
   });
 });
 
+document.getElementById('btn-presets').addEventListener('click', () => showScreen('preset-screen'));
+document.getElementById('btn-preset-back').addEventListener('click', () => showScreen('upload-screen'));
+
+function buildPresetGrid() {
+  const grid = document.getElementById('preset-grid');
+  PRESETS.forEach((preset, idx) => {
+    const card = document.createElement('button');
+    card.className = 'preset-card';
+    card.innerHTML = `<span class="preset-emoji">${preset.emoji}</span><span class="preset-name">${preset.name}</span>`;
+    card.addEventListener('click', () => loadPreset(idx));
+    grid.appendChild(card);
+  });
+}
+
+function loadPreset(idx) {
+  const result = renderPreset(PRESETS[idx], SC, sx);
+  lineartData = result.lineartData;
+  laW = result.size; laH = result.size;
+  parts = detectParts(result.outData, result.size, result.size);
+  const lp = document.getElementById('lineart-preview');
+  lp.width = result.size; lp.height = result.size;
+  lp.getContext('2d').putImageData(lineartData, 0, 0);
+  document.getElementById('preview-img').src = SC.toDataURL();
+  hasPhoto = true;
+  showScreen('mode-screen');
+}
+
 DC.addEventListener('touchstart', onStart, { passive: false });
 DC.addEventListener('mousedown', onStart);
 DC.addEventListener('touchmove', onMove, { passive: false });
@@ -521,3 +550,4 @@ window.addEventListener('resize', () => {
 });
 
 buildPalette();
+buildPresetGrid();

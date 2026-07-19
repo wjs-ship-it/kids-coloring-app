@@ -108,6 +108,14 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 .mode-card.full-width{grid-column:1/-1}
 .mode-back{padding:12px 28px;border-radius:50px;background:rgba(255,255,255,.25);color:#fff;font-size:15px;font-weight:700;margin-top:8px}
 .mode-back:active{transform:scale(.92)}
+
+/* Preset selection */
+#preset-screen{background:linear-gradient(160deg,#fbbf24 0%,#f97316 100%);gap:16px;padding:24px}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:320px;width:100%}
+.preset-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 4px 16px rgba(0,0,0,.08);transition:transform .15s}
+.preset-card:active{transform:scale(.9)}
+.preset-card .preset-emoji{font-size:42px}
+.preset-card .preset-name{font-size:13px;font-weight:800;color:#78350f}
 </style>
 </head>
 <body>
@@ -120,7 +128,14 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
   </button>
   <input type="file" id="photo-input" accept="image/*" capture="environment">
   <button class="demo-pill" id="btn-demo">🐱 체험해보기</button>
-  <button class="demo-pill" id="btn-creative" style="background:rgba(255,255,255,.5);color:#4c1d95">🎨 창의적 그리기</button>
+  <button class="demo-pill" id="btn-presets" style="background:rgba(255,255,255,.5);color:#78350f">🖼️ 그림 고르기</button>
+  <button class="demo-pill" id="btn-creative" style="background:rgba(255,255,255,.3);color:#4c1d95">✨ 자유롭게 놀기</button>
+</div>
+
+<div id="preset-screen" class="screen">
+  <div class="app-title" style="color:#fff;font-size:28px">그림을 골라봐! 🖼️</div>
+  <div class="preset-grid" id="preset-grid"></div>
+  <button class="mode-back" id="btn-preset-back">↩️ 돌아가기</button>
 </div>
 
 <div id="processing-screen" class="screen">
@@ -167,5 +182,6 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 <div class="save-toast" id="save-toast">💾 저장 완료!</div>
 
 <script type="module" src="./js/app.js"></script>
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js',{scope:'./'});</script>
 </body>
 </html>
