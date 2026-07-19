@@ -102,7 +102,7 @@ async function processPhoto(blob) {
     const aiResult = await convertWithAI(blob);
     if (aiResult) {
       const img = await createImageBitmap(aiResult);
-      convertToLineart(img);
+      applyAILineart(img);
       return;
     }
   } catch { /* fall through to local */ }
@@ -120,7 +120,36 @@ async function processPhoto(blob) {
   }
 }
 
+function applyAILineart(img) {
+  const MAX = 800;
+  let w = img.width, h = img.height;
+  if (w > MAX || h > MAX) {
+    const r = Math.min(MAX / w, MAX / h);
+    w = Math.floor(w * r); h = Math.floor(h * r);
+  }
+  SC.width = w; SC.height = h;
+  sx.drawImage(img, 0, 0, w, h);
+  const imgData = sx.getImageData(0, 0, w, h);
+  const d = imgData.data;
 
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    const v = gray < 128 ? 40 : 255;
+    d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
+  }
+
+  lineartData = imgData;
+  laW = w; laH = h;
+  parts = detectParts(imgData, w, h);
+
+  document.getElementById('preview-img').src = SC.toDataURL();
+  const lp = document.getElementById('lineart-preview');
+  lp.width = w; lp.height = h;
+  lp.getContext('2d').putImageData(lineartData, 0, 0);
+  showScreen('preview-screen');
+  isProcessing = false;
+  document.getElementById('detail-slider-wrap').style.display = 'none';
+}
 
 function convertToLineart(img) {
   const MAX = 800;
