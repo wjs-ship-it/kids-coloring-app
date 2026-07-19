@@ -10,7 +10,7 @@ const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
 const SNAP_RADIUS = 30;
 const TRACE_TOLERANCE = 40;
-const COMPLETE_THRESHOLD = 0.88;
+const COMPLETE_THRESHOLD = 0.90;
 
 let appMode = 'trace', parts = [], curPartIdx = 0;
 let traceZone = null, colorMask = null;
@@ -444,12 +444,14 @@ function checkTraceCompletion() {
   const part = parts[curPartIdx];
   const id = cx.getImageData(0, 0, DC.width, DC.height), d = id.data;
   let covered = 0;
+  const R = 8;
   for (const pos of part.samplePoints) {
     const x = pos % laW + offX, y = Math.floor(pos / laW) + offY;
     if (x < 0 || x >= DC.width || y < 0 || y >= DC.height) continue;
     let found = false;
-    for (let dy = -15; dy <= 15 && !found; dy++) {
-      for (let dx = -15; dx <= 15 && !found; dx++) {
+    for (let dy = -R; dy <= R && !found; dy++) {
+      for (let dx = -R; dx <= R && !found; dx++) {
+        if (dx * dx + dy * dy > R * R) continue;
         const px = x + dx, py = y + dy;
         if (px >= 0 && px < DC.width && py >= 0 && py < DC.height) {
           const idx = (py * DC.width + px) * 4;
@@ -753,6 +755,11 @@ function onMove(e) {
     cx.strokeStyle = currentColor;
     cx.lineWidth = brushSize;
     cx.beginPath(); cx.moveTo(lastX, lastY); cx.lineTo(snap.x, snap.y); cx.stroke();
+    const now = Date.now();
+    if (now - particleThrottle > 60) {
+      spawnParticles(snap.x, snap.y, 4 + Math.floor(Math.random() * 4));
+      particleThrottle = now;
+    }
     lastX = snap.x; lastY = snap.y;
     return;
   }
@@ -800,6 +807,64 @@ function onEnd() {
   if (appMode === 'trace') checkTraceCompletion();
 }
 
+// --- Particle Effect System ---
+const PARTICLE_COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#ff6b9d','#00d2ff'];
+const particles = [];
+let particleAnimId = null;
+
+class Particle {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 5;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed - 2;
+    this.size = 3 + Math.random() * 5;
+    this.color = PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
+    this.life = 1.0;
+    this.decay = 0.02 + Math.random() * 0.03;
+    this.gravity = 0.12;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += this.gravity;
+    this.life -= this.decay;
+    this.size *= 0.97;
+  }
+  draw(ctx) {
+    if (this.life <= 0 || this.size < 0.5) return;
+    ctx.save();
+    ctx.globalAlpha = this.life;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function spawnParticles(x, y, count) {
+  for (let i = 0; i < count; i++) particles.push(new Particle(x, y));
+  if (!particleAnimId) particleLoop();
+}
+
+function particleLoop() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    particles[i].update();
+    particles[i].draw(cx);
+    if (particles[i].life <= 0 || particles[i].size < 0.5) particles.splice(i, 1);
+  }
+  if (particles.length > 0) {
+    particleAnimId = requestAnimationFrame(particleLoop);
+  } else {
+    particleAnimId = null;
+  }
+}
+
+let particleThrottle = 0;
+// --- End Particle System ---
 
 function saveState() {
   historyStack.push(cx.getImageData(0, 0, DC.width, DC.height));
