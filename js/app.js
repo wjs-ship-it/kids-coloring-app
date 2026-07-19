@@ -144,15 +144,15 @@ function applyAILineart(img) {
     const j = i * 4;
     const gray = 0.299 * d[j] + 0.587 * d[j + 1] + 0.114 * d[j + 2];
     if (isWhiteOnBlack) {
-      binEdges[i] = gray >= 50 ? 1 : 0;
+      binEdges[i] = gray >= 60 ? 1 : 0;
     } else {
-      binEdges[i] = gray < 200 ? 1 : 0;
+      binEdges[i] = gray < 190 ? 1 : 0;
     }
   }
 
-  const dilated = dilate(binEdges, w, h, 2);
-  const fused = fuseLines(dilated, w, h, 2, 0.12);
-  const thick = normalizeLineWidth(fused, w, h, 4);
+  const dilated = dilate(binEdges, w, h, 1);
+  const fused = fuseLines(dilated, w, h, 1, 0.18);
+  const thick = normalizeLineWidth(fused, w, h, 3);
 
   for (let i = 0; i < w * h; i++) {
     const v = thick[i] ? 40 : 255;
@@ -323,6 +323,11 @@ function beginActivity() {
   fitLineartToCanvas();
   offX = Math.floor((DC.width - laW) / 2);
   offY = Math.floor((DC.height - laH) / 2);
+
+  if (!parts || parts.length === 0) {
+    parts = detectParts(lineartData, laW, laH);
+  }
+
   curPartIdx = 0;
   appMode = 'trace';
   historyStack = [];

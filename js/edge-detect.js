@@ -482,19 +482,24 @@ export function detectParts(lineartData, w, h) {
     }
   }
 
-  let meaningful = regions.filter(r => !r.touchesBorder && r.pixels.length > 150);
+  let meaningful = regions.filter(r => !r.touchesBorder && r.pixels.length > 50);
   if (meaningful.length < 2) {
-    meaningful = [];
-    const bandCount = 4, bandH = Math.floor(h / bandCount);
-    for (let b = 0; b < bandCount; b++) {
-      const pxs = [];
-      const y0 = b * bandH, y1 = Math.min((b + 1) * bandH, h);
-      for (let y = y0; y < y1; y++) {
-        for (let x = 0; x < w; x++) {
-          if (isEdge[y * w + x]) pxs.push(x + y * w);
+    const smaller = regions.filter(r => !r.touchesBorder && r.pixels.length > 20);
+    if (smaller.length >= 2) {
+      meaningful = smaller;
+    } else {
+      meaningful = [];
+      const bandCount = 4, bandH = Math.floor(h / bandCount);
+      for (let b = 0; b < bandCount; b++) {
+        const pxs = [];
+        const y0 = b * bandH, y1 = Math.min((b + 1) * bandH, h);
+        for (let y = y0; y < y1; y++) {
+          for (let x = 0; x < w; x++) {
+            if (isEdge[y * w + x]) pxs.push(x + y * w);
+          }
         }
+        if (pxs.length > 30) meaningful.push({ pixels: pxs, touchesBorder: false, isBand: true });
       }
-      if (pxs.length > 50) meaningful.push({ pixels: pxs, touchesBorder: false, isBand: true });
     }
   }
 
@@ -562,21 +567,21 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
     rawEdge = cannyEdge(smoothed, w, h, thHi, thLo);
   }
 
-  const d1 = dilate(rawEdge, w, h, 2);
-  const fused = fuseLines(d1, w, h, 3, 0.12);
-  const bridged = bridgeEndpoints(fused, w, h, 18);
-  const closed = morphClose(bridged, w, h, 5);
-  const bridged2 = bridgeEndpoints(closed, w, h, 12);
+  const d1 = dilate(rawEdge, w, h, 1);
+  const fused = fuseLines(d1, w, h, 2, 0.20);
+  const bridged = bridgeEndpoints(fused, w, h, 15);
+  const closed = morphClose(bridged, w, h, 3);
+  const bridged2 = bridgeEndpoints(closed, w, h, 10);
 
-  const minArea = mode === 'portrait' ? (60 - t * 40) : 20;
-  const cleaned = removeSmallComponents(bridged2, w, h, Math.max(8, minArea));
-  let final = normalizeLineWidth(cleaned, w, h, 4);
+  const minArea = mode === 'portrait' ? (50 - t * 30) : 15;
+  const cleaned = removeSmallComponents(bridged2, w, h, Math.max(6, minArea));
+  let final = normalizeLineWidth(cleaned, w, h, 3);
 
   const { leakCount } = validateFloodFillIntegrity(final, w, h);
   if (leakCount > 0) {
-    const d2 = dilate(cleaned, w, h, 3);
-    const fused2 = fuseLines(d2, w, h, 2, 0.10);
-    final = normalizeLineWidth(fused2, w, h, 4);
+    const d2 = dilate(cleaned, w, h, 2);
+    const fused2 = fuseLines(d2, w, h, 1, 0.15);
+    final = normalizeLineWidth(fused2, w, h, 3);
   }
 
   const outData = new Uint8ClampedArray(w * h * 4);
