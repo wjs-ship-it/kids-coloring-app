@@ -3,7 +3,7 @@ import { createDemoCatBlob } from './demo.js';
 import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonBg, rebuildPalette } from './creative.js';
 import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showScreen, setLoadingText } from './ui-utils.js';
 import { PRESETS, renderPreset } from './presets.js';
-import { detectParts } from './edge-detect.js';
+import { detectParts, dilate, fuseLines, normalizeLineWidth } from './edge-detect.js';
 import { convertWithAI } from './ai-bridge.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
@@ -139,15 +139,25 @@ function applyAILineart(img) {
   }
   const isWhiteOnBlack = darkCount > (d.length / 4) * 0.5;
 
-  for (let i = 0; i < d.length; i += 4) {
-    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    let v;
+  const binEdges = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    const j = i * 4;
+    const gray = 0.299 * d[j] + 0.587 * d[j + 1] + 0.114 * d[j + 2];
     if (isWhiteOnBlack) {
-      v = gray >= 128 ? 40 : 255;
+      binEdges[i] = gray >= 50 ? 1 : 0;
     } else {
-      v = gray < 128 ? 40 : 255;
+      binEdges[i] = gray < 200 ? 1 : 0;
     }
-    d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
+  }
+
+  const dilated = dilate(binEdges, w, h, 2);
+  const fused = fuseLines(dilated, w, h, 2, 0.12);
+  const thick = normalizeLineWidth(fused, w, h, 4);
+
+  for (let i = 0; i < w * h; i++) {
+    const v = thick[i] ? 40 : 255;
+    const j = i * 4;
+    d[j] = v; d[j + 1] = v; d[j + 2] = v; d[j + 3] = 255;
   }
 
   lineartData = imgData;

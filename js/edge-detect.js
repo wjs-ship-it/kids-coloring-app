@@ -252,6 +252,68 @@ export function normalizeLineWidth(edges, w, h, targetWidth = 2) {
   return dilated;
 }
 
+export function dilate(edges, w, h, radius = 2) {
+  const result = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!edges[y * w + x]) continue;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          if (dx * dx + dy * dy > radius * radius) continue;
+          const ny = y + dy, nx = x + dx;
+          if (ny >= 0 && ny < h && nx >= 0 && nx < w) result[ny * w + nx] = 1;
+        }
+      }
+    }
+  }
+  return result;
+}
+
+export function fuseLines(edges, w, h, blurRadius = 2, threshold = 0.15) {
+  const buf = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) buf[i] = edges[i] ? 1.0 : 0.0;
+
+  const k = blurRadius * 2 + 1;
+  const sigma = blurRadius * 0.8;
+  const kernel = new Float32Array(k);
+  let kSum = 0;
+  for (let i = 0; i < k; i++) {
+    const d = i - blurRadius;
+    kernel[i] = Math.exp(-0.5 * (d * d) / (sigma * sigma));
+    kSum += kernel[i];
+  }
+  for (let i = 0; i < k; i++) kernel[i] /= kSum;
+
+  const tmp = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let s = 0;
+      for (let i = 0; i < k; i++) {
+        const nx = Math.min(w - 1, Math.max(0, x + i - blurRadius));
+        s += buf[y * w + nx] * kernel[i];
+      }
+      tmp[y * w + x] = s;
+    }
+  }
+  const blurred = new Float32Array(w * h);
+  for (let x = 0; x < w; x++) {
+    for (let y = 0; y < h; y++) {
+      let s = 0;
+      for (let i = 0; i < k; i++) {
+        const ny = Math.min(h - 1, Math.max(0, y + i - blurRadius));
+        s += tmp[ny * w + x] * kernel[i];
+      }
+      blurred[y * w + x] = s;
+    }
+  }
+
+  const result = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    result[i] = blurred[i] > threshold ? 1 : 0;
+  }
+  return result;
+}
+
 export function validateFloodFillIntegrity(edges, w, h) {
   const corners = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1]];
   const centerX = Math.floor(w / 2), centerY = Math.floor(h / 2);
@@ -486,31 +548,35 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
     smoothed = bilateralFilter(s2, w, h);
   }
 
-  const baseHi = mode === 'portrait' ? 0.20 : 0.15;
-  const baseLo = mode === 'portrait' ? 0.08 : 0.06;
-  const thHi = baseHi * (1.4 - t * 0.8);
-  const thLo = baseLo * (1.4 - t * 0.8);
+  const baseHi = mode === 'portrait' ? 0.12 : 0.10;
+  const baseLo = mode === 'portrait' ? 0.03 : 0.02;
+  const thHi = baseHi * (1.5 - t * 0.9);
+  const thLo = baseLo * (1.5 - t * 0.9);
 
-  let step6;
+  let rawEdge;
   if (mode === 'portrait') {
-    const innerHi = thHi * 0.4;
-    const innerLo = thLo * 0.4;
-    step6 = dualPassEdge(smoothed, w, h, thHi, thLo, innerHi, innerLo, 0.4);
+    const innerHi = thHi * 0.35;
+    const innerLo = thLo * 0.35;
+    rawEdge = dualPassEdge(smoothed, w, h, thHi, thLo, innerHi, innerLo, 0.45);
   } else {
-    step6 = cannyEdge(smoothed, w, h, thHi, thLo);
+    rawEdge = cannyEdge(smoothed, w, h, thHi, thLo);
   }
 
-  const step7 = multiPassClose(step6, w, h, 2);
-  const step7b = adaptiveClose(step7, w, h);
-  const minArea = mode === 'portrait' ? (80 - t * 50) : 30;
-  const step8 = removeSmallComponents(step7b, w, h, Math.max(10, minArea));
-  const step9 = normalizeLineWidth(step8, w, h, mode === 'portrait' ? 3 : 2);
+  const d1 = dilate(rawEdge, w, h, 2);
+  const fused = fuseLines(d1, w, h, 3, 0.12);
+  const bridged = bridgeEndpoints(fused, w, h, 18);
+  const closed = morphClose(bridged, w, h, 5);
+  const bridged2 = bridgeEndpoints(closed, w, h, 12);
 
-  const { leakCount } = validateFloodFillIntegrity(step9, w, h);
-  let final = step9;
+  const minArea = mode === 'portrait' ? (60 - t * 40) : 20;
+  const cleaned = removeSmallComponents(bridged2, w, h, Math.max(8, minArea));
+  let final = normalizeLineWidth(cleaned, w, h, 4);
+
+  const { leakCount } = validateFloodFillIntegrity(final, w, h);
   if (leakCount > 0) {
-    const bridged = bridgeEndpoints(step8, w, h, 20);
-    final = normalizeLineWidth(bridged, w, h, mode === 'portrait' ? 3 : 2);
+    const d2 = dilate(cleaned, w, h, 3);
+    const fused2 = fuseLines(d2, w, h, 2, 0.10);
+    final = normalizeLineWidth(fused2, w, h, 4);
   }
 
   const outData = new Uint8ClampedArray(w * h * 4);
