@@ -446,8 +446,9 @@ export function multiPassClose(edges, w, h, passes = 2) {
 }
 
 export function detectParts(lineartData, w, h) {
+  const d = lineartData.data || lineartData;
   const isEdge = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) isEdge[i] = lineartData[i * 4] < 128 ? 1 : 0;
+  for (let i = 0; i < w * h; i++) isEdge[i] = d[i * 4] < 128 ? 1 : 0;
 
   const labels = new Int32Array(w * h);
   let nextLabel = 1;
@@ -495,15 +496,7 @@ export function detectParts(lineartData, w, h) {
     if (reg.isBand) {
       reg.boundaryPos = reg.pixels;
     } else if (!reg.boundaryPos) {
-      const boundary = new Set();
-      for (const pos of reg.pixels) {
-        const x = pos % w, y = Math.floor(pos / w);
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
-          const nx = x + dx, ny = y + dy;
-          if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx]) boundary.add(ny * w + nx);
-        }
-      }
-      reg.boundaryPos = [...boundary];
+      reg.boundaryPos = traceRegionBoundary(reg.pixels, isEdge, w, h);
     }
     if (!reg.boundaryPos || reg.boundaryPos.length === 0) {
       reg.boundaryPos = reg.pixels.slice(0, Math.min(reg.pixels.length, 500));
@@ -519,6 +512,52 @@ export function detectParts(lineartData, w, h) {
   meaningful.sort((a, b) => a.centerY - b.centerY);
   if (meaningful.length > 8) meaningful = meaningful.slice(0, 8);
   return meaningful;
+}
+
+function traceRegionBoundary(regionPixels, isEdge, w, h) {
+  const edgeSet = new Uint8Array(w * h);
+  for (const pos of regionPixels) {
+    const x = pos % w, y = Math.floor(pos / w);
+    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx]) {
+        edgeSet[ny * w + nx] = 1;
+      }
+    }
+  }
+
+  let startPos = -1;
+  for (let i = 0; i < w * h; i++) {
+    if (edgeSet[i]) { startPos = i; break; }
+  }
+  if (startPos < 0) return [];
+
+  const dx8 = [1, 1, 0, -1, -1, -1, 0, 1];
+  const dy8 = [0, 1, 1, 1, 0, -1, -1, -1];
+  const visited = new Uint8Array(w * h);
+  const contour = [];
+
+  let cx = startPos % w, cy = Math.floor(startPos / w);
+  for (let step = 0; step < w * h; step++) {
+    const pos = cy * w + cx;
+    if (visited[pos]) break;
+    visited[pos] = 1;
+    contour.push(pos);
+
+    let found = false;
+    for (let k = 0; k < 8; k++) {
+      const nx = cx + dx8[k], ny = cy + dy8[k];
+      if (nx >= 0 && nx < w && ny >= 0 && ny < h && edgeSet[ny * w + nx] && !visited[ny * w + nx]) {
+        cx = nx; cy = ny; found = true; break;
+      }
+    }
+    if (!found) break;
+  }
+
+  const step = Math.max(1, Math.floor(contour.length / 600));
+  const sampled = [];
+  for (let i = 0; i < contour.length; i += step) sampled.push(contour[i]);
+  return sampled;
 }
 
 function traceOuterContour(isEdge, w, h) {

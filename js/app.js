@@ -405,49 +405,64 @@ function buildEmergencyParts(ld, w, h) {
 
 function ensureFullCoverage(parts, ld, w, h) {
   const data = ld.data;
-  const allEdge = [];
+  const isEdge = new Uint8Array(w * h);
+  let totalEdge = 0;
   for (let i = 0; i < w * h; i++) {
-    if (data[i * 4] < 128) allEdge.push(i);
+    if (data[i * 4] < 128) { isEdge[i] = 1; totalEdge++; }
   }
-  if (allEdge.length < 20) return parts;
+  if (totalEdge < 20) return parts;
 
   const covered = new Uint8Array(w * h);
   let coveredCount = 0;
   for (const p of parts) {
     for (const pos of p.boundaryPos) {
-      if (!covered[pos]) { covered[pos] = 1; coveredCount++; }
+      if (isEdge[pos] && !covered[pos]) { covered[pos] = 1; coveredCount++; }
     }
   }
 
-  const coverage = coveredCount / allEdge.length;
-  if (coverage >= 0.7) return parts;
+  if (coveredCount / totalEdge >= 0.7) return parts;
 
-  const uncovered = allEdge.filter(pos => !covered[pos]);
-  const targetSegSize = Math.max(30, Math.floor(allEdge.length / 6));
-  const segCount = Math.max(1, Math.ceil(uncovered.length / targetSegSize));
+  const dx8 = [1, 1, 0, -1, -1, -1, 0, 1];
+  const dy8 = [0, 1, 1, 1, 0, -1, -1, -1];
+  const visited = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) if (covered[i]) visited[i] = 1;
 
-  uncovered.sort((a, b) => {
-    const ay = Math.floor(a / w), by = Math.floor(b / w);
-    return ay !== by ? ay - by : (a % w) - (b % w);
-  });
+  for (let i = 0; i < w * h; i++) {
+    if (!isEdge[i] || visited[i]) continue;
+    const contour = [];
+    let cx = i % w, cy = Math.floor(i / w);
+    for (let step = 0; step < w * h; step++) {
+      const pos = cy * w + cx;
+      if (visited[pos]) break;
+      visited[pos] = 1;
+      contour.push(pos);
+      let found = false;
+      for (let k = 0; k < 8; k++) {
+        const nx = cx + dx8[k], ny = cy + dy8[k];
+        if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx] && !visited[ny * w + nx]) {
+          cx = nx; cy = ny; found = true; break;
+        }
+      }
+      if (!found) break;
+    }
+    if (contour.length < 10) continue;
 
-  const segSize = Math.ceil(uncovered.length / segCount);
-  for (let s = 0; s < segCount; s++) {
-    const pxs = uncovered.slice(s * segSize, Math.min((s + 1) * segSize, uncovered.length));
-    if (pxs.length < 5) continue;
+    const step = Math.max(1, Math.floor(contour.length / 400));
+    const sampled = [];
+    for (let j = 0; j < contour.length; j += step) sampled.push(contour[j]);
+
     let sy = 0;
-    for (const pos of pxs) sy += Math.floor(pos / w);
+    for (const pos of sampled) sy += Math.floor(pos / w);
     parts.push({
-      pixels: pxs,
-      boundaryPos: pxs,
-      samplePoints: pxs.filter((_, i) => i % 5 === 0),
+      pixels: sampled,
+      boundaryPos: sampled,
+      samplePoints: sampled.filter((_, idx) => idx % 5 === 0),
       touchesBorder: false,
       isBand: true,
-      centerY: sy / pxs.length
+      centerY: sy / sampled.length
     });
   }
 
-  parts.sort((a, b) => a.centerY - b.centerY);
   return parts;
 }
 
