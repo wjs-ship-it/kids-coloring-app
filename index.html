@@ -4,151 +4,292 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#FFF8E9">
 <link rel="manifest" href="./manifest.json">
 <title>키즈 컬러링</title>
 <style>
+:root{
+  --bg:#FFF8E9;--paper:#FFFDF8;--ink:#493A35;--sub:#806D64;
+  --coral:#FF8B70;--coral-deep:#E96C52;
+  --yellow:#FFD86B;--yellow-deep:#E6B949;
+  --mint:#A7E2CF;--mint-deep:#68B89E;
+  --lav:#C9B8F0;--lav-deep:#9A83CF;
+  --line:rgba(73,58,53,.1);
+  --shadow:0 14px 34px rgba(92,66,48,.13);
+  --press:0 7px 0 rgba(73,58,53,.12),0 14px 22px rgba(73,58,53,.08);
+}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-user-select:none;user-select:none}
-html,body{width:100%;height:100%;overflow:hidden;font-family:'Noto Sans KR',sans-serif;background:#fff}
+html,body{width:100%;height:100%;overflow:hidden;
+  font-family:"Arial Rounded MT Bold","NanumSquareRound","Pretendard","Apple SD Gothic Neo",sans-serif;
+  color:var(--ink);
+  background:linear-gradient(180deg,#FFF9EC,#FFF6E4);
+}
 canvas{touch-action:none}
-button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.screen{display:none;width:100%;height:100%;position:absolute;inset:0}
-.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
+button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;font:inherit}
+.screen{display:none;width:100%;height:100%;position:absolute;inset:0;overflow-y:auto}
+.screen.active{display:flex;flex-direction:column;align-items:center}
 
-/* Upload */
-#upload-screen{background:linear-gradient(160deg,#43e97b 0%,#38f9d7 50%,#667eea 100%);gap:28px}
-.app-title{font-size:42px;font-weight:900;color:#fff;text-shadow:3px 3px 0 rgba(0,0,0,0.1);text-align:center}
-.upload-btn-big{width:180px;height:180px;border-radius:50%;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;transition:transform .2s}
-.upload-btn-big:active{transform:scale(.9)}
-.upload-btn-big .icon{font-size:72px}
-.upload-btn-big .label{font-size:16px;font-weight:700;color:#667eea}
-.demo-pill{padding:16px 36px;border-radius:50px;background:rgba(255,255,255,.3);color:#fff;font-size:17px;font-weight:700}
-.demo-pill:active{transform:scale(.92)}
+/* Doodles */
+.doodle{position:absolute;z-index:0;pointer-events:none;opacity:.8}
+.d-star{top:6%;left:4%;width:68px;transform:rotate(-15deg)}
+.d-rainbow{top:20%;right:-10px;width:62px;transform:rotate(14deg)}
+.d-blob{bottom:22%;left:-6px;width:56px}
+.d-spark{bottom:10%;right:6px;width:56px}
+
+/* ═══ Upload ═══ */
+#upload-screen{
+  background:
+    radial-gradient(circle at 10% 7%,rgba(255,216,107,.24) 0 110px,transparent 111px),
+    radial-gradient(circle at 92% 15%,rgba(201,184,240,.21) 0 120px,transparent 121px),
+    linear-gradient(180deg,#FFF9EC,#FFF6E4);
+  justify-content:flex-start;
+  padding:max(20px,env(safe-area-inset-top)) 18px 40px;
+}
+.hero-section{text-align:center;padding:20px 0 0;position:relative;z-index:1}
+.mini-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:7px 13px;border-radius:999px;
+  background:#FFF1B9;color:#836423;
+  border:1px solid rgba(230,185,73,.25);
+  box-shadow:0 7px 16px rgba(124,91,26,.08);
+  font-size:12px;font-weight:900;
+}
+.app-title{margin:10px 0 0;font-size:clamp(34px,10vw,44px);font-weight:900;line-height:1.08;letter-spacing:-2px}
+.app-subtitle{margin:8px auto 0;max-width:340px;color:var(--sub);font-size:14px;line-height:1.55;font-weight:800}
+
+.magic-zone{
+  position:relative;margin:18px auto 0;width:100%;max-width:390px;
+  padding:18px 16px 16px;border-radius:34px;
+  background:linear-gradient(145deg,#FFE6A6,#FFD17B);
+  border:2px solid rgba(255,255,255,.75);
+  box-shadow:var(--shadow);overflow:hidden;z-index:1;
+}
+.cloud-svg{position:absolute;opacity:.55;pointer-events:none}
+.cloud-1{left:12px;top:18px;width:70px}
+.cloud-2{right:8px;bottom:26px;width:86px}
+.camera-wrap{position:relative;display:grid;place-items:center;width:200px;height:150px;margin:0 auto 6px}
+.camera-svg{width:170px;filter:drop-shadow(0 13px 10px rgba(102,66,40,.15));animation:float 2.8s ease-in-out infinite}
+.spark-svg{position:absolute;animation:twinkle 1.8s ease-in-out infinite}
+.spark-1{top:5px;right:7px;width:28px}
+.spark-2{left:5px;bottom:15px;width:21px;animation-delay:.5s}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes twinkle{0%,100%{transform:scale(.8) rotate(0);opacity:.45}50%{transform:scale(1.15) rotate(12deg);opacity:1}}
+
+.upload-btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;min-height:56px;border-radius:22px;
+  background:#FFF;color:#9B4C39;font-size:18px;font-weight:900;
+  box-shadow:0 7px 0 #F4C9A7,0 13px 20px rgba(120,78,42,.13);
+  transition:.18s ease;
+}
+.upload-btn:active{transform:translateY(5px);box-shadow:0 2px 0 #F4C9A7,0 7px 12px rgba(120,78,42,.11)}
+.upload-btn svg{width:24px;height:24px}
 #photo-input{display:none}
-.deco{position:absolute;font-size:48px;opacity:.25;animation:float 4s ease-in-out infinite;pointer-events:none}
-.deco:nth-child(1){top:8%;left:8%}.deco:nth-child(2){top:12%;right:10%;animation-delay:1s}
-.deco:nth-child(3){bottom:18%;left:12%;animation-delay:2s}.deco:nth-child(4){bottom:10%;right:8%;animation-delay:.5s}
-@keyframes float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-12px) rotate(8deg)}}
 
-/* Processing */
-#processing-screen{background:#f0f4ff;gap:24px}
+.type-area{margin:14px auto 0;max-width:350px;width:100%}
+.type-label{margin:0 0 7px;text-align:left;font-size:12px;color:#8A7469;font-weight:900}
+.toggle-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px;border-radius:23px;background:#F2E5D0;box-shadow:inset 0 2px 8px rgba(73,58,53,.06)}
+.mtbtn{min-height:48px;border-radius:18px;background:transparent;color:#735F56;font-size:15px;font-weight:900;transition:.18s ease}
+.mtbtn.active{background:var(--coral);color:#FFF;box-shadow:0 5px 0 var(--coral-deep),0 10px 16px rgba(233,108,82,.2);transform:translateY(-2px)}
+
+.section-title-row{display:flex;align-items:end;justify-content:space-between;margin:24px 4px 10px;width:100%;max-width:390px;position:relative;z-index:1}
+.section-title-row h2{margin:0;font-size:20px;letter-spacing:-.7px}
+.section-title-row span{font-size:11px;color:#8A766C;font-weight:800}
+
+.home-modes{display:grid;gap:10px;width:100%;max-width:390px;position:relative;z-index:1}
+.home-mode-card{
+  position:relative;display:grid;grid-template-columns:52px 1fr 16px;
+  align-items:center;gap:11px;min-height:82px;padding:12px 14px;
+  border-radius:26px;text-align:left;color:var(--ink);
+  box-shadow:var(--press);cursor:pointer;overflow:hidden;transition:.18s ease;
+}
+.home-mode-card:active{transform:translateY(5px);box-shadow:0 2px 0 rgba(73,58,53,.12),0 7px 12px rgba(73,58,53,.08)}
+.home-mode-card.yellow{background:#FFF0A8}
+.home-mode-card.mint{background:#BDEAD9}
+.home-mode-card.lav{background:#DCCFF5}
+.home-mode-card::after{content:"";position:absolute;width:70px;height:70px;border-radius:50%;right:-22px;top:-18px;background:rgba(255,255,255,.25)}
+.hm-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:17px;background:rgba(255,255,255,.72);box-shadow:inset 0 1px 0 rgba(255,255,255,.95);font-size:28px}
+.home-mode-card strong{display:block;font-size:17px;letter-spacing:-.4px}
+.home-mode-card small{display:block;margin-top:3px;color:#745F55;font-size:11px;line-height:1.35;font-weight:800}
+.chev{width:9px;height:9px;border-top:3px solid currentColor;border-right:3px solid currentColor;transform:rotate(45deg);opacity:.4}
+
+.howto{margin:22px auto 0;padding:14px;border-radius:26px;background:rgba(255,255,255,.76);border:1px solid rgba(255,255,255,.95);box-shadow:0 10px 24px rgba(73,58,53,.08);width:100%;max-width:390px;position:relative;z-index:1}
+.howto h3{margin:0 0 10px;font-size:16px;letter-spacing:-.4px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.step{text-align:center;padding:10px 5px;border-radius:17px;background:#FFF9F0;border:1px solid var(--line)}
+.step-num{width:24px;height:24px;display:grid;place-items:center;margin:0 auto 6px;border-radius:50%;background:#FF9C82;color:#FFF;font-size:11px;font-weight:900}
+.step b{display:block;font-size:12px}
+.step span{display:block;margin-top:3px;color:#8A766C;font-size:10px;line-height:1.35;font-weight:700}
+
+/* ═══ Processing ═══ */
+#processing-screen{background:linear-gradient(180deg,#FFF9EC,#FFF6E4);gap:24px;justify-content:center}
 .loading-anim{font-size:80px;animation:bounce .6s ease-in-out infinite alternate}
 @keyframes bounce{from{transform:scale(1)}to{transform:scale(1.2)}}
-.loading-text{font-size:22px;font-weight:700;color:#667eea}
+.loading-text{font-size:22px;font-weight:800;color:var(--coral-deep)}
 
-/* Preview */
-#preview-screen{background:#f8f9ff;gap:20px;padding:24px}
-.preview-box{display:flex;gap:12px;align-items:center;background:#fff;padding:16px;border-radius:24px;box-shadow:0 4px 20px rgba(0,0,0,.06)}
+/* ═══ Preview ═══ */
+#preview-screen{background:linear-gradient(180deg,#FFF9EC,#FFF6E4);gap:16px;padding:28px 20px;justify-content:center}
+.preview-box{display:flex;gap:12px;align-items:center;background:#FFF;padding:16px;border-radius:28px;box-shadow:var(--shadow)}
 .preview-box img,.preview-box canvas{width:120px;height:120px;object-fit:contain;border-radius:16px}
-.preview-arrow{font-size:36px;color:#667eea}
-.start-btn{width:200px;height:200px;border-radius:50%;background:linear-gradient(135deg,#fbbf24,#f97316);color:#fff;font-size:36px;font-weight:900;box-shadow:0 8px 30px rgba(249,115,22,.3);transition:transform .2s;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px}
-.start-btn:active{transform:scale(.9)}
-.start-btn .si{font-size:64px}
+.preview-arrow{font-size:36px;color:var(--coral)}
+.detail-slider-wrap{width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(255,255,255,.85);padding:14px 20px;border-radius:22px;box-shadow:0 6px 18px rgba(73,58,53,.06)}
+.detail-label{font-size:15px;font-weight:800;color:var(--coral-deep)}
+.detail-range{-webkit-appearance:none;appearance:none;width:100%;height:10px;border-radius:5px;background:linear-gradient(90deg,#F2E5D0,var(--coral));outline:none}
+.detail-range::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#FFF;border:3px solid var(--coral);box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer}
+.detail-range::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#FFF;border:3px solid var(--coral);box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer}
+.detail-ends{display:flex;justify-content:space-between;width:100%;font-size:12px;font-weight:700;color:#8A766C}
+.detail-slider-wrap.processing{opacity:.5;pointer-events:none}
+.start-btn{width:100%;max-width:320px;min-height:62px;border-radius:23px;background:var(--coral);color:#FFF;font-size:20px;font-weight:900;box-shadow:0 7px 0 var(--coral-deep),0 14px 24px rgba(233,108,82,.24);transition:.18s ease;display:flex;align-items:center;justify-content:center;gap:8px}
+.start-btn:active{transform:translateY(5px);box-shadow:0 2px 0 var(--coral-deep),0 7px 13px rgba(233,108,82,.2)}
+.start-btn .si{font-size:28px}
+.back-pill{padding:12px 28px;border-radius:50px;background:rgba(73,58,53,.08);color:var(--sub);font-size:15px;font-weight:800;margin-top:4px}
+.back-pill:active{transform:scale(.92)}
 
-/* Canvas screen */
+/* ═══ Mode ═══ */
+#mode-screen{background:linear-gradient(180deg,#FFF9EC,#FFF6E4);gap:16px;padding:32px 20px;justify-content:center}
+.mode-title{font-size:28px;font-weight:900;letter-spacing:-1px}
+.mode-grid{display:grid;gap:12px;max-width:380px;width:100%}
+.mode-card{
+  position:relative;display:grid;grid-template-columns:52px 1fr;
+  align-items:center;gap:12px;min-height:76px;padding:14px 18px;
+  border-radius:26px;text-align:left;color:var(--ink);
+  box-shadow:var(--press);cursor:pointer;overflow:hidden;transition:.18s ease;
+}
+.mode-card:active{transform:translateY(5px);box-shadow:0 2px 0 rgba(73,58,53,.12),0 7px 12px rgba(73,58,53,.08)}
+.mode-card:nth-child(1){background:#FFF0A8}
+.mode-card:nth-child(2){background:#BDEAD9}
+.mode-card:nth-child(3){background:#DCCFF5}
+.mode-card:nth-child(4){background:#FFD4C8}
+.mode-card:nth-child(5){background:#B8E8F8}
+.mode-card::after{content:"";position:absolute;width:70px;height:70px;border-radius:50%;right:-20px;top:-18px;background:rgba(255,255,255,.25)}
+.mode-card .mode-icon{width:52px;height:52px;display:grid;place-items:center;border-radius:17px;background:rgba(255,255,255,.72);box-shadow:inset 0 1px 0 rgba(255,255,255,.95);font-size:28px}
+.mode-card .mode-name{font-size:17px;font-weight:900;letter-spacing:-.3px}
+.mode-card.full-width{grid-column:1/-1}
+.mode-back{padding:12px 28px;border-radius:50px;background:rgba(73,58,53,.08);color:var(--sub);font-size:15px;font-weight:800}
+.mode-back:active{transform:scale(.92)}
+
+/* ═══ Canvas ═══ */
 #canvas-screen{position:relative;display:none!important}
 #canvas-screen.active{display:block!important}
 #drawing-canvas{display:block;position:absolute;top:0;left:0}
-
-/* Round buttons */
-.round-btn{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 3px 12px rgba(0,0,0,.12);transition:transform .15s;position:absolute;z-index:50}
-.round-btn:active{transform:scale(.85)}
-#btn-back{top:14px;left:14px;background:#fee2e2}
-#btn-undo{top:14px;left:76px;background:#e0e7ff}
-#btn-save{top:14px;right:14px;background:#d1fae5}
-
-/* Progress bar */
+.round-btn{width:52px;height:52px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 5px 0 rgba(73,58,53,.1),0 8px 16px rgba(73,58,53,.08);transition:.18s ease;position:absolute;z-index:50}
+.round-btn:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(73,58,53,.1)}
+#btn-back{top:14px;left:14px;background:#FFD4C8}
+#btn-undo{top:14px;left:76px;background:#DCCFF5}
+#btn-save{top:14px;right:14px;background:#BDEAD9}
 .progress-wrap{position:absolute;top:76px;left:14px;right:14px;z-index:50;display:flex;align-items:center;gap:8px}
-.progress-bar{flex:1;height:14px;background:#e2e8f0;border-radius:7px;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,#fbbf24,#f97316);border-radius:7px;transition:width .3s;width:0}
-.part-label{font-size:14px;font-weight:800;color:#667eea;white-space:nowrap}
-
-/* Side palette */
-.side-palette{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:50;background:rgba(255,255,255,.88);backdrop-filter:blur(8px);padding:8px 6px;border-radius:28px;box-shadow:0 4px 20px rgba(0,0,0,.08);max-height:65vh;overflow-y:auto;scrollbar-width:none;transition:opacity .3s,transform .3s}
+.progress-bar{flex:1;height:14px;background:#F2E5D0;border-radius:7px;overflow:hidden}
+.progress-fill{height:100%;border-radius:7px;transition:width .3s;width:0;background:linear-gradient(90deg,var(--yellow),var(--coral))}
+.part-label{font-size:14px;font-weight:900;color:var(--coral-deep);white-space:nowrap}
+.side-palette{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:7px;z-index:50;background:rgba(255,253,248,.92);backdrop-filter:blur(8px);padding:8px 6px;border-radius:22px;box-shadow:0 8px 24px rgba(73,58,53,.1);max-height:65vh;overflow-y:auto;scrollbar-width:none;transition:opacity .3s,transform .3s}
 .side-palette::-webkit-scrollbar{display:none}
 .side-palette.hidden{opacity:0;transform:translateY(-50%) translateX(80px);pointer-events:none}
 .cdot{width:40px;height:40px;min-height:40px;border-radius:50%;border:3px solid transparent;transition:all .15s;flex-shrink:0}
-.cdot.active{border-color:#1e293b;transform:scale(1.15)}
-.eraser-dot{width:40px;height:40px;min-height:40px;border-radius:50%;background:#fff;border:3px solid #e2e8f0;display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .15s;flex-shrink:0}
-.eraser-dot.active{border-color:#1e293b;transform:scale(1.15)}
-
-/* Brush bar */
-.brush-bar{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:50;background:rgba(255,255,255,.9);backdrop-filter:blur(8px);padding:8px 16px;border-radius:24px;box-shadow:0 4px 16px rgba(0,0,0,.08);transition:opacity .3s,transform .3s}
+.cdot.active{border-color:var(--ink);transform:scale(1.15)}
+.eraser-dot{width:40px;height:40px;min-height:40px;border-radius:50%;background:#FFF;border:3px solid #F2E5D0;display:flex;align-items:center;justify-content:center;font-size:20px;transition:all .15s;flex-shrink:0}
+.eraser-dot.active{border-color:var(--ink);transform:scale(1.15)}
+.brush-bar{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:50;background:rgba(255,253,248,.92);backdrop-filter:blur(8px);padding:8px 16px;border-radius:22px;box-shadow:0 6px 20px rgba(73,58,53,.1);transition:opacity .3s,transform .3s}
 .brush-bar.hidden{opacity:0;transform:translateX(-50%) translateY(60px);pointer-events:none}
-.brush-pick{width:44px;height:44px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.brush-pick{width:44px;height:44px;border-radius:50%;background:#FFF9F0;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .brush-pick:active{transform:scale(.9)}
-.brush-pick.active{background:#e0e7ff;box-shadow:inset 0 0 0 3px #667eea}
-.bdot{border-radius:50%;background:#1e293b}
+.brush-pick.active{background:#FFE6A6;box-shadow:inset 0 0 0 3px var(--yellow-deep)}
+.bdot{border-radius:50%;background:var(--ink)}
 
-/* Hint toast */
-.hint-toast{position:absolute;top:100px;left:50%;transform:translateX(-50%);background:#fbbf24;color:#78350f;padding:10px 24px;border-radius:24px;font-size:15px;font-weight:700;z-index:60;pointer-events:none;white-space:nowrap;transition:opacity .5s;animation:hint-pulse 2s infinite}
+.hint-toast{position:absolute;top:100px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#78350f;padding:10px 24px;border-radius:20px;font-size:15px;font-weight:800;z-index:60;pointer-events:none;white-space:nowrap;transition:opacity .5s;animation:hint-pulse 2s infinite;box-shadow:0 5px 0 var(--yellow-deep),0 10px 16px rgba(230,185,73,.2)}
 @keyframes hint-pulse{0%,100%{opacity:1;transform:translateX(-50%) scale(1)}50%{opacity:.7;transform:translateX(-50%) scale(.96)}}
 
-/* Part complete overlay */
 .part-done-overlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;pointer-events:none}
 .part-done-overlay.active{display:flex}
-.part-done-msg{font-size:48px;font-weight:900;color:#fff;text-shadow:3px 3px 0 rgba(0,0,0,.2);animation:pop-in .5s ease-out}
+.part-done-msg{font-size:48px;font-weight:900;color:#FFF;text-shadow:3px 3px 0 rgba(73,58,53,.2);animation:pop-in .5s ease-out}
 @keyframes pop-in{0%{transform:scale(0) rotate(-20deg);opacity:0}60%{transform:scale(1.2) rotate(5deg)}100%{transform:scale(1) rotate(0deg);opacity:1}}
-
-/* Stars celebration */
 .stars-celebration{position:fixed;inset:0;z-index:300;pointer-events:none;display:none}
 .stars-celebration.active{display:block}
 .star-particle{position:absolute;animation:star-fall 1.5s ease-out forwards}
 @keyframes star-fall{0%{opacity:1;transform:translateY(0) rotate(0deg) scale(1)}100%{opacity:0;transform:translateY(60vh) rotate(360deg) scale(.3)}}
+.save-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#4C3C36;color:#FFF;padding:14px 28px;border-radius:20px;font-size:17px;font-weight:800;z-index:200;display:none;box-shadow:0 12px 30px rgba(0,0,0,.17)}
 
-/* Save toast */
-.save-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#065f46;color:#fff;padding:14px 28px;border-radius:20px;font-size:18px;font-weight:700;z-index:200;display:none}
-
-/* Mode selection */
-#mode-screen{background:linear-gradient(160deg,#667eea 0%,#764ba2 100%);gap:20px;padding:24px}
-.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:340px;width:100%}
-.mode-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 12px;border-radius:24px;background:rgba(255,255,255,.92);box-shadow:0 4px 20px rgba(0,0,0,.08);transition:transform .15s}
-.mode-card:active{transform:scale(.9)}
-.mode-card .mode-icon{font-size:44px}
-.mode-card .mode-name{font-size:14px;font-weight:800;color:#4c1d95;text-align:center}
-.mode-card.full-width{grid-column:1/-1}
-.mode-back{padding:12px 28px;border-radius:50px;background:rgba(255,255,255,.25);color:#fff;font-size:15px;font-weight:700;margin-top:8px}
-.mode-back:active{transform:scale(.92)}
-
-/* Preset selection */
-#preset-screen{background:linear-gradient(160deg,#fbbf24 0%,#f97316 100%);gap:16px;padding:24px}
-.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:320px;width:100%}
-.preset-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;border-radius:20px;background:rgba(255,255,255,.92);box-shadow:0 4px 16px rgba(0,0,0,.08);transition:transform .15s}
-.preset-card:active{transform:scale(.9)}
+/* ═══ Preset ═══ */
+#preset-screen{background:linear-gradient(180deg,#FFF9EC,#FFF6E4);gap:16px;padding:28px 20px;justify-content:center}
+.preset-title{font-size:26px;font-weight:900;letter-spacing:-.7px}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:340px;width:100%}
+.preset-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;border-radius:24px;background:#FFF;box-shadow:0 7px 0 rgba(73,58,53,.06),0 14px 22px rgba(73,58,53,.06);transition:.18s ease}
+.preset-card:active{transform:translateY(5px);box-shadow:0 2px 0 rgba(73,58,53,.06),0 7px 12px rgba(73,58,53,.05)}
 .preset-card .preset-emoji{font-size:42px}
-.preset-card .preset-name{font-size:13px;font-weight:800;color:#78350f}
-
-/* Detail slider */
-.detail-slider-wrap{width:100%;max-width:300px;display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(255,255,255,.85);padding:14px 20px;border-radius:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
-.detail-label{font-size:15px;font-weight:800;color:#667eea}
-.detail-range{-webkit-appearance:none;appearance:none;width:100%;height:10px;border-radius:5px;background:linear-gradient(90deg,#e2e8f0,#667eea);outline:none}
-.detail-range::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:3px solid #667eea;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer}
-.detail-range::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:3px solid #667eea;box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer}
-.detail-ends{display:flex;justify-content:space-between;width:100%;font-size:12px;font-weight:600;color:#94a3b8}
-.detail-slider-wrap.processing{opacity:.5;pointer-events:none}
+.preset-card .preset-name{font-size:13px;font-weight:900;color:#745F55}
+.demo-pill{padding:12px 28px;border-radius:50px;background:rgba(73,58,53,.08);color:var(--sub);font-size:15px;font-weight:800}
+.demo-pill:active{transform:scale(.92)}
 </style>
 </head>
 <body>
 
 <div id="upload-screen" class="screen active">
-  <div class="deco">🖍️</div><div class="deco">🎨</div><div class="deco">⭐</div><div class="deco">🌈</div>
-  <div class="app-title">사진을 그림으로!<br>🎨</div>
-  <button class="upload-btn-big" id="btn-upload">
-    <span class="icon">📸</span><span class="label">사진 고르기</span>
-  </button>
-  <input type="file" id="photo-input" accept="image/*">
-  <div id="mode-toggle" style="display:flex;gap:0;border-radius:50px;overflow:hidden;background:rgba(0,0,0,.12)">
-    <button class="mtbtn active" data-edge="object" style="padding:10px 22px;font-size:14px;font-weight:700;border:none;border-radius:50px;transition:all .2s;background:rgba(255,255,255,.85);color:#4c1d95">🧸 사물</button>
-    <button class="mtbtn" data-edge="portrait" style="padding:10px 22px;font-size:14px;font-weight:700;border:none;border-radius:50px;transition:all .2s;background:transparent;color:rgba(255,255,255,.8)">👤 인물</button>
+  <svg class="doodle d-star" viewBox="0 0 100 100" aria-hidden="true"><path d="M51 8l11 26 28 3-21 18 7 28-25-14-25 14 7-28-21-18 28-3z" fill="#FFE491" stroke="#E5B84E" stroke-width="3"/></svg>
+  <svg class="doodle d-rainbow" viewBox="0 0 100 70" aria-hidden="true"><path d="M5 58C28 6 70 6 95 58" fill="none" stroke="#F5A0A9" stroke-width="12" stroke-linecap="round"/><path d="M18 58C35 20 66 20 82 58" fill="none" stroke="#F4C46C" stroke-width="10" stroke-linecap="round"/><path d="M31 58C42 34 59 34 69 58" fill="none" stroke="#9FD9C3" stroke-width="9" stroke-linecap="round"/></svg>
+  <svg class="doodle d-blob" viewBox="0 0 100 100" aria-hidden="true"><path d="M20 48c10-28 50-34 65-8 16 27-8 50-34 44-25-5-40-17-31-36z" fill="#C9B8F0" opacity=".55"/><circle cx="43" cy="50" r="5" fill="#9B85D0"/><circle cx="62" cy="43" r="5" fill="#9B85D0"/></svg>
+  <svg class="doodle d-spark" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 8c3 22 12 31 34 34-22 3-31 12-34 34-3-22-12-31-34-34 22-3 31-12 34-34z" fill="#A7E2CF"/></svg>
+
+  <div class="hero-section">
+    <span class="mini-badge">✨ 사진 한 장이면 색칠놀이 완성</span>
+    <div class="app-title">사진을 그림으로!</div>
+    <p class="app-subtitle">좋아하는 사진을 골라주세요.<br>귀여운 색칠 그림으로 바꿔드려요.</p>
   </div>
-  <button class="demo-pill" id="btn-demo">🐱 체험해보기</button>
-  <button class="demo-pill" id="btn-presets" style="background:rgba(255,255,255,.5);color:#78350f">🖼️ 그림 고르기</button>
-  <button class="demo-pill" id="btn-creative" style="background:rgba(255,255,255,.3);color:#4c1d95">✨ 자유롭게 놀기</button>
+
+  <section class="magic-zone">
+    <svg class="cloud-svg cloud-1" viewBox="0 0 100 50" aria-hidden="true"><path d="M10 40c0-11 9-20 20-20 4-10 13-15 23-12 8 2 14 8 16 16 12-1 21 7 21 17H10z" fill="#FFF"/></svg>
+    <svg class="cloud-svg cloud-2" viewBox="0 0 100 50" aria-hidden="true"><path d="M10 40c0-11 9-20 20-20 4-10 13-15 23-12 8 2 14 8 16 16 12-1 21 7 21 17H10z" fill="#FFF"/></svg>
+    <div class="camera-wrap">
+      <svg class="spark-svg spark-1" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 1c2 12 7 17 19 19-12 2-17 7-19 19C18 27 13 22 1 20 13 18 18 13 20 1z" fill="#FFF"/></svg>
+      <svg class="spark-svg spark-2" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 1c2 12 7 17 19 19-12 2-17 7-19 19C18 27 13 22 1 20 13 18 18 13 20 1z" fill="#FF8B70"/></svg>
+      <svg class="camera-svg" viewBox="0 0 240 190" aria-hidden="true">
+        <defs><linearGradient id="camBody" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFAB90"/><stop offset="1" stop-color="#FF7D64"/></linearGradient></defs>
+        <path d="M45 57c0-12 10-22 22-22h25l12-17h32l12 17h25c12 0 22 10 22 22v82c0 16-13 29-29 29H74c-16 0-29-13-29-29z" fill="url(#camBody)" stroke="#694C44" stroke-width="6" stroke-linejoin="round"/>
+        <path d="M66 47h38l11-16h11l11 16h39" fill="none" stroke="#FFE2D7" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="120" cy="104" r="49" fill="#FFF8E9" stroke="#694C44" stroke-width="6"/>
+        <circle cx="120" cy="104" r="34" fill="#A7E2CF" stroke="#694C44" stroke-width="6"/>
+        <circle cx="108" cy="91" r="8" fill="#EFFFFA"/>
+        <circle cx="83" cy="81" r="6" fill="#4A3934"/><circle cx="157" cy="81" r="6" fill="#4A3934"/>
+        <path d="M98 127c13 12 31 12 44 0" fill="none" stroke="#4A3934" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="62" cy="66" r="9" fill="#FFD86B" stroke="#694C44" stroke-width="5"/>
+        <path d="M195 19l4 12 12 4-12 4-4 12-4-12-12-4 12-4z" fill="#FFD86B" stroke="#694C44" stroke-width="3"/>
+      </svg>
+    </div>
+    <button class="upload-btn" id="btn-upload">
+      <svg viewBox="0 0 36 36" aria-hidden="true"><rect x="5" y="9" width="26" height="20" rx="5" fill="#FFD86B" stroke="#6A5047" stroke-width="2.5"/><circle cx="18" cy="19" r="6" fill="#A7E2CF" stroke="#6A5047" stroke-width="2.5"/><path d="M11 9l3-4h8l3 4" fill="#FF8B70" stroke="#6A5047" stroke-width="2.5" stroke-linejoin="round"/></svg>
+      사진 고르기
+    </button>
+    <div class="type-area">
+      <p class="type-label">무엇이 나온 사진인가요?</p>
+      <div id="mode-toggle" class="toggle-wrap">
+        <button class="mtbtn active" data-edge="object">🧸 사물</button>
+        <button class="mtbtn" data-edge="portrait">🧒 인물</button>
+      </div>
+    </div>
+  </section>
+  <input type="file" id="photo-input" accept="image/*">
+
+  <div class="section-title-row">
+    <h2>어떻게 놀까요?</h2>
+    <span>원하는 놀이를 골라보세요</span>
+  </div>
+  <div class="home-modes">
+    <button class="home-mode-card yellow" id="btn-demo"><span class="hm-icon">🐱</span><span><strong>체험해보기</strong><small>샘플 사진으로 먼저 변환해봐요</small></span><span class="chev"></span></button>
+    <button class="home-mode-card mint" id="btn-presets"><span class="hm-icon">🖼️</span><span><strong>그림 고르기</strong><small>준비된 색칠 그림 중 하나를 골라요</small></span><span class="chev"></span></button>
+    <button class="home-mode-card lav" id="btn-creative"><span class="hm-icon">✨</span><span><strong>자유롭게 놀기</strong><small>그리고, 칠하고, 마음껏 꾸며요</small></span><span class="chev"></span></button>
+  </div>
+  <section class="howto">
+    <h3>이렇게 사용해요</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><b>사진 고르기</b><span>좋아하는 사진을 선택해요</span></div>
+      <div class="step"><div class="step-num">2</div><b>그림 만들기</b><span>선 그림으로 변환해요</span></div>
+      <div class="step"><div class="step-num">3</div><b>마음껏 색칠</b><span>원하는 색으로 꾸며요</span></div>
+    </div>
+  </section>
 </div>
 
 <div id="preset-screen" class="screen">
-  <div class="app-title" style="color:#fff;font-size:28px">그림을 골라봐! 🖼️</div>
+  <div class="preset-title">그림을 골라봐! 🖼️</div>
   <div class="preset-grid" id="preset-grid"></div>
-  <button class="mode-back" id="btn-preset-back">↩️ 돌아가기</button>
+  <button class="demo-pill" id="btn-preset-back">↩️ 돌아가기</button>
 </div>
 
 <div id="processing-screen" class="screen">
@@ -166,11 +307,11 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
     <div class="detail-ends"><span>부드럽게</span><span>선명하게</span></div>
   </div>
   <button class="start-btn" id="btn-begin"><span class="si">▶️</span>시작!</button>
-  <button class="demo-pill" id="btn-other-photo" style="background:rgba(100,100,200,.15);color:#667eea">↩️ 다른 사진</button>
+  <button class="back-pill" id="btn-other-photo">↩️ 다른 사진</button>
 </div>
 
 <div id="mode-screen" class="screen">
-  <div class="app-title" style="color:#fff;font-size:32px">어떻게 놀까?</div>
+  <div class="mode-title">어떻게 놀까? 🎨</div>
   <div class="mode-grid">
     <button class="mode-card" data-mode="trace"><span class="mode-icon">✏️</span><span class="mode-name">따라 그리기</span></button>
     <button class="mode-card" data-mode="color"><span class="mode-icon">🎨</span><span class="mode-name">색칠하기</span></button>

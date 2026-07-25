@@ -954,14 +954,8 @@ document.getElementById('btn-mode-back').addEventListener('click', () => {
 document.querySelectorAll('.mtbtn').forEach(btn => {
   btn.addEventListener('click', () => {
     edgeMode = btn.dataset.edge;
-    document.querySelectorAll('.mtbtn').forEach(b => {
-      b.classList.remove('active');
-      b.style.background = 'transparent';
-      b.style.color = 'rgba(255,255,255,.8)';
-    });
+    document.querySelectorAll('.mtbtn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    btn.style.background = 'rgba(255,255,255,.85)';
-    btn.style.color = '#4c1d95';
   });
 });
 
