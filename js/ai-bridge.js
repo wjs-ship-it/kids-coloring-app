@@ -1,4 +1,4 @@
-const AI_SERVER_URL = 'https://biotechnology-entity-ethernet-home.trycloudflare.com';
+const AI_SERVER_URL = 'https://published-maternity-locks-permanent.trycloudflare.com';
 
 export function hasAICapability() {
   return true;
