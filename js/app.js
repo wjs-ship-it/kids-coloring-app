@@ -331,6 +331,7 @@ function beginActivity() {
   }
 
   parts = ensureFullCoverage(parts, lineartData, laW, laH);
+  parts = limitParts(parts, 30, laW);
 
   curPartIdx = 0;
   appMode = 'trace';
@@ -463,6 +464,48 @@ function ensureFullCoverage(parts, ld, w, h) {
     });
   }
 
+  return parts;
+}
+
+function limitParts(parts, maxParts, w) {
+  if (parts.length <= maxParts) return parts;
+
+  while (parts.length > maxParts) {
+    let minSize = Infinity, minIdx = -1;
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i].boundaryPos.length < minSize) {
+        minSize = parts[i].boundaryPos.length;
+        minIdx = i;
+      }
+    }
+    if (minIdx < 0) break;
+
+    const small = parts[minIdx];
+    const sCY = small.centerY;
+    const sCX = small.boundaryPos.length > 0 ? (small.boundaryPos[0] % w) : 0;
+
+    let bestDist = Infinity, bestIdx = -1;
+    for (let i = 0; i < parts.length; i++) {
+      if (i === minIdx) continue;
+      const p = parts[i];
+      const pCX = p.boundaryPos.length > 0 ? (p.boundaryPos[0] % w) : 0;
+      const d = Math.sqrt((sCX - pCX) ** 2 + (sCY - p.centerY) ** 2);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    if (bestIdx < 0) break;
+
+    const target = parts[bestIdx];
+    target.boundaryPos = target.boundaryPos.concat(small.boundaryPos);
+    target.samplePoints = target.samplePoints.concat(small.samplePoints);
+    target.pixels = (target.pixels || []).concat(small.pixels || []);
+    let sy = 0;
+    for (const pos of target.boundaryPos) sy += Math.floor(pos / w);
+    target.centerY = target.boundaryPos.length > 0 ? sy / target.boundaryPos.length : 0;
+
+    parts.splice(minIdx, 1);
+  }
+
+  parts.sort((a, b) => a.centerY - b.centerY);
   return parts;
 }
 
