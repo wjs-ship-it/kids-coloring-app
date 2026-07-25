@@ -1,10 +1,8 @@
-import { removeBackground } from './bg-remove.js';
 import { createDemoCatBlob } from './demo.js';
 import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonBg, rebuildPalette } from './creative.js';
 import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showScreen, setLoadingText } from './ui-utils.js';
 import { PRESETS, renderPreset } from './presets.js';
 import { detectParts, dilate, fuseLines, normalizeLineWidth } from './edge-detect.js';
-import { convertWithAI } from './ai-bridge.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -98,84 +96,9 @@ async function processPhoto(blob) {
   showScreen('processing-screen');
   setLoadingText('AI 요정이 그림을 그리고 있어요... ✨');
 
-  try {
-    const aiResult = await convertWithAI(blob);
-    if (aiResult) {
-      const img = await createImageBitmap(aiResult);
-      applyAILineart(img);
-      return;
-    }
-  } catch { /* fall through to local */ }
-
-  setLoadingText('배경을 지우는 중... 🧹');
-  try {
-    const cleanBlob = await removeBackground(blob);
-    const img = await createImageBitmap(cleanBlob);
-    setLoadingText('선을 그리는 중... ✏️');
-    convertToLineart(img);
-  } catch {
-    const img = await createImageBitmap(blob);
-    setLoadingText('선을 그리는 중... ✏️');
-    convertToLineart(img);
-  }
-}
-
-function applyAILineart(img) {
-  const MAX = 800;
-  let w = img.width, h = img.height;
-  if (w > MAX || h > MAX) {
-    const r = Math.min(MAX / w, MAX / h);
-    w = Math.floor(w * r); h = Math.floor(h * r);
-  }
-  SC.width = w; SC.height = h;
-  sx.drawImage(img, 0, 0, w, h);
-  const imgData = sx.getImageData(0, 0, w, h);
-  const d = imgData.data;
-
-  let darkCount = 0;
-  for (let i = 0; i < d.length; i += 4) {
-    const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    if (gray < 128) darkCount++;
-  }
-  const isWhiteOnBlack = darkCount > (d.length / 4) * 0.5;
-
-  const binEdges = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) {
-    const j = i * 4;
-    const gray = 0.299 * d[j] + 0.587 * d[j + 1] + 0.114 * d[j + 2];
-    if (isWhiteOnBlack) {
-      binEdges[i] = gray >= 60 ? 1 : 0;
-    } else {
-      binEdges[i] = gray < 190 ? 1 : 0;
-    }
-  }
-
-  const dilated = dilate(binEdges, w, h, 1);
-  const fused = fuseLines(dilated, w, h, 1, 0.18);
-  const thick = normalizeLineWidth(fused, w, h, 3);
-
-  for (let i = 0; i < w * h; i++) {
-    const v = thick[i] ? 40 : 255;
-    const j = i * 4;
-    d[j] = v; d[j + 1] = v; d[j + 2] = v; d[j + 3] = 255;
-  }
-
-  lineartData = imgData;
-  laW = w; laH = h;
-  parts = detectParts(imgData, w, h);
-
-  _sourceImgData = null;
-  _sourceW = w;
-  _sourceH = h;
-
-  document.getElementById('preview-img').src = SC.toDataURL();
-  const lp = document.getElementById('lineart-preview');
-  lp.width = w; lp.height = h;
-  lp.getContext('2d').putImageData(lineartData, 0, 0);
-  document.getElementById('detail-slider').value = 50;
-  document.getElementById('detail-slider-wrap').style.display = '';
-  showScreen('preview-screen');
-  isProcessing = false;
+  const img = await createImageBitmap(blob);
+  setLoadingText('선을 그리는 중... ✏️');
+  convertToLineart(img);
 }
 
 function convertToLineart(img) {
