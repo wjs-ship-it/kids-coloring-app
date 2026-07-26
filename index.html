@@ -26,7 +26,7 @@ html,body{width:100%;height:100%;overflow:hidden;
 }
 canvas{touch-action:none}
 button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;font:inherit}
-.screen{display:none;width:100%;height:100%;position:absolute;inset:0;overflow-y:auto}
+.screen{display:none;width:100%;height:100%;position:absolute;inset:0;overflow-x:hidden;overflow-y:auto}
 .screen.active{display:flex;flex-direction:column;align-items:center}
 
 /* Doodles */
@@ -63,6 +63,7 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
   background:linear-gradient(145deg,#FFE6A6,#FFD17B);
   border:2px solid rgba(255,255,255,.75);
   box-shadow:var(--shadow);overflow:hidden;z-index:1;
+  flex-shrink:0;
 }
 .cloud-svg{position:absolute;opacity:.55;pointer-events:none}
 .cloud-1{left:12px;top:18px;width:70px}
