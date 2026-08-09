@@ -33,6 +33,7 @@ let fillLineMask = null;
 let fillRegionMap = null;
 let fillRegions = [];
 let fillRegionsById = [];
+let paintByRegion = [];
 
 const DC = document.getElementById('drawing-canvas');
 const cx = DC.getContext('2d');
@@ -524,6 +525,7 @@ function transitionToColor() {
   hidePartDone();
   appMode = 'color';
   historyStack = [];
+  paintByRegion = [];
   buildLineBoundary();
   createLineartOverlay();
   cx.fillStyle = '#fff'; cx.fillRect(0, 0, DC.width, DC.height);
@@ -632,6 +634,7 @@ function hydrateFillData(fillData) {
     fillRegionMap = null;
     fillRegions = [];
     fillRegionsById = [];
+    paintByRegion = [];
     return;
   }
 
@@ -639,6 +642,7 @@ function hydrateFillData(fillData) {
   fillRegionMap = fillData.regionMap ? new Int32Array(fillData.regionMap) : null;
   fillRegions = Array.isArray(fillData.regions) ? fillData.regions : [];
   fillRegionsById = [];
+  paintByRegion = [];
   for (const region of fillRegions) {
     fillRegionsById[region.id] = region;
   }
@@ -772,6 +776,34 @@ function buildColorMask(startX, startY) {
   return mask;
 }
 
+function getRegionIdAtCanvasPoint(x, y) {
+  if (!fillRegionMap || fillRegions.length === 0) return 0;
+  const lx = Math.floor(x - offX);
+  const ly = Math.floor(y - offY);
+  if (lx < 0 || lx >= laW || ly < 0 || ly >= laH) return 0;
+  return fillRegionMap[ly * laW + lx] || 0;
+}
+
+function fillRegionAtCanvasPoint(x, y, color) {
+  const regionId = getRegionIdAtCanvasPoint(x, y);
+  if (regionId <= 0) return false;
+
+  const region = fillRegionsById[regionId];
+  if (!region || !region.pixels || region.pixels.length === 0) return false;
+
+  paintByRegion[regionId] = color;
+  cx.fillStyle = color;
+  for (const pos of region.pixels) {
+    const px = (pos % laW) + offX;
+    const py = Math.floor(pos / laW) + offY;
+    if (px >= 0 && px < DC.width && py >= 0 && py < DC.height) {
+      cx.fillRect(px, py, 1, 1);
+    }
+  }
+  if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
+  return true;
+}
+
 function getPos(e) {
   const r = DC.getBoundingClientRect();
   const t = e.touches ? e.touches[0] : e;
@@ -789,6 +821,13 @@ function onStart(e) {
   }
 
   if (appMode === 'color' && !isEraser) {
+    if (fillRegionMap && fillRegions.length > 0) {
+      if (fillRegionAtCanvasPoint(px, py, currentColor)) {
+        saveState();
+      }
+      return;
+    }
+
     colorMask = buildColorMask(px, py);
     if (!colorMask) return;
 
