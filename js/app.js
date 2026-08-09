@@ -224,6 +224,83 @@ function runEdgeWorker(rawData, w, h, isFirstRun) {
   edgeWorker.postMessage({ imageData: rawData, w, h, mode: edgeMode, detail: detailLevel });
 }
 
+function analyzeLineartInWorker(lineart, w, h, task, onDone) {
+  if (edgeWorker) edgeWorker.terminate();
+  edgeWorker = new Worker('./js/edge-worker.js', { type: 'module' });
+  debugMark('lineart-analysis-start', { width: w, height: h, task });
+
+  edgeWorker.onmessage = (e) => {
+    if (e.data.type === 'progress') {
+      debugMark('lineart-analysis-progress', { step: e.data.step, message: e.data.message });
+      setLoadingText(e.data.message);
+      return;
+    }
+    if (e.data.type === 'parts-result') {
+      parts = e.data.parts || [];
+      debugMark('lineart-analysis-result', {
+        parts: parts.length,
+        task
+      });
+      edgeWorker.terminate();
+      edgeWorker = null;
+      onDone();
+      return;
+    }
+    if (e.data.type === 'fill-regions-result') {
+      hydrateFillData(e.data.fillRegions);
+      debugMark('lineart-analysis-result', {
+        fillRegions: fillRegions.length,
+        task
+      });
+      edgeWorker.terminate();
+      edgeWorker = null;
+      onDone();
+    }
+  };
+
+  edgeWorker.onerror = (event) => {
+    debugMark('lineart-analysis-error', {
+      message: event.message,
+      lineno: event.lineno,
+      colno: event.colno,
+      filename: event.filename
+    });
+    edgeWorker = null;
+    isProcessing = false;
+    alert('프리셋 준비에 실패했어요. 다시 시도해주세요!');
+    goHome();
+  };
+
+  edgeWorker.postMessage({
+    task,
+    imageData: lineart.data || lineart,
+    w,
+    h
+  });
+}
+
+function ensurePresetTraceReady(onDone) {
+  if (!lineartData) return;
+  if (parts && parts.length > 0) {
+    onDone();
+    return;
+  }
+  showScreen('processing-screen');
+  setLoadingText('따라 그릴 길을 준비하는 중... ✏️');
+  analyzeLineartInWorker(lineartData, laW, laH, 'detect-parts', onDone);
+}
+
+function ensurePresetFillReady(onDone) {
+  if (!lineartData) return;
+  if (fillRegionMap && fillRegions.length > 0) {
+    onDone();
+    return;
+  }
+  showScreen('processing-screen');
+  setLoadingText('색칠 영역을 준비하는 중... 🎨');
+  analyzeLineartInWorker(lineartData, laW, laH, 'build-fill-regions', onDone);
+}
+
 function onDetailChange(val) {
   detailLevel = parseInt(val, 10);
   if (detailTimer) clearTimeout(detailTimer);
@@ -306,7 +383,9 @@ function beginActivity() {
   offX = Math.floor((DC.width - laW) / 2);
   offY = Math.floor((DC.height - laH) / 2);
 
-  parts = detectParts(lineartData, laW, laH);
+  if (!parts || parts.length === 0) {
+    parts = detectParts(lineartData, laW, laH);
+  }
 
   if (!parts || parts.length === 0) {
     parts = buildEmergencyParts(lineartData, laW, laH);
@@ -1104,8 +1183,22 @@ document.querySelectorAll('.mtbtn').forEach(btn => {
 document.querySelectorAll('.mode-card').forEach(card => {
   card.addEventListener('click', () => {
     const mode = card.dataset.mode;
-    if (mode === 'trace') { beginActivity(); return; }
-    if (mode === 'color') { beginColorDirect(); return; }
+    if (mode === 'trace') {
+      if (hasPhoto && lineartData) {
+        ensurePresetTraceReady(() => beginActivity());
+        return;
+      }
+      beginActivity();
+      return;
+    }
+    if (mode === 'color') {
+      if (hasPhoto && lineartData) {
+        ensurePresetFillReady(() => beginColorDirect());
+        return;
+      }
+      beginColorDirect();
+      return;
+    }
     if (mode === 'sketch') { startCreativeMode('sketch'); return; }
     if (mode === 'kaleidoscope') { startCreativeMode('kaleidoscope'); return; }
     if (mode === 'neon') { startCreativeMode('neon'); return; }
@@ -1133,15 +1226,14 @@ function loadPreset(idx) {
     debugMark('preset-rendered', { size: result.size });
     lineartData = result.lineartData;
     laW = result.size; laH = result.size;
-    parts = detectParts(result.outData, result.size, result.size);
-    debugMark('preset-parts-detected', { parts: parts.length });
-    recomputeFillData(result.lineartData, result.size, result.size);
-    debugMark('preset-fill-ready', { fillRegions: fillRegions.length });
+    parts = [];
+    hydrateFillData(null);
     const lp = document.getElementById('lineart-preview');
     lp.width = result.size; lp.height = result.size;
     lp.getContext('2d').putImageData(lineartData, 0, 0);
     document.getElementById('preview-img').src = SC.toDataURL();
     hasPhoto = true;
+    isProcessing = false;
     showScreen('mode-screen');
     debugMark('preset-mode-screen-ready', { hasPhoto });
   } catch (error) {

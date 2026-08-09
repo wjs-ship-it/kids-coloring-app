@@ -523,6 +523,7 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
 
   const regionMap = new Int32Array(w * h);
   const regions = [];
+  const queue = new Int32Array(w * h);
   let nextRegionId = 1;
 
   for (let y = 0; y < h; y++) {
@@ -530,18 +531,18 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
       const startPos = y * w + x;
       if (lineMask[startPos] || regionMap[startPos] !== 0) continue;
 
-      const queue = [[x, y]];
-      const pixels = [];
-      let front = 0;
+      let head = 0;
+      let tail = 0;
       let touchesBorder = false;
       let minX = x, maxX = x, minY = y, maxY = y;
 
+      queue[tail++] = startPos;
       regionMap[startPos] = -1;
 
-      while (front < queue.length) {
-        const [cx, cy] = queue[front++];
-        const pos = cy * w + cx;
-        pixels.push(pos);
+      while (head < tail) {
+        const pos = queue[head++];
+        const cx = pos % w;
+        const cy = (pos / w) | 0;
 
         if (cx === 0 || cx === w - 1 || cy === 0 || cy === h - 1) {
           touchesBorder = true;
@@ -558,20 +559,23 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
           const nextPos = ny * w + nx;
           if (lineMask[nextPos] || regionMap[nextPos] !== 0) continue;
           regionMap[nextPos] = -1;
-          queue.push([nx, ny]);
+          queue[tail++] = nextPos;
         }
       }
 
-      const keep = !touchesBorder && pixels.length >= minArea;
+      const keep = !touchesBorder && tail >= minArea;
       const regionId = keep ? nextRegionId++ : 0;
-      for (const pos of pixels) {
+      const pixels = keep ? new Array(tail) : null;
+      for (let i = 0; i < tail; i++) {
+        const pos = queue[i];
         regionMap[pos] = regionId;
+        if (keep) pixels[i] = pos;
       }
       if (!keep) continue;
 
       regions.push({
         id: regionId,
-        area: pixels.length,
+        area: tail,
         bounds: { minX, minY, maxX, maxY },
         pixels
       });
