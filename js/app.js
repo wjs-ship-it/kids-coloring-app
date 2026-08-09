@@ -2,7 +2,7 @@ import { createDemoCatBlob } from './demo.js';
 import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonBg, rebuildPalette } from './creative.js';
 import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showScreen, setLoadingText } from './ui-utils.js';
 import { PRESETS, renderPreset } from './presets.js';
-import { detectParts, dilate, fuseLines, normalizeLineWidth } from './edge-detect.js';
+import { detectParts, dilate, fuseLines, normalizeLineWidth, buildFillRegions } from './edge-detect.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -29,6 +29,10 @@ let lineBoundary = null;
 let _maskCvs = null, _drawCvs = null, _baseCvs = null;
 let lineartOverlay = null;
 let activeClip = false;
+let fillLineMask = null;
+let fillRegionMap = null;
+let fillRegions = [];
+let fillRegionsById = [];
 
 const DC = document.getElementById('drawing-canvas');
 const cx = DC.getContext('2d');
@@ -137,6 +141,7 @@ function runEdgeWorker(rawData, w, h, isFirstRun) {
       lineartData = new ImageData(new Uint8ClampedArray(e.data.lineartData), e.data.w, e.data.h);
       parts = e.data.parts;
       laW = e.data.w; laH = e.data.h;
+      hydrateFillData(e.data.fillRegions);
 
       if (isFirstRun) {
         document.getElementById('preview-img').src = SC.toDataURL();
@@ -184,6 +189,7 @@ function onDetailChange(val) {
         d[i] = v; d[i + 1] = v; d[i + 2] = v;
       }
       parts = detectParts(lineartData, laW, laH);
+      recomputeFillData(lineartData, laW, laH);
       const lp = document.getElementById('lineart-preview');
       lp.width = laW; lp.height = laH;
       lp.getContext('2d').putImageData(lineartData, 0, 0);
@@ -617,6 +623,29 @@ function fitLineartToCanvas() {
   laW = newW;
   laH = newH;
   parts = detectParts(sd, newW, newH);
+  recomputeFillData(sd, newW, newH);
+}
+
+function hydrateFillData(fillData) {
+  if (!fillData) {
+    fillLineMask = null;
+    fillRegionMap = null;
+    fillRegions = [];
+    fillRegionsById = [];
+    return;
+  }
+
+  fillLineMask = fillData.lineMask ? new Uint8Array(fillData.lineMask) : null;
+  fillRegionMap = fillData.regionMap ? new Int32Array(fillData.regionMap) : null;
+  fillRegions = Array.isArray(fillData.regions) ? fillData.regions : [];
+  fillRegionsById = [];
+  for (const region of fillRegions) {
+    fillRegionsById[region.id] = region;
+  }
+}
+
+function recomputeFillData(ld, w, h) {
+  hydrateFillData(buildFillRegions(ld, w, h));
 }
 
 function buildLineBoundary() {
@@ -677,6 +706,28 @@ function createLineartOverlay() {
 function buildColorMask(startX, startY) {
   const cw = DC.width, ch = DC.height;
   if (startX < 0 || startX >= cw || startY < 0 || startY >= ch) return null;
+
+  if (fillRegionMap && fillRegions.length > 0) {
+    const lx = Math.floor(startX - offX);
+    const ly = Math.floor(startY - offY);
+    if (lx < 0 || lx >= laW || ly < 0 || ly >= laH) return null;
+
+    const regionId = fillRegionMap[ly * laW + lx];
+    if (regionId <= 0) return null;
+
+    const region = fillRegionsById[regionId];
+    if (!region || !region.pixels || region.pixels.length === 0) return null;
+
+    const mask = new Uint8Array(cw * ch);
+    for (const pos of region.pixels) {
+      const px = (pos % laW) + offX;
+      const py = Math.floor(pos / laW) + offY;
+      if (px >= 0 && px < cw && py >= 0 && py < ch) {
+        mask[py * cw + px] = 1;
+      }
+    }
+    return mask;
+  }
 
   if (lineBoundary) {
     if (lineBoundary[startY * cw + startX]) return null;
@@ -989,6 +1040,7 @@ function loadPreset(idx) {
   lineartData = result.lineartData;
   laW = result.size; laH = result.size;
   parts = detectParts(result.outData, result.size, result.size);
+  recomputeFillData(result.lineartData, result.size, result.size);
   const lp = document.getElementById('lineart-preview');
   lp.width = result.size; lp.height = result.size;
   lp.getContext('2d').putImageData(lineartData, 0, 0);

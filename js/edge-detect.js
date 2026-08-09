@@ -514,6 +514,77 @@ export function detectParts(lineartData, w, h) {
   return meaningful;
 }
 
+export function buildFillRegions(lineartData, w, h, minArea = 24) {
+  const d = lineartData.data || lineartData;
+  const lineMask = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    lineMask[i] = d[i * 4] < 128 ? 1 : 0;
+  }
+
+  const regionMap = new Int32Array(w * h);
+  const regions = [];
+  let nextRegionId = 1;
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const startPos = y * w + x;
+      if (lineMask[startPos] || regionMap[startPos] !== 0) continue;
+
+      const queue = [[x, y]];
+      const pixels = [];
+      let front = 0;
+      let touchesBorder = false;
+      let minX = x, maxX = x, minY = y, maxY = y;
+
+      regionMap[startPos] = -1;
+
+      while (front < queue.length) {
+        const [cx, cy] = queue[front++];
+        const pos = cy * w + cx;
+        pixels.push(pos);
+
+        if (cx === 0 || cx === w - 1 || cy === 0 || cy === h - 1) {
+          touchesBorder = true;
+        }
+        if (cx < minX) minX = cx;
+        if (cx > maxX) maxX = cx;
+        if (cy < minY) minY = cy;
+        if (cy > maxY) maxY = cy;
+
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = cx + dx;
+          const ny = cy + dy;
+          if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+          const nextPos = ny * w + nx;
+          if (lineMask[nextPos] || regionMap[nextPos] !== 0) continue;
+          regionMap[nextPos] = -1;
+          queue.push([nx, ny]);
+        }
+      }
+
+      const keep = !touchesBorder && pixels.length >= minArea;
+      const regionId = keep ? nextRegionId++ : 0;
+      for (const pos of pixels) {
+        regionMap[pos] = regionId;
+      }
+      if (!keep) continue;
+
+      regions.push({
+        id: regionId,
+        area: pixels.length,
+        bounds: { minX, minY, maxX, maxY },
+        pixels
+      });
+    }
+  }
+
+  if (regions.length === 0 && minArea > 8) {
+    return buildFillRegions(lineartData, w, h, 8);
+  }
+
+  return { lineMask, regionMap, regions };
+}
+
 function traceRegionBoundary(regionPixels, isEdge, w, h) {
   const edgeSet = new Uint8Array(w * h);
   for (const pos of regionPixels) {
@@ -743,5 +814,6 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
   }
 
   const parts = detectParts(outData, w, h);
-  return { lineartData: outData, parts };
+  const fillRegions = buildFillRegions(outData, w, h);
+  return { lineartData: outData, parts, fillRegions };
 }
