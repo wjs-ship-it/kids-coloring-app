@@ -156,6 +156,100 @@
       return `<div><strong>${label}</strong><br>${value}</div>`;
     }
 
+    function samePixel(a, b, index) {
+      return (
+        a[index] === b[index] &&
+        a[index + 1] === b[index + 1] &&
+        a[index + 2] === b[index + 2] &&
+        a[index + 3] === b[index + 3]
+      );
+    }
+
+    function countPixelDiff(a, b) {
+      let diff = 0;
+      for (let i = 0; i < a.length; i += 4) {
+        if (!samePixel(a, b, i)) diff++;
+      }
+      return diff;
+    }
+
+    function redrawFilledRegions(ctx, lineartData, fillData, paintByRegion, color) {
+      const { width, height } = ctx.canvas;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      const regionMap = fillData.regionMap;
+      const regionsById = new Map(fillData.regions.map((region) => [region.id, region]));
+
+      for (const [regionId, fillColor] of paintByRegion.entries()) {
+        if (!fillColor) continue;
+        const region = regionsById.get(regionId);
+        if (!region) continue;
+        ctx.fillStyle = fillColor;
+        const { minX, maxX, minY, maxY } = region.bounds;
+        for (let y = minY; y <= maxY; y++) {
+          const rowBase = y * width;
+          for (let x = minX; x <= maxX; x++) {
+            if (regionMap[rowBase + x] !== regionId) continue;
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+
+      const line = lineartData.data;
+      ctx.fillStyle = color;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          if (line[(y * width + x) * 4] < 128) {
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+    }
+
+    function paintLineartOnly(ctx, lineartData, color) {
+      const { width, height } = ctx.canvas;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+      const line = lineartData.data;
+      ctx.fillStyle = color;
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          if (line[(y * width + x) * 4] < 128) {
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+    }
+
+    function verifyFillUndo(lineartData, fillData, canvas) {
+      const ctx = canvas.getContext('2d');
+      paintLineartOnly(ctx, lineartData, '#1e293b');
+      const baseline = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const regions = [...fillData.regions].sort((a, b) => b.area - a.area);
+      const target = regions.find((region) => region.area >= 100);
+      if (!target) {
+        return { ok: false, filledPixels: 0, undoDiff: -1 };
+      }
+
+      const paintByRegion = new Map();
+      paintByRegion.set(target.id, '#ef4444');
+      redrawFilledRegions(ctx, lineartData, fillData, paintByRegion, '#1e293b');
+      const afterFill = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const filledPixels = countPixelDiff(afterFill.data, baseline.data);
+
+      paintByRegion.delete(target.id);
+      redrawFilledRegions(ctx, lineartData, fillData, paintByRegion, '#1e293b');
+      const afterUndo = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const undoDiff = countPixelDiff(afterUndo.data, baseline.data);
+
+      return {
+        ok: filledPixels > 0 && undoDiff === 0,
+        filledPixels,
+        undoDiff
+      };
+    }
+
     function makeCard(result) {
       const card = document.createElement('article');
       card.className = 'card';
@@ -175,7 +269,9 @@
         renderMetric('Parts', result.parts),
         renderMetric('Fill Regions', result.fillRegions),
         renderMetric('Largest Region', result.largestRegionArea),
-        renderMetric('Runtime', `${result.durationMs.toFixed(1)} ms`)
+        renderMetric('Runtime', `${result.durationMs.toFixed(1)} ms`),
+        renderMetric('Fill Pixels', result.fillPixels),
+        renderMetric('Undo Diff', result.undoDiff)
       ].join('');
       card.appendChild(meta);
 
@@ -191,11 +287,12 @@
       const { lineartData, size } = renderPreset(preset, canvas, ctx);
       const parts = detectParts(lineartData, size, size);
       const fillData = buildFillRegions(lineartData, size, size);
+      const interaction = verifyFillUndo(lineartData, fillData, canvas);
       const durationMs = performance.now() - startedAt;
 
       const regions = fillData.regions || [];
       const largestRegionArea = regions.reduce((max, region) => Math.max(max, region.area || 0), 0);
-      const ok = parts.length > 0 && regions.length > 0 && largestRegionArea >= 100;
+      const ok = parts.length > 0 && regions.length > 0 && largestRegionArea >= 100 && interaction.ok;
 
       return {
         name: preset.name,
@@ -204,6 +301,8 @@
         fillRegions: regions.length,
         largestRegionArea,
         durationMs,
+        fillPixels: interaction.filledPixels,
+        undoDiff: interaction.undoDiff,
         ok,
         canvas
       };
