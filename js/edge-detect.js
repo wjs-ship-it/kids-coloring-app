@@ -516,15 +516,71 @@ export function detectParts(lineartData, w, h) {
 
 export function buildFillRegions(lineartData, w, h, minArea = 24) {
   const d = lineartData.data || lineartData;
+  const total = w * h;
   const lineMask = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) {
+  for (let i = 0; i < total; i++) {
     lineMask[i] = d[i * 4] < 128 ? 1 : 0;
   }
 
-  const regionMap = new Int32Array(w * h);
+  const regionMap = new Int32Array(total);
   const regions = [];
-  const queue = new Int32Array(w * h);
+  const queue = new Int32Array(total);
   let nextRegionId = 1;
+
+  function markOutside(startPos) {
+    let head = 0;
+    let tail = 0;
+    queue[tail++] = startPos;
+    regionMap[startPos] = -2;
+
+    while (head < tail) {
+      const pos = queue[head++];
+      const cx = pos % w;
+      const cy = (pos / w) | 0;
+
+      if (cx + 1 < w) {
+        const nextPos = pos + 1;
+        if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
+          regionMap[nextPos] = -2;
+          queue[tail++] = nextPos;
+        }
+      }
+      if (cx > 0) {
+        const nextPos = pos - 1;
+        if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
+          regionMap[nextPos] = -2;
+          queue[tail++] = nextPos;
+        }
+      }
+      if (cy + 1 < h) {
+        const nextPos = pos + w;
+        if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
+          regionMap[nextPos] = -2;
+          queue[tail++] = nextPos;
+        }
+      }
+      if (cy > 0) {
+        const nextPos = pos - w;
+        if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
+          regionMap[nextPos] = -2;
+          queue[tail++] = nextPos;
+        }
+      }
+    }
+  }
+
+  for (let x = 0; x < w; x++) {
+    const top = x;
+    const bottom = (h - 1) * w + x;
+    if (!lineMask[top] && regionMap[top] === 0) markOutside(top);
+    if (!lineMask[bottom] && regionMap[bottom] === 0) markOutside(bottom);
+  }
+  for (let y = 1; y < h - 1; y++) {
+    const left = y * w;
+    const right = left + (w - 1);
+    if (!lineMask[left] && regionMap[left] === 0) markOutside(left);
+    if (!lineMask[right] && regionMap[right] === 0) markOutside(right);
+  }
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -533,7 +589,6 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
 
       let head = 0;
       let tail = 0;
-      let touchesBorder = false;
       let minX = x, maxX = x, minY = y, maxY = y;
 
       queue[tail++] = startPos;
@@ -543,41 +598,53 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
         const pos = queue[head++];
         const cx = pos % w;
         const cy = (pos / w) | 0;
-
-        if (cx === 0 || cx === w - 1 || cy === 0 || cy === h - 1) {
-          touchesBorder = true;
-        }
         if (cx < minX) minX = cx;
         if (cx > maxX) maxX = cx;
         if (cy < minY) minY = cy;
         if (cy > maxY) maxY = cy;
 
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          const nx = cx + dx;
-          const ny = cy + dy;
-          if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
-          const nextPos = ny * w + nx;
-          if (lineMask[nextPos] || regionMap[nextPos] !== 0) continue;
-          regionMap[nextPos] = -1;
-          queue[tail++] = nextPos;
+        if (cx + 1 < w) {
+          const nextPos = pos + 1;
+          if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
+            regionMap[nextPos] = -1;
+            queue[tail++] = nextPos;
+          }
+        }
+        if (cx > 0) {
+          const nextPos = pos - 1;
+          if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
+            regionMap[nextPos] = -1;
+            queue[tail++] = nextPos;
+          }
+        }
+        if (cy + 1 < h) {
+          const nextPos = pos + w;
+          if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
+            regionMap[nextPos] = -1;
+            queue[tail++] = nextPos;
+          }
+        }
+        if (cy > 0) {
+          const nextPos = pos - w;
+          if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
+            regionMap[nextPos] = -1;
+            queue[tail++] = nextPos;
+          }
         }
       }
 
-      const keep = !touchesBorder && tail >= minArea;
+      const keep = tail >= minArea;
       const regionId = keep ? nextRegionId++ : 0;
-      const pixels = keep ? new Array(tail) : null;
       for (let i = 0; i < tail; i++) {
         const pos = queue[i];
         regionMap[pos] = regionId;
-        if (keep) pixels[i] = pos;
       }
       if (!keep) continue;
 
       regions.push({
         id: regionId,
         area: tail,
-        bounds: { minX, minY, maxX, maxY },
-        pixels
+        bounds: { minX, minY, maxX, maxY }
       });
     }
   }

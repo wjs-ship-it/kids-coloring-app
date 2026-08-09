@@ -851,14 +851,19 @@ function buildColorMask(startX, startY) {
     if (regionId <= 0) return null;
 
     const region = fillRegionsById[regionId];
-    if (!region || !region.pixels || region.pixels.length === 0) return null;
+    if (!region || !region.bounds) return null;
 
     const mask = new Uint8Array(cw * ch);
-    for (const pos of region.pixels) {
-      const px = (pos % laW) + offX;
-      const py = Math.floor(pos / laW) + offY;
-      if (px >= 0 && px < cw && py >= 0 && py < ch) {
-        mask[py * cw + px] = 1;
+    const { minX, maxX, minY, maxY } = region.bounds;
+    for (let y = minY; y <= maxY; y++) {
+      const rowBase = y * laW;
+      for (let x = minX; x <= maxX; x++) {
+        if (fillRegionMap[rowBase + x] !== regionId) continue;
+        const px = x + offX;
+        const py = y + offY;
+        if (px >= 0 && px < cw && py >= 0 && py < ch) {
+          mask[py * cw + px] = 1;
+        }
       }
     }
     return mask;
@@ -920,15 +925,20 @@ function fillRegionAtCanvasPoint(x, y, color) {
   if (regionId <= 0) return false;
 
   const region = fillRegionsById[regionId];
-  if (!region || !region.pixels || region.pixels.length === 0) return false;
+  if (!region || !region.bounds) return false;
 
   paintByRegion[regionId] = color;
   cx.fillStyle = color;
-  for (const pos of region.pixels) {
-    const px = (pos % laW) + offX;
-    const py = Math.floor(pos / laW) + offY;
-    if (px >= 0 && px < DC.width && py >= 0 && py < DC.height) {
-      cx.fillRect(px, py, 1, 1);
+  const { minX, maxX, minY, maxY } = region.bounds;
+  for (let iy = minY; iy <= maxY; iy++) {
+    const rowBase = iy * laW;
+    for (let ix = minX; ix <= maxX; ix++) {
+      if (fillRegionMap[rowBase + ix] !== regionId) continue;
+      const px = ix + offX;
+      const py = iy + offY;
+      if (px >= 0 && px < DC.width && py >= 0 && py < DC.height) {
+        cx.fillRect(px, py, 1, 1);
+      }
     }
   }
   if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
