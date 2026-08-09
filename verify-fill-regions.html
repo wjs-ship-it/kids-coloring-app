@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kids Coloring Fill Verification</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #fdf7ef;
+      --ink: #1e293b;
+      --card: #ffffff;
+      --line: #e7d7c5;
+      --ok: #166534;
+      --ok-bg: #dcfce7;
+      --bad: #991b1b;
+      --bad-bg: #fee2e2;
+      --accent: #f97316;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: linear-gradient(180deg, #fff8f0 0%, var(--bg) 100%);
+      color: var(--ink);
+      font-family: "Pretendard", "Noto Sans KR", sans-serif;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 32px;
+      line-height: 1.1;
+    }
+
+    p {
+      margin: 0 0 20px;
+      color: #475569;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      background: var(--accent);
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .status {
+      font-weight: 700;
+    }
+
+    .status.ok { color: var(--ok); }
+    .status.bad { color: var(--bad); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 16px;
+      box-shadow: 0 12px 40px rgba(148, 163, 184, 0.12);
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 14px;
+    }
+
+    .meta div {
+      background: #fffaf4;
+      border-radius: 14px;
+      padding: 10px 12px;
+      border: 1px solid #f2e8db;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 72px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .badge.ok {
+      color: var(--ok);
+      background: var(--ok-bg);
+    }
+
+    .badge.bad {
+      color: var(--bad);
+      background: var(--bad-bg);
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: white;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Fill Region Verification</h1>
+    <p>Local browser harness for preset lineart, trace parts, and fill-region generation.</p>
+    <div class="toolbar">
+      <button id="run-btn" type="button">Run Verification</button>
+      <span id="summary" class="status">Idle</span>
+    </div>
+    <div id="results" class="grid"></div>
+  </main>
+
+  <script type="module">
+    import { PRESETS, renderPreset } from './js/presets.js';
+    import { detectParts, buildFillRegions } from './js/edge-detect.js';
+
+    const runBtn = document.getElementById('run-btn');
+    const summary = document.getElementById('summary');
+    const results = document.getElementById('results');
+
+    function renderMetric(label, value) {
+      return `<div><strong>${label}</strong><br>${value}</div>`;
+    }
+
+    function makeCard(result) {
+      const card = document.createElement('article');
+      card.className = 'card';
+
+      const title = document.createElement('h2');
+      title.textContent = `${result.emoji} ${result.name}`;
+      card.appendChild(title);
+
+      const badge = document.createElement('div');
+      badge.className = `badge ${result.ok ? 'ok' : 'bad'}`;
+      badge.textContent = result.ok ? 'PASS' : 'FAIL';
+      card.appendChild(badge);
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML = [
+        renderMetric('Parts', result.parts),
+        renderMetric('Fill Regions', result.fillRegions),
+        renderMetric('Largest Region', result.largestRegionArea),
+        renderMetric('Runtime', `${result.durationMs.toFixed(1)} ms`)
+      ].join('');
+      card.appendChild(meta);
+
+      const canvas = result.canvas;
+      card.appendChild(canvas);
+      return card;
+    }
+
+    function verifyPreset(preset) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const startedAt = performance.now();
+      const { lineartData, size } = renderPreset(preset, canvas, ctx);
+      const parts = detectParts(lineartData, size, size);
+      const fillData = buildFillRegions(lineartData, size, size);
+      const durationMs = performance.now() - startedAt;
+
+      const regions = fillData.regions || [];
+      const largestRegionArea = regions.reduce((max, region) => Math.max(max, region.area || 0), 0);
+      const ok = parts.length > 0 && regions.length > 0 && largestRegionArea >= 100;
+
+      return {
+        name: preset.name,
+        emoji: preset.emoji,
+        parts: parts.length,
+        fillRegions: regions.length,
+        largestRegionArea,
+        durationMs,
+        ok,
+        canvas
+      };
+    }
+
+    function runVerification() {
+      summary.textContent = 'Running...';
+      summary.className = 'status';
+      results.innerHTML = '';
+
+      const runs = PRESETS.map(verifyPreset);
+      const passCount = runs.filter((result) => result.ok).length;
+
+      for (const result of runs) {
+        results.appendChild(makeCard(result));
+      }
+
+      const allPassed = passCount === runs.length;
+      summary.textContent = `${passCount}/${runs.length} presets passed`;
+      summary.className = `status ${allPassed ? 'ok' : 'bad'}`;
+    }
+
+    runBtn.addEventListener('click', runVerification);
+    runVerification();
+  </script>
+</body>
+</html>
