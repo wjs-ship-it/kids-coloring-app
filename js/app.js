@@ -40,6 +40,40 @@ const cx = DC.getContext('2d');
 const SC = document.createElement('canvas');
 const sx = SC.getContext('2d');
 
+const DEBUG_MAX_EVENTS = 120;
+
+function debugMark(stage, extra = {}) {
+  const entry = {
+    at: new Date().toISOString(),
+    stage,
+    screen: document.querySelector('.screen.active')?.id || null,
+    ...extra
+  };
+  const store = window.__kidsDebug ?? { events: [] };
+  store.last = entry;
+  store.events.push(entry);
+  if (store.events.length > DEBUG_MAX_EVENTS) store.events.shift();
+  window.__kidsDebug = store;
+  console.log('[kids-debug]', entry);
+  return entry;
+}
+
+window.addEventListener('error', (event) => {
+  debugMark('window-error', {
+    message: event.message,
+    source: event.filename,
+    lineno: event.lineno,
+    colno: event.colno
+  });
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason;
+  debugMark('unhandled-rejection', {
+    reason: reason?.message || String(reason)
+  });
+});
+
 function buildPalette() {
   rebuildPaletteForColors(COLORS);
   const b = document.getElementById('brush-bar');
@@ -87,6 +121,7 @@ function goHome() {
 }
 
 async function loadDemoImage() {
+  debugMark('demo-start');
   showScreen('processing-screen');
   const blob = await createDemoCatBlob();
   processPhoto(blob);
@@ -98,10 +133,12 @@ async function processPhoto(blob) {
   if (now - lastProcessTime < 500) return;
   lastProcessTime = now;
   isProcessing = true;
+  debugMark('processPhoto-start', { blobType: blob?.type || 'unknown', blobSize: blob?.size || null });
   showScreen('processing-screen');
   setLoadingText('AI 요정이 그림을 그리고 있어요... ✨');
 
   const img = await createImageBitmap(blob);
+  debugMark('processPhoto-imageBitmap-ready', { width: img.width, height: img.height });
   setLoadingText('선을 그리는 중... ✏️');
   convertToLineart(img);
 }
@@ -121,6 +158,7 @@ function convertToLineart(img) {
   _sourceW = w;
   _sourceH = h;
   detailLevel = 50;
+  debugMark('convertToLineart-ready', { width: w, height: h });
   document.getElementById('detail-slider').value = 50;
   document.getElementById('detail-slider-wrap').style.display = '';
 
@@ -130,15 +168,23 @@ function convertToLineart(img) {
 function runEdgeWorker(rawData, w, h, isFirstRun) {
   if (edgeWorker) edgeWorker.terminate();
   edgeWorker = new Worker('./js/edge-worker.js', { type: 'module' });
+  debugMark('worker-start', { width: w, height: h, isFirstRun, edgeMode, detailLevel });
 
   const sliderWrap = document.getElementById('detail-slider-wrap');
 
   edgeWorker.onmessage = (e) => {
     if (e.data.type === 'progress') {
+      debugMark('worker-progress', { step: e.data.step, message: e.data.message });
       if (isFirstRun) setLoadingText(e.data.message);
       return;
     }
     if (e.data.type === 'result') {
+      debugMark('worker-result', {
+        width: e.data.w,
+        height: e.data.h,
+        parts: e.data.parts?.length || 0,
+        fillRegions: e.data.fillRegions?.regions?.length || 0
+      });
       lineartData = new ImageData(new Uint8ClampedArray(e.data.lineartData), e.data.w, e.data.h);
       parts = e.data.parts;
       laW = e.data.w; laH = e.data.h;
@@ -159,7 +205,13 @@ function runEdgeWorker(rawData, w, h, isFirstRun) {
     }
   };
 
-  edgeWorker.onerror = () => {
+  edgeWorker.onerror = (event) => {
+    debugMark('worker-error', {
+      message: event.message,
+      lineno: event.lineno,
+      colno: event.colno,
+      filename: event.filename
+    });
     isProcessing = false;
     sliderWrap.classList.remove('processing');
     edgeWorker = null;
@@ -1075,17 +1127,27 @@ function buildPresetGrid() {
 }
 
 function loadPreset(idx) {
-  const result = renderPreset(PRESETS[idx], SC, sx);
-  lineartData = result.lineartData;
-  laW = result.size; laH = result.size;
-  parts = detectParts(result.outData, result.size, result.size);
-  recomputeFillData(result.lineartData, result.size, result.size);
-  const lp = document.getElementById('lineart-preview');
-  lp.width = result.size; lp.height = result.size;
-  lp.getContext('2d').putImageData(lineartData, 0, 0);
-  document.getElementById('preview-img').src = SC.toDataURL();
-  hasPhoto = true;
-  showScreen('mode-screen');
+  debugMark('preset-click', { index: idx, name: PRESETS[idx]?.name || null });
+  try {
+    const result = renderPreset(PRESETS[idx], SC, sx);
+    debugMark('preset-rendered', { size: result.size });
+    lineartData = result.lineartData;
+    laW = result.size; laH = result.size;
+    parts = detectParts(result.outData, result.size, result.size);
+    debugMark('preset-parts-detected', { parts: parts.length });
+    recomputeFillData(result.lineartData, result.size, result.size);
+    debugMark('preset-fill-ready', { fillRegions: fillRegions.length });
+    const lp = document.getElementById('lineart-preview');
+    lp.width = result.size; lp.height = result.size;
+    lp.getContext('2d').putImageData(lineartData, 0, 0);
+    document.getElementById('preview-img').src = SC.toDataURL();
+    hasPhoto = true;
+    showScreen('mode-screen');
+    debugMark('preset-mode-screen-ready', { hasPhoto });
+  } catch (error) {
+    debugMark('preset-error', { message: error?.message || String(error) });
+    throw error;
+  }
 }
 
 DC.addEventListener('touchstart', onStart, { passive: false });
