@@ -35,6 +35,10 @@ let fillRegions = [];
 let fillRegionsById = [];
 let paintByRegion = [];
 
+function isRegionFillColorMode() {
+  return appMode === 'color' && !creativeMode && !!fillRegionMap && fillRegions.length > 0;
+}
+
 const DC = document.getElementById('drawing-canvas');
 const cx = DC.getContext('2d');
 const SC = document.createElement('canvas');
@@ -659,14 +663,7 @@ function transitionToColor() {
   paintByRegion = [];
   buildLineBoundary();
   createLineartOverlay();
-  cx.fillStyle = '#fff'; cx.fillRect(0, 0, DC.width, DC.height);
-  const ld = lineartData.data;
-  cx.fillStyle = '#1e293b';
-  for (let y = 0; y < laH; y++) {
-    for (let x = 0; x < laW; x++) {
-      if (ld[(y * laW + x) * 4] < 128) cx.fillRect(offX + x, offY + y, 1, 1);
-    }
-  }
+  redrawColorScene();
   saveState();
   document.getElementById('side-palette').classList.remove('hidden');
   document.getElementById('brush-bar').classList.remove('hidden');
@@ -920,14 +917,10 @@ function getRegionIdAtCanvasPoint(x, y) {
   return fillRegionMap[ly * laW + lx] || 0;
 }
 
-function fillRegionAtCanvasPoint(x, y, color) {
-  const regionId = getRegionIdAtCanvasPoint(x, y);
-  if (regionId <= 0) return false;
-
+function drawFilledRegion(regionId, color) {
   const region = fillRegionsById[regionId];
   if (!region || !region.bounds) return false;
 
-  paintByRegion[regionId] = color;
   cx.fillStyle = color;
   const { minX, maxX, minY, maxY } = region.bounds;
   for (let iy = minY; iy <= maxY; iy++) {
@@ -941,8 +934,46 @@ function fillRegionAtCanvasPoint(x, y, color) {
       }
     }
   }
-  if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
   return true;
+}
+
+function redrawColorScene() {
+  cx.fillStyle = '#fff';
+  cx.fillRect(0, 0, DC.width, DC.height);
+  for (let regionId = 1; regionId < paintByRegion.length; regionId++) {
+    const color = paintByRegion[regionId];
+    if (!color) continue;
+    drawFilledRegion(regionId, color);
+  }
+  if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
+}
+
+function fillRegionAtCanvasPoint(x, y, color) {
+  const regionId = getRegionIdAtCanvasPoint(x, y);
+  if (regionId <= 0) return null;
+
+  const region = fillRegionsById[regionId];
+  if (!region || !region.bounds) return null;
+
+  const prevColor = paintByRegion[regionId] || null;
+  if (prevColor === color) {
+    return { regionId, prevColor, nextColor: color, changed: false };
+  }
+
+  paintByRegion[regionId] = color;
+  drawFilledRegion(regionId, color);
+  if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
+  return { regionId, prevColor, nextColor: color, changed: true };
+}
+
+function saveRegionFillAction(regionId, prevColor, nextColor) {
+  historyStack.push({
+    kind: 'region-fill',
+    regionId,
+    prevColor,
+    nextColor
+  });
+  if (historyStack.length > 10) historyStack.shift();
 }
 
 function getPos(e) {
@@ -963,8 +994,9 @@ function onStart(e) {
 
   if (appMode === 'color' && !isEraser) {
     if (fillRegionMap && fillRegions.length > 0) {
-      if (fillRegionAtCanvasPoint(px, py, currentColor)) {
-        saveState();
+      const fillAction = fillRegionAtCanvasPoint(px, py, currentColor);
+      if (fillAction?.changed) {
+        saveRegionFillAction(fillAction.regionId, fillAction.prevColor, fillAction.nextColor);
       }
       return;
     }
@@ -1138,14 +1170,34 @@ let particleThrottle = 0;
 // --- End Particle System ---
 
 function saveState() {
-  historyStack.push(cx.getImageData(0, 0, DC.width, DC.height));
+  historyStack.push({
+    kind: 'snapshot',
+    imageData: cx.getImageData(0, 0, DC.width, DC.height)
+  });
   if (historyStack.length > 10) historyStack.shift();
 }
 
 function undo() {
+  if (historyStack.length === 0) return;
+
+  const lastEntry = historyStack[historyStack.length - 1];
+  if (isRegionFillColorMode() && lastEntry?.kind === 'region-fill') {
+    historyStack.pop();
+    if (lastEntry.prevColor) {
+      paintByRegion[lastEntry.regionId] = lastEntry.prevColor;
+    } else {
+      delete paintByRegion[lastEntry.regionId];
+    }
+    redrawColorScene();
+    return;
+  }
+
   if (historyStack.length > 1) {
     historyStack.pop();
-    cx.putImageData(historyStack[historyStack.length - 1], 0, 0);
+    const snapshotEntry = historyStack[historyStack.length - 1];
+    if (snapshotEntry?.kind === 'snapshot') {
+      cx.putImageData(snapshotEntry.imageData, 0, 0);
+    }
   }
 }
 
