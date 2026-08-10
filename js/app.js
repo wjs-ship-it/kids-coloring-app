@@ -11,6 +11,8 @@ const TRACE_TOLERANCE = 40;
 const COMPLETE_THRESHOLD = 0.90;
 const TRACE_REJOIN_DISTANCE = 18;
 const TRACE_HINT_COOLDOWN_MS = 900;
+const SMART_MISSION_IDLE_MS = 2400;
+const SMART_MISSION_HINT_COOLDOWN_MS = 3200;
 
 let appMode = 'trace', parts = [], curPartIdx = 0;
 let traceZone = null, colorMask = null;
@@ -40,9 +42,18 @@ let previewRegionId = 0;
 let traceHasPendingGap = false;
 let lastTraceHintAt = 0;
 let traceGuideVisible = false;
+let smartMissionTimer = null;
+let smartMissionRegionId = 0;
+let lastSmartMissionHintAt = 0;
 
 function isRegionFillColorMode() {
   return appMode === 'color' && !creativeMode && !!fillRegionMap && fillRegions.length > 0;
+}
+
+function clearSmartMissionTimer() {
+  if (!smartMissionTimer) return;
+  clearTimeout(smartMissionTimer);
+  smartMissionTimer = null;
 }
 
 const DC = document.getElementById('drawing-canvas');
@@ -123,6 +134,8 @@ function goHome() {
   isProcessing = false;
   creativeMode = null;
   hasPhoto = false;
+  smartMissionRegionId = 0;
+  clearSmartMissionTimer();
   lineBoundary = null;
   lineartOverlay = null;
   activeClip = false;
@@ -673,6 +686,8 @@ function transitionToColor() {
   hidePartDone();
   hideTraceGuide();
   previewRegionId = 0;
+  smartMissionRegionId = 0;
+  clearSmartMissionTimer();
   appMode = 'color';
   historyStack = [];
   paintByRegion = [];
@@ -683,13 +698,14 @@ function transitionToColor() {
   document.getElementById('side-palette').classList.remove('hidden');
   document.getElementById('brush-bar').classList.remove('hidden');
   updateProgress(1);
-  document.getElementById('part-label').textContent = '🎨 색칠!';
+  updateColorModeLabel('🎨 색칠!');
   showHint('터치해서 색칠해봐요! 🎨');
   setTimeout(() => document.getElementById('hint-toast').style.display = 'none', 3000);
   currentColor = '#ef4444'; brushSize = 14; isEraser = false;
   document.querySelectorAll('.cdot').forEach(d => d.classList.remove('active'));
   document.querySelector('.cdot').classList.add('active');
   traceZone = null; colorMask = null;
+  scheduleSmartMissionHint({ announce: true });
 }
 
 function beginColorDirect() {
@@ -702,12 +718,15 @@ function beginColorDirect() {
   creativeMode = null;
   transitionToColor();
   showScreen('canvas-screen');
+  scheduleSmartMissionHint({ announce: true });
 }
 
 function startCreativeMode(mode) {
   showScreen('canvas-screen');
   hideTraceGuide();
   previewRegionId = 0;
+  smartMissionRegionId = 0;
+  clearSmartMissionTimer();
   historyStack = [];
   traceZone = null; colorMask = null;
 
@@ -993,6 +1012,62 @@ function clearPreviewRegion() {
   redrawColorScene();
 }
 
+function updateColorModeLabel(text = '🎨 색칠!') {
+  document.getElementById('part-label').textContent = text;
+}
+
+function getNextSmartMissionRegionId() {
+  let bestRegion = null;
+  for (const region of fillRegions) {
+    if (!region || paintByRegion[region.id]) continue;
+    if (!bestRegion || region.area > bestRegion.area) bestRegion = region;
+  }
+  return bestRegion?.id || 0;
+}
+
+function refreshSmartMissionRegion() {
+  smartMissionRegionId = getNextSmartMissionRegionId();
+  return smartMissionRegionId;
+}
+
+function showSmartMissionHint(message) {
+  const now = Date.now();
+  if (now - lastSmartMissionHintAt < SMART_MISSION_HINT_COOLDOWN_MS) return;
+  lastSmartMissionHintAt = now;
+  showHint(message);
+  setTimeout(() => {
+    const hint = document.getElementById('hint-toast');
+    if (hint.textContent === message) hint.style.display = 'none';
+  }, 2200);
+}
+
+function scheduleSmartMissionHint(options = {}) {
+  const { immediate = false, announce = false } = options;
+  clearSmartMissionTimer();
+  if (!isRegionFillColorMode() || !document.getElementById('canvas-screen').classList.contains('active')) return;
+
+  const run = () => {
+    if (!isRegionFillColorMode() || isDrawing) return;
+    const regionId = refreshSmartMissionRegion();
+    if (regionId <= 0) {
+      updateColorModeLabel('🌈 거의 완성!');
+      if (announce) showSmartMissionHint('거의 다 칠했어요! 🌈');
+      return;
+    }
+
+    updateColorModeLabel('🎨 색칠! · 🎯 추천');
+    if (!previewRegionId) setPreviewRegion(regionId);
+    if (announce) showSmartMissionHint('큰 부분부터 칠해봐요! 🎯');
+  };
+
+  if (immediate) {
+    run();
+    return;
+  }
+
+  smartMissionTimer = setTimeout(run, SMART_MISSION_IDLE_MS);
+}
+
 function getRegionBurstAnchor(region, fallbackX, fallbackY) {
   if (!region?.bounds) return { x: fallbackX, y: fallbackY };
   const { minX, maxX, minY, maxY } = region.bounds;
@@ -1038,6 +1113,7 @@ function fillRegionAtCanvasPoint(x, y, color) {
   drawFilledRegion(regionId, color);
   if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
   triggerFillBurst(region, color, x, y);
+  if (smartMissionRegionId === regionId) smartMissionRegionId = 0;
   return { regionId, prevColor, nextColor: color, changed: true };
 }
 
@@ -1113,6 +1189,7 @@ function onStart(e) {
       const fillAction = fillRegionAtCanvasPoint(px, py, currentColor);
       if (fillAction?.changed) {
         saveRegionFillAction(fillAction.regionId, fillAction.prevColor, fillAction.nextColor);
+        scheduleSmartMissionHint({ announce: true });
       }
       return;
     }
@@ -1181,7 +1258,15 @@ function onMove(e) {
         hideTraceGuide();
       }
     } else if (isRegionFillColorMode() && document.getElementById('canvas-screen').classList.contains('active')) {
-      setPreviewRegion(getRegionIdAtCanvasPoint(px, py));
+      scheduleSmartMissionHint();
+      const hoveredRegionId = getRegionIdAtCanvasPoint(px, py);
+      if (hoveredRegionId > 0) {
+        setPreviewRegion(hoveredRegionId);
+      } else if (smartMissionRegionId > 0) {
+        setPreviewRegion(smartMissionRegionId);
+      } else {
+        clearPreviewRegion();
+      }
     } else {
       clearPreviewRegion();
     }
@@ -1262,6 +1347,7 @@ function onEnd() {
   if (!isDrawing) {
     hideTraceGuide();
     clearPreviewRegion();
+    if (isRegionFillColorMode()) scheduleSmartMissionHint();
     return;
   }
   isDrawing = false;
@@ -1271,6 +1357,7 @@ function onEnd() {
   hideTraceGuide();
   saveState();
   if (appMode === 'trace') checkTraceCompletion();
+  if (isRegionFillColorMode()) scheduleSmartMissionHint();
 }
 
 // --- Particle Effect System (overlay canvas) ---
@@ -1365,6 +1452,7 @@ function undo() {
       delete paintByRegion[lastEntry.regionId];
     }
     redrawColorScene();
+    scheduleSmartMissionHint({ immediate: true, announce: true });
     return;
   }
 
