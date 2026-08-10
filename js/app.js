@@ -38,6 +38,7 @@ let fillRegionsById = [];
 let paintByRegion = [];
 let traceHasPendingGap = false;
 let lastTraceHintAt = 0;
+let traceGuideVisible = false;
 
 function isRegionFillColorMode() {
   return appMode === 'color' && !creativeMode && !!fillRegionMap && fillRegions.length > 0;
@@ -669,6 +670,7 @@ function advancePart() {
 
 function transitionToColor() {
   hidePartDone();
+  hideTraceGuide();
   appMode = 'color';
   historyStack = [];
   paintByRegion = [];
@@ -702,6 +704,7 @@ function beginColorDirect() {
 
 function startCreativeMode(mode) {
   showScreen('canvas-screen');
+  hideTraceGuide();
   historyStack = [];
   traceZone = null; colorMask = null;
 
@@ -1004,6 +1007,22 @@ function showTraceHint(message) {
   showHint(message);
 }
 
+function showTraceGuide(x, y, valid) {
+  traceGuideVisible = true;
+  TG.style.display = 'block';
+  TG.style.transform = `translate(${x}px, ${y}px) scale(${valid ? 1 : 0.72})`;
+  TG.style.borderColor = valid ? 'rgba(59,130,246,0.92)' : 'rgba(251,146,60,0.92)';
+  TG.style.background = valid ? 'rgba(191,219,254,0.22)' : 'rgba(254,215,170,0.18)';
+  TG.style.boxShadow = valid
+    ? '0 0 0 6px rgba(191,219,254,0.18), 0 8px 18px rgba(59,130,246,0.28)'
+    : '0 0 0 6px rgba(254,215,170,0.16), 0 8px 18px rgba(249,115,22,0.22)';
+}
+
+function hideTraceGuide() {
+  traceGuideVisible = false;
+  TG.style.display = 'none';
+}
+
 function beginTraceStroke(x, y) {
   const part = getTracePart();
   if (!part) return false;
@@ -1082,9 +1101,27 @@ function onStart(e) {
 
 function onMove(e) {
   e.preventDefault();
-  if (!isDrawing) return;
   const p = getPos(e);
   const px = Math.floor(p.x), py = Math.floor(p.y);
+
+  if (!isDrawing) {
+    if (appMode === 'trace' && document.getElementById('canvas-screen').classList.contains('active')) {
+      const part = getTracePart();
+      if (!part) {
+        hideTraceGuide();
+        return;
+      }
+      const snap = snapToLine(px, py, part);
+      if (snap.valid) {
+        showTraceGuide(snap.x, snap.y, true);
+      } else if (traceZone && traceZone[py * DC.width + px]) {
+        showTraceGuide(px, py, false);
+      } else {
+        hideTraceGuide();
+      }
+    }
+    return;
+  }
 
   if (appMode === 'trace') {
     const part = getTracePart();
@@ -1157,11 +1194,15 @@ function onMove(e) {
 }
 
 function onEnd() {
-  if (!isDrawing) return;
+  if (!isDrawing) {
+    hideTraceGuide();
+    return;
+  }
   isDrawing = false;
   activeClip = false;
   colorMask = null;
   traceHasPendingGap = false;
+  hideTraceGuide();
   saveState();
   if (appMode === 'trace') checkTraceCompletion();
 }
@@ -1175,6 +1216,10 @@ const PC = document.createElement('canvas');
 PC.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
 document.body.appendChild(PC);
 const pcx = PC.getContext('2d');
+
+const TG = document.createElement('div');
+TG.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:28px;height:28px;border-radius:999px;border:3px solid rgba(59,130,246,0.92);background:rgba(191,219,254,0.22);transform:translate(-9999px,-9999px) scale(1);pointer-events:none;z-index:9998;display:none;transition:transform .08s linear, box-shadow .12s ease, border-color .12s ease, background .12s ease';
+document.body.appendChild(TG);
 
 function resizeParticleCanvas() { PC.width = window.innerWidth; PC.height = window.innerHeight; }
 resizeParticleCanvas();
