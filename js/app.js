@@ -45,6 +45,7 @@ let traceGuideVisible = false;
 let smartMissionTimer = null;
 let smartMissionRegionId = 0;
 let lastSmartMissionHintAt = 0;
+let smartMissionPulseTimer = null;
 
 function isRegionFillColorMode() {
   return appMode === 'color' && !creativeMode && !!fillRegionMap && fillRegions.length > 0;
@@ -54,6 +55,12 @@ function clearSmartMissionTimer() {
   if (!smartMissionTimer) return;
   clearTimeout(smartMissionTimer);
   smartMissionTimer = null;
+}
+
+function clearSmartMissionPulse() {
+  if (!smartMissionPulseTimer) return;
+  clearInterval(smartMissionPulseTimer);
+  smartMissionPulseTimer = null;
 }
 
 const DC = document.getElementById('drawing-canvas');
@@ -136,6 +143,7 @@ function goHome() {
   hasPhoto = false;
   smartMissionRegionId = 0;
   clearSmartMissionTimer();
+  clearSmartMissionPulse();
   lineBoundary = null;
   lineartOverlay = null;
   activeClip = false;
@@ -688,6 +696,7 @@ function transitionToColor() {
   previewRegionId = 0;
   smartMissionRegionId = 0;
   clearSmartMissionTimer();
+  clearSmartMissionPulse();
   appMode = 'color';
   historyStack = [];
   paintByRegion = [];
@@ -727,6 +736,7 @@ function startCreativeMode(mode) {
   previewRegionId = 0;
   smartMissionRegionId = 0;
   clearSmartMissionTimer();
+  clearSmartMissionPulse();
   historyStack = [];
   traceZone = null; colorMask = null;
 
@@ -993,7 +1003,7 @@ function renderColorPreview(regionId) {
 
   redrawColorScene();
   cx.save();
-  cx.globalAlpha = paintByRegion[regionId] ? 0.18 : 0.34;
+  cx.globalAlpha = getPreviewAlpha(regionId);
   drawFilledRegion(regionId, currentColor);
   cx.restore();
   if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
@@ -1002,11 +1012,14 @@ function renderColorPreview(regionId) {
 function setPreviewRegion(regionId) {
   const nextRegionId = regionId > 0 ? regionId : 0;
   if (previewRegionId === nextRegionId) return;
+  clearSmartMissionPulse();
   previewRegionId = nextRegionId;
   renderColorPreview(previewRegionId);
+  ensureSmartMissionPulse(previewRegionId);
 }
 
 function clearPreviewRegion() {
+  clearSmartMissionPulse();
   if (!previewRegionId) return;
   previewRegionId = 0;
   redrawColorScene();
@@ -1039,6 +1052,27 @@ function showSmartMissionHint(message) {
     const hint = document.getElementById('hint-toast');
     if (hint.textContent === message) hint.style.display = 'none';
   }, 2200);
+}
+
+function getPreviewAlpha(regionId) {
+  const baseAlpha = paintByRegion[regionId] ? 0.18 : 0.34;
+  if (regionId !== smartMissionRegionId) return baseAlpha;
+  return baseAlpha + ((Math.sin(Date.now() / 180) + 1) * 0.08);
+}
+
+function ensureSmartMissionPulse(regionId) {
+  if (regionId !== smartMissionRegionId || regionId <= 0) {
+    clearSmartMissionPulse();
+    return;
+  }
+  if (smartMissionPulseTimer) return;
+  smartMissionPulseTimer = setInterval(() => {
+    if (previewRegionId !== smartMissionRegionId || !isRegionFillColorMode() || isDrawing) {
+      clearSmartMissionPulse();
+      return;
+    }
+    renderColorPreview(previewRegionId);
+  }, 120);
 }
 
 function scheduleSmartMissionHint(options = {}) {
@@ -1452,6 +1486,7 @@ function undo() {
       delete paintByRegion[lastEntry.regionId];
     }
     redrawColorScene();
+    clearSmartMissionPulse();
     scheduleSmartMissionHint({ immediate: true, announce: true });
     return;
   }

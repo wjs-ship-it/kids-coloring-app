@@ -29,3 +29,4 @@
 - 탭 지점에 즉시 작은 버스트, 영역 중심에 더 큰 버스트를 한 번 더 터뜨린다.
 - 입자 수와 크기는 `region.area`에 비례해 커지도록 조정했다.
 - `smart mission`은 가장 큰 미색칠 영역을 자동 추천하고, idle 시 hint와 preview로 다시 보여주도록 구현했다.
+- `smart mission` 추천 영역은 idle 상태에서 pulse preview로 시각 강조되도록 구현했다.
