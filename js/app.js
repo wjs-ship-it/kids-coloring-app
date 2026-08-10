@@ -993,6 +993,34 @@ function clearPreviewRegion() {
   redrawColorScene();
 }
 
+function getRegionBurstAnchor(region, fallbackX, fallbackY) {
+  if (!region?.bounds) return { x: fallbackX, y: fallbackY };
+  const { minX, maxX, minY, maxY } = region.bounds;
+  const centerX = offX + Math.floor((minX + maxX) / 2);
+  const centerY = offY + Math.floor((minY + maxY) / 2);
+  return { x: centerX, y: centerY };
+}
+
+function triggerFillBurst(region, color, tapX, tapY) {
+  if (!region?.bounds) return;
+  const anchor = getRegionBurstAnchor(region, tapX, tapY);
+  const area = region.area || 0;
+  const count = Math.max(8, Math.min(22, Math.round(area / 1800) + 8));
+
+  spawnParticles(tapX, tapY, Math.max(6, Math.floor(count * 0.55)), {
+    color,
+    speedBoost: 0.5,
+    sizeBoost: 1.25
+  });
+
+  const dist = Math.hypot(anchor.x - tapX, anchor.y - tapY);
+  spawnParticles(anchor.x, anchor.y, count, {
+    color,
+    speedBoost: dist > 24 ? 0.9 : 0.65,
+    sizeBoost: dist > 24 ? 1.8 : 1.5
+  });
+}
+
 function fillRegionAtCanvasPoint(x, y, color) {
   const regionId = getRegionIdAtCanvasPoint(x, y);
   if (regionId <= 0) return null;
@@ -1009,6 +1037,7 @@ function fillRegionAtCanvasPoint(x, y, color) {
   previewRegionId = 0;
   drawFilledRegion(regionId, color);
   if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
+  triggerFillBurst(region, color, x, y);
   return { regionId, prevColor, nextColor: color, changed: true };
 }
 
