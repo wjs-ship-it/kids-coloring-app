@@ -36,6 +36,7 @@ let fillRegionMap = null;
 let fillRegions = [];
 let fillRegionsById = [];
 let paintByRegion = [];
+let previewRegionId = 0;
 let traceHasPendingGap = false;
 let lastTraceHintAt = 0;
 let traceGuideVisible = false;
@@ -671,6 +672,7 @@ function advancePart() {
 function transitionToColor() {
   hidePartDone();
   hideTraceGuide();
+  previewRegionId = 0;
   appMode = 'color';
   historyStack = [];
   paintByRegion = [];
@@ -705,6 +707,7 @@ function beginColorDirect() {
 function startCreativeMode(mode) {
   showScreen('canvas-screen');
   hideTraceGuide();
+  previewRegionId = 0;
   historyStack = [];
   traceZone = null; colorMask = null;
 
@@ -777,6 +780,7 @@ function hydrateFillData(fillData) {
     fillRegions = [];
     fillRegionsById = [];
     paintByRegion = [];
+    previewRegionId = 0;
     return;
   }
 
@@ -962,6 +966,33 @@ function redrawColorScene() {
   if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
 }
 
+function renderColorPreview(regionId) {
+  if (regionId <= 0) {
+    redrawColorScene();
+    return;
+  }
+
+  redrawColorScene();
+  cx.save();
+  cx.globalAlpha = paintByRegion[regionId] ? 0.18 : 0.34;
+  drawFilledRegion(regionId, currentColor);
+  cx.restore();
+  if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
+}
+
+function setPreviewRegion(regionId) {
+  const nextRegionId = regionId > 0 ? regionId : 0;
+  if (previewRegionId === nextRegionId) return;
+  previewRegionId = nextRegionId;
+  renderColorPreview(previewRegionId);
+}
+
+function clearPreviewRegion() {
+  if (!previewRegionId) return;
+  previewRegionId = 0;
+  redrawColorScene();
+}
+
 function fillRegionAtCanvasPoint(x, y, color) {
   const regionId = getRegionIdAtCanvasPoint(x, y);
   if (regionId <= 0) return null;
@@ -975,6 +1006,7 @@ function fillRegionAtCanvasPoint(x, y, color) {
   }
 
   paintByRegion[regionId] = color;
+  previewRegionId = 0;
   drawFilledRegion(regionId, color);
   if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
   return { regionId, prevColor, nextColor: color, changed: true };
@@ -1119,6 +1151,10 @@ function onMove(e) {
       } else {
         hideTraceGuide();
       }
+    } else if (isRegionFillColorMode() && document.getElementById('canvas-screen').classList.contains('active')) {
+      setPreviewRegion(getRegionIdAtCanvasPoint(px, py));
+    } else {
+      clearPreviewRegion();
     }
     return;
   }
@@ -1196,6 +1232,7 @@ function onMove(e) {
 function onEnd() {
   if (!isDrawing) {
     hideTraceGuide();
+    clearPreviewRegion();
     return;
   }
   isDrawing = false;
