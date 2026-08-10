@@ -10,6 +10,7 @@ const SNAP_RADIUS = 30;
 const TRACE_TOLERANCE = 40;
 const COMPLETE_THRESHOLD = 0.90;
 const TRACE_REJOIN_DISTANCE = 18;
+const TRACE_HINT_COOLDOWN_MS = 900;
 
 let appMode = 'trace', parts = [], curPartIdx = 0;
 let traceZone = null, colorMask = null;
@@ -36,6 +37,7 @@ let fillRegions = [];
 let fillRegionsById = [];
 let paintByRegion = [];
 let traceHasPendingGap = false;
+let lastTraceHintAt = 0;
 
 function isRegionFillColorMode() {
   return appMode === 'color' && !creativeMode && !!fillRegionMap && fillRegions.length > 0;
@@ -647,6 +649,8 @@ function advancePart() {
     const x = pos % laW, y = Math.floor(pos / laW);
     cx.fillRect(offX + x, offY + y, 1, 1);
   }
+  const burstX = lastX;
+  const burstY = lastY;
   curPartIdx++;
   if (curPartIdx >= parts.length) {
     showPartDone('잘했어요! 🌟');
@@ -655,6 +659,11 @@ function advancePart() {
     showPartDone('⭐');
     setTimeout(() => { hidePartDone(); showCurrentPart(); }, 1000);
   }
+  spawnParticles(burstX, burstY, 12, {
+    color: currentColor,
+    speedBoost: 0.8,
+    sizeBoost: 1.4
+  });
   celebrate();
 }
 
@@ -988,6 +997,13 @@ function getTracePart() {
   return parts[curPartIdx] || null;
 }
 
+function showTraceHint(message) {
+  const now = Date.now();
+  if (now - lastTraceHintAt < TRACE_HINT_COOLDOWN_MS) return;
+  lastTraceHintAt = now;
+  showHint(message);
+}
+
 function beginTraceStroke(x, y) {
   const part = getTracePart();
   if (!part) return false;
@@ -1051,8 +1067,14 @@ function onStart(e) {
   }
 
   if (appMode === 'trace') {
-    if (!traceZone || !traceZone[py * DC.width + px]) return;
-    if (!beginTraceStroke(px, py)) return;
+    if (!traceZone || !traceZone[py * DC.width + px]) {
+      showTraceHint('선 가까이에서 시작해봐요! ✏️');
+      return;
+    }
+    if (!beginTraceStroke(px, py)) {
+      showTraceHint('점선 위에서 천천히 그려봐요! ✨');
+      return;
+    }
     return;
   }
   isDrawing = true; lastX = p.x; lastY = p.y;
@@ -1071,6 +1093,7 @@ function onMove(e) {
     const snap = snapToLine(px, py, part);
     if (!snap.valid) {
       traceHasPendingGap = true;
+      showTraceHint('선을 따라 다시 이어가봐요! ✏️');
       return;
     }
 
@@ -1088,7 +1111,10 @@ function onMove(e) {
     cx.beginPath(); cx.moveTo(lastX, lastY); cx.lineTo(snap.x, snap.y); cx.stroke();
     const now = Date.now();
     if (now - particleThrottle > 80) {
-      spawnParticles(snap.x, snap.y, 1 + Math.floor(Math.random() * 2));
+      spawnParticles(snap.x, snap.y, 2 + Math.floor(Math.random() * 2), {
+        color: currentColor,
+        speedBoost: 0.3
+      });
       particleThrottle = now;
     }
     lastX = snap.x; lastY = snap.y;
@@ -1155,15 +1181,15 @@ resizeParticleCanvas();
 window.addEventListener('resize', resizeParticleCanvas);
 
 class Particle {
-  constructor(x, y) {
+  constructor(x, y, options = {}) {
     this.x = x;
     this.y = y;
     const angle = Math.random() * Math.PI * 2;
-    const speed = 1.5 + Math.random() * 3;
+    const speed = 1.5 + Math.random() * 3 + (options.speedBoost || 0);
     this.vx = Math.cos(angle) * speed;
     this.vy = Math.sin(angle) * speed - 1.5;
-    this.size = 1.5 + Math.random() * 2;
-    this.color = PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
+    this.size = (1.5 + Math.random() * 2) * (options.sizeBoost || 1);
+    this.color = options.color || PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)];
     this.life = 0.8;
     this.decay = 0.04 + Math.random() * 0.04;
     this.gravity = 0.08;
@@ -1185,8 +1211,8 @@ class Particle {
   }
 }
 
-function spawnParticles(x, y, count) {
-  for (let i = 0; i < count; i++) particles.push(new Particle(x, y));
+function spawnParticles(x, y, count, options = {}) {
+  for (let i = 0; i < count; i++) particles.push(new Particle(x, y, options));
   if (!particleAnimId) particleLoop();
 }
 
