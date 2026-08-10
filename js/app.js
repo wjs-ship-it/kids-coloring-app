@@ -13,6 +13,7 @@ const TRACE_REJOIN_DISTANCE = 18;
 const TRACE_HINT_COOLDOWN_MS = 900;
 const SMART_MISSION_IDLE_MS = 2400;
 const SMART_MISSION_HINT_COOLDOWN_MS = 3200;
+const ALMOST_COMPLETE_REMAINING_COUNT = 1;
 
 let appMode = 'trace', parts = [], curPartIdx = 0;
 let traceZone = null, colorMask = null;
@@ -46,6 +47,8 @@ let smartMissionTimer = null;
 let smartMissionRegionId = 0;
 let lastSmartMissionHintAt = 0;
 let smartMissionPulseTimer = null;
+let almostCompleteCelebrated = false;
+let completeCelebrated = false;
 
 function isRegionFillColorMode() {
   return appMode === 'color' && !creativeMode && !!fillRegionMap && fillRegions.length > 0;
@@ -61,6 +64,14 @@ function clearSmartMissionPulse() {
   if (!smartMissionPulseTimer) return;
   clearInterval(smartMissionPulseTimer);
   smartMissionPulseTimer = null;
+}
+
+function resetColorMissionState() {
+  smartMissionRegionId = 0;
+  clearSmartMissionTimer();
+  clearSmartMissionPulse();
+  almostCompleteCelebrated = false;
+  completeCelebrated = false;
 }
 
 const DC = document.getElementById('drawing-canvas');
@@ -141,9 +152,7 @@ function goHome() {
   isProcessing = false;
   creativeMode = null;
   hasPhoto = false;
-  smartMissionRegionId = 0;
-  clearSmartMissionTimer();
-  clearSmartMissionPulse();
+  resetColorMissionState();
   lineBoundary = null;
   lineartOverlay = null;
   activeClip = false;
@@ -694,9 +703,7 @@ function transitionToColor() {
   hidePartDone();
   hideTraceGuide();
   previewRegionId = 0;
-  smartMissionRegionId = 0;
-  clearSmartMissionTimer();
-  clearSmartMissionPulse();
+  resetColorMissionState();
   appMode = 'color';
   historyStack = [];
   paintByRegion = [];
@@ -734,9 +741,7 @@ function startCreativeMode(mode) {
   showScreen('canvas-screen');
   hideTraceGuide();
   previewRegionId = 0;
-  smartMissionRegionId = 0;
-  clearSmartMissionTimer();
-  clearSmartMissionPulse();
+  resetColorMissionState();
   historyStack = [];
   traceZone = null; colorMask = null;
 
@@ -1029,6 +1034,15 @@ function updateColorModeLabel(text = '🎨 색칠!') {
   document.getElementById('part-label').textContent = text;
 }
 
+function getRemainingColorRegionCount() {
+  let remaining = 0;
+  for (const region of fillRegions) {
+    if (!region || paintByRegion[region.id]) continue;
+    remaining++;
+  }
+  return remaining;
+}
+
 function getNextSmartMissionRegionId() {
   let bestRegion = null;
   for (const region of fillRegions) {
@@ -1043,15 +1057,35 @@ function refreshSmartMissionRegion() {
   return smartMissionRegionId;
 }
 
-function showSmartMissionHint(message) {
+function showSmartMissionHint(message, options = {}) {
+  const { force = false } = options;
   const now = Date.now();
-  if (now - lastSmartMissionHintAt < SMART_MISSION_HINT_COOLDOWN_MS) return;
+  if (!force && now - lastSmartMissionHintAt < SMART_MISSION_HINT_COOLDOWN_MS) return;
   lastSmartMissionHintAt = now;
   showHint(message);
   setTimeout(() => {
     const hint = document.getElementById('hint-toast');
     if (hint.textContent === message) hint.style.display = 'none';
   }, 2200);
+}
+
+function triggerAlmostCompleteCelebration(regionId) {
+  const region = fillRegionsById[regionId];
+  if (!region?.bounds) return;
+  const anchor = getRegionBurstAnchor(region, offX, offY);
+  spawnParticles(anchor.x, anchor.y, 18, {
+    color: '#facc15',
+    speedBoost: 1.2,
+    sizeBoost: 2.1
+  });
+  spawnParticles(anchor.x, anchor.y, 10, {
+    color: '#fb7185',
+    speedBoost: 0.9,
+    sizeBoost: 1.55
+  });
+  showSmartMissionHint('마지막 한 곳만 더 칠해요! 🌈', { force: true });
+  showPartDone('거의 다 왔어요! 🌈');
+  setTimeout(hidePartDone, 900);
 }
 
 function getPreviewAlpha(regionId) {
@@ -1083,11 +1117,32 @@ function scheduleSmartMissionHint(options = {}) {
   const run = () => {
     if (!isRegionFillColorMode() || isDrawing) return;
     const regionId = refreshSmartMissionRegion();
-    if (regionId <= 0) {
-      updateColorModeLabel('🌈 거의 완성!');
-      if (announce) showSmartMissionHint('거의 다 칠했어요! 🌈');
+    const remainingCount = getRemainingColorRegionCount();
+    if (remainingCount <= 0) {
+      updateColorModeLabel('🎉 완성!');
+      if (announce && !completeCelebrated) {
+        completeCelebrated = true;
+        showSmartMissionHint('완성했어요! 🎉', { force: true });
+        celebrate();
+      }
+      clearPreviewRegion();
       return;
     }
+
+    completeCelebrated = false;
+
+    if (remainingCount === ALMOST_COMPLETE_REMAINING_COUNT && regionId > 0) {
+      updateColorModeLabel('🌈 거의 완성!');
+      if (!previewRegionId) setPreviewRegion(regionId);
+      if (!almostCompleteCelebrated) {
+        almostCompleteCelebrated = true;
+        triggerAlmostCompleteCelebration(regionId);
+      }
+      if (announce) showSmartMissionHint('마지막 한 곳만 더 칠해요! 🌈', { force: true });
+      return;
+    }
+
+    almostCompleteCelebrated = false;
 
     updateColorModeLabel('🎨 색칠! · 🎯 추천');
     if (!previewRegionId) setPreviewRegion(regionId);

@@ -29,4 +29,5 @@
 - 탭 지점에 즉시 작은 버스트, 영역 중심에 더 큰 버스트를 한 번 더 터뜨린다.
 - 입자 수와 크기는 `region.area`에 비례해 커지도록 조정했다.
 - `smart mission`은 가장 큰 미색칠 영역을 자동 추천하고, idle 시 hint와 preview로 다시 보여주도록 구현했다.
+- 마지막 1개 영역만 남으면 `거의 완성` 라벨, pulse preview, 전용 hint, 파티클/오버레이 축하 연출이 함께 나오도록 강화했다.
 - `smart mission` 추천 영역은 idle 상태에서 pulse preview로 시각 강조되도록 구현했다.
