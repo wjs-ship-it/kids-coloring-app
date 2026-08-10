@@ -9,6 +9,7 @@ const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
 const SNAP_RADIUS = 30;
 const TRACE_TOLERANCE = 40;
 const COMPLETE_THRESHOLD = 0.90;
+const TRACE_REJOIN_DISTANCE = 18;
 
 let appMode = 'trace', parts = [], curPartIdx = 0;
 let traceZone = null, colorMask = null;
@@ -34,6 +35,7 @@ let fillRegionMap = null;
 let fillRegions = [];
 let fillRegionsById = [];
 let paintByRegion = [];
+let traceHasPendingGap = false;
 
 function isRegionFillColorMode() {
   return appMode === 'color' && !creativeMode && !!fillRegionMap && fillRegions.length > 0;
@@ -982,6 +984,24 @@ function getPos(e) {
   return { x: t.clientX - r.left, y: t.clientY - r.top };
 }
 
+function getTracePart() {
+  return parts[curPartIdx] || null;
+}
+
+function beginTraceStroke(x, y) {
+  const part = getTracePart();
+  if (!part) return false;
+
+  const snap = snapToLine(x, y, part);
+  if (!snap.valid) return false;
+
+  isDrawing = true;
+  lastX = snap.x;
+  lastY = snap.y;
+  traceHasPendingGap = false;
+  return true;
+}
+
 function onStart(e) {
   e.preventDefault();
   const p = getPos(e);
@@ -1032,6 +1052,8 @@ function onStart(e) {
 
   if (appMode === 'trace') {
     if (!traceZone || !traceZone[py * DC.width + px]) return;
+    if (!beginTraceStroke(px, py)) return;
+    return;
   }
   isDrawing = true; lastX = p.x; lastY = p.y;
 }
@@ -1043,8 +1065,23 @@ function onMove(e) {
   const px = Math.floor(p.x), py = Math.floor(p.y);
 
   if (appMode === 'trace') {
-    const snap = snapToLine(px, py, parts[curPartIdx]);
-    if (!snap.valid) { lastX = p.x; lastY = p.y; return; }
+    const part = getTracePart();
+    if (!part) return;
+
+    const snap = snapToLine(px, py, part);
+    if (!snap.valid) {
+      traceHasPendingGap = true;
+      return;
+    }
+
+    const dist = Math.hypot(snap.x - lastX, snap.y - lastY);
+    if (traceHasPendingGap || dist > TRACE_REJOIN_DISTANCE) {
+      lastX = snap.x;
+      lastY = snap.y;
+      traceHasPendingGap = false;
+      return;
+    }
+
     cx.globalCompositeOperation = 'source-over';
     cx.strokeStyle = currentColor;
     cx.lineWidth = brushSize;
@@ -1055,6 +1092,7 @@ function onMove(e) {
       particleThrottle = now;
     }
     lastX = snap.x; lastY = snap.y;
+    traceHasPendingGap = false;
     return;
   }
 
@@ -1097,6 +1135,7 @@ function onEnd() {
   isDrawing = false;
   activeClip = false;
   colorMask = null;
+  traceHasPendingGap = false;
   saveState();
   if (appMode === 'trace') checkTraceCompletion();
 }
