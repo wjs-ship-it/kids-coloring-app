@@ -49,6 +49,7 @@ let lastSmartMissionHintAt = 0;
 let smartMissionPulseTimer = null;
 let almostCompleteCelebrated = false;
 let completeCelebrated = false;
+let suppressColorHintReschedule = false;
 
 function isRegionFillColorMode() {
   return appMode === 'color' && !creativeMode && !!fillRegionMap && fillRegions.length > 0;
@@ -72,6 +73,7 @@ function resetColorMissionState() {
   clearSmartMissionPulse();
   almostCompleteCelebrated = false;
   completeCelebrated = false;
+  suppressColorHintReschedule = false;
 }
 
 const DC = document.getElementById('drawing-canvas');
@@ -1088,6 +1090,23 @@ function triggerAlmostCompleteCelebration(regionId) {
   setTimeout(hidePartDone, 900);
 }
 
+function triggerCompleteCelebration() {
+  const centerX = DC.width / 2;
+  const centerY = DC.height / 2;
+  const colors = ['#facc15', '#fb7185', '#60a5fa', '#34d399', '#c084fc'];
+
+  for (let i = 0; i < colors.length; i++) {
+    spawnParticles(centerX, centerY, 14, {
+      color: colors[i],
+      speedBoost: 1.25 + i * 0.08,
+      sizeBoost: 1.9
+    });
+  }
+
+  showPartDone('완성했어요! 🎉');
+  setTimeout(hidePartDone, 1200);
+}
+
 function getPreviewAlpha(regionId) {
   const baseAlpha = paintByRegion[regionId] ? 0.18 : 0.34;
   if (regionId !== smartMissionRegionId) return baseAlpha;
@@ -1123,6 +1142,7 @@ function scheduleSmartMissionHint(options = {}) {
       if (announce && !completeCelebrated) {
         completeCelebrated = true;
         showSmartMissionHint('완성했어요! 🎉', { force: true });
+        triggerCompleteCelebration();
         celebrate();
       }
       clearPreviewRegion();
@@ -1277,6 +1297,7 @@ function onStart(e) {
     if (fillRegionMap && fillRegions.length > 0) {
       const fillAction = fillRegionAtCanvasPoint(px, py, currentColor);
       if (fillAction?.changed) {
+        suppressColorHintReschedule = true;
         saveRegionFillAction(fillAction.regionId, fillAction.prevColor, fillAction.nextColor);
         scheduleSmartMissionHint({ announce: true });
       }
@@ -1436,7 +1457,13 @@ function onEnd() {
   if (!isDrawing) {
     hideTraceGuide();
     clearPreviewRegion();
-    if (isRegionFillColorMode()) scheduleSmartMissionHint();
+    if (isRegionFillColorMode()) {
+      if (suppressColorHintReschedule) {
+        suppressColorHintReschedule = false;
+        return;
+      }
+      scheduleSmartMissionHint();
+    }
     return;
   }
   isDrawing = false;
