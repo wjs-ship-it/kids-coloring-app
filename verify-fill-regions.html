@@ -144,6 +144,35 @@
     <div id="results" class="grid"></div>
   </main>
 
+  <script>
+    window.__verifyNoSwReady = false;
+    (function ensureNoServiceWorkerControl() {
+      const params = new URLSearchParams(location.search);
+      if (params.get('no-sw') !== '1') {
+        params.set('no-sw', '1');
+        location.replace(`${location.pathname}?${params.toString()}`);
+        return;
+      }
+      if (!('serviceWorker' in navigator)) {
+        window.__verifyNoSwReady = true;
+        return;
+      }
+      if (!navigator.serviceWorker.controller) {
+        window.__verifyNoSwReady = true;
+        return;
+      }
+      navigator.serviceWorker.getRegistrations()
+        .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+        .then(() => {
+          if (params.get('sw-reset') === '1') {
+            window.__verifyNoSwReady = true;
+            return;
+          }
+          params.set('sw-reset', '1');
+          location.replace(`${location.pathname}?${params.toString()}`);
+        });
+    }());
+  </script>
   <script type="module">
     import { PRESETS, renderPreset } from './js/presets.js';
     import { detectParts, buildFillRegions } from './js/edge-detect.js';
@@ -309,6 +338,7 @@
     }
 
     function runVerification() {
+      if (window.__verifyNoSwReady !== true) return;
       summary.textContent = 'Running...';
       summary.className = 'status';
       results.innerHTML = '';
@@ -326,7 +356,9 @@
     }
 
     runBtn.addEventListener('click', runVerification);
-    runVerification();
+    if (window.__verifyNoSwReady === true) {
+      runVerification();
+    }
   </script>
 </body>
 </html>

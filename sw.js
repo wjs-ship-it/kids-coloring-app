@@ -1,9 +1,10 @@
-const CACHE_NAME = 'kids-coloring-v4';
+const CACHE_NAME = 'kids-coloring-v5';
 const WASM_CACHE = 'kids-coloring-wasm-v1';
 
 const CORE_ASSETS = [
   './',
   './index.html',
+  './verify-fill-regions.html',
   './manifest.json',
   './js/app.js',
   './js/bg-remove.js',
@@ -25,6 +26,19 @@ const WASM_CDN_ORIGINS = [
 
 function isWasmAsset(url) {
   return WASM_CDN_ORIGINS.some((origin) => url.hostname.includes(origin));
+}
+
+function isNetworkFirstRequest(request) {
+  return request.destination === 'document' || request.destination === 'script';
+}
+
+function cacheResponse(request, response) {
+  if (!response || response.status !== 200 || response.type === 'opaque') {
+    return response;
+  }
+  const clone = response.clone();
+  caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+  return response;
 }
 
 self.addEventListener('install', (event) => {
@@ -66,15 +80,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (isNetworkFirstRequest(event.request)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => cacheResponse(event.request, response))
+        .catch(async () => {
+          const cached = await caches.match(event.request);
+          if (cached) return cached;
+          if (event.request.destination === 'document') {
+            return caches.match('./index.html');
+          }
+          return new Response('', { status: 503 });
+        })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
       return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200) return response;
-        if (response.type === 'opaque') return response;
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return response;
+        return cacheResponse(event.request, response);
       }).catch(() => {
         if (event.request.destination === 'document') {
           return caches.match('./index.html');
