@@ -333,7 +333,9 @@ function analyzeLineartInWorker(lineart, w, h, task, onDone) {
     task,
     imageData: lineart.data || lineart,
     w,
-    h
+    h,
+    mode: edgeMode,
+    detail: detailLevel
   });
 }
 
@@ -376,7 +378,10 @@ function onDetailChange(val) {
         const v = isLine ? Math.max(10, 40 - Math.floor((detailLevel - 50) * 0.4)) : 255;
         d[i] = v; d[i + 1] = v; d[i + 2] = v;
       }
-      parts = detectParts(lineartData, laW, laH);
+      parts = detectParts(lineartData, laW, laH, {
+        mode: edgeMode,
+        detail: detailLevel
+      });
       recomputeFillData(lineartData, laW, laH);
       const lp = document.getElementById('lineart-preview');
       lp.width = laW; lp.height = laH;
@@ -442,7 +447,10 @@ function beginActivity() {
   offY = Math.floor((DC.height - laH) / 2);
 
   if (!parts || parts.length === 0) {
-    parts = detectParts(lineartData, laW, laH);
+    parts = detectParts(lineartData, laW, laH, {
+      mode: edgeMode,
+      detail: detailLevel
+    });
   }
 
   if (!parts || parts.length === 0) {
@@ -524,6 +532,10 @@ function buildEmergencyParts(ld, w, h) {
 }
 
 function ensureFullCoverage(parts, ld, w, h) {
+  if (parts.length > 0 && parts.every((part) => part.traceStrategy === 'simplified')) {
+    return parts;
+  }
+
   const data = ld.data;
   const isEdge = new Uint8Array(w * h);
   let totalEdge = 0;
@@ -821,7 +833,10 @@ function fitLineartToCanvas() {
   lineartData = sd;
   laW = newW;
   laH = newH;
-  parts = detectParts(sd, newW, newH);
+  parts = detectParts(sd, newW, newH, {
+    mode: edgeMode,
+    detail: detailLevel
+  });
   recomputeFillData(sd, newW, newH);
 }
 

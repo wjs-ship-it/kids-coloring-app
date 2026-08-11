@@ -45,3 +45,7 @@
 - portrait 모드에서 RGB만 보던 grayscale 변환을 alpha-aware 합성으로 바꿨다. 투명 배경은 흰색으로 합성해 edge 입력에 덜 섞이게 한다.
 - `bg-remove.js`의 fallback을 no-op 원본 반환에서 `중앙 인물 보존 + 가장자리 백화` 휴리스틱으로 교체했다.
 - 실제 인물 사진 업로드 검증에서 `lineart-preview` dark ratio가 `0.93 → 0.47`로 내려가 검정판 현상이 크게 줄었다.
+- `js/trace-path.js`를 추가해 trace path 생성을 `raw edge 조각`에서 `단순화된 outer contour + 내부 특징선` 조합으로 교체했다.
+- `detectParts()`는 이제 `mode/detail` 옵션을 받아 path 단순화 강도와 part 수를 조절한다. worker/app 경로에도 이 옵션을 전부 연결했다.
+- 새 simplified trace part가 생긴 뒤 `ensureFullCoverage()`가 다시 30개 파트까지 부풀리던 문제를 막아, portrait trace가 `1/30`이 아니라 실제 `1/6` 파트로 시작되도록 수정했다.
+- 실제 브라우저 검증에서 portrait 업로드 trace는 `1/6`, preset trace는 `1/5`로 시작했고, detail `20 → 80` 변경 시 worker 결과가 `parts 6 → 7`, `fillRegions 15 → 27`로 다시 계산되는 것을 확인했다.

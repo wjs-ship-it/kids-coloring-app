@@ -5,7 +5,10 @@ self.onmessage = function(e) {
 
   if (task === 'detect-parts') {
     self.postMessage({ type: 'progress', step: 'parts', message: '따라 그릴 길을 준비하는 중... ✏️' });
-    const parts = detectParts(imageData, w, h);
+    const parts = detectParts(imageData, w, h, {
+      mode: mode || 'object',
+      detail: detail ?? 50
+    });
     self.postMessage({ type: 'progress', step: 'done', message: '거의 다 됐어요! 🎨' });
     self.postMessage({
       type: 'parts-result',

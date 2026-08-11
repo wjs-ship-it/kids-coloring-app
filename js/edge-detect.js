@@ -1,4 +1,5 @@
 import { selectMeaningfulEdges } from './lineart-shape.js';
+import { detectTraceParts } from './trace-path.js';
 
 export function applyCLAHE(gray, w, h, tileSize = 8, clipLimit = 2.0) {
   const out = new Float32Array(w * h);
@@ -447,73 +448,8 @@ export function multiPassClose(edges, w, h, passes = 2) {
   return result;
 }
 
-export function detectParts(lineartData, w, h) {
-  const d = lineartData.data || lineartData;
-  const isEdge = new Uint8Array(w * h);
-  for (let i = 0; i < w * h; i++) isEdge[i] = d[i * 4] < 128 ? 1 : 0;
-
-  const labels = new Int32Array(w * h);
-  let nextLabel = 1;
-  const regions = [];
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const pos = y * w + x;
-      if (isEdge[pos] || labels[pos] !== 0) continue;
-      const queue = [[x, y]];
-      let front = 0;
-      const pixels = [];
-      let touchesBorder = false;
-      labels[pos] = nextLabel;
-      while (front < queue.length) {
-        const [cx, cy] = queue[front++];
-        pixels.push(cx + cy * w);
-        if (cx === 0 || cx === w - 1 || cy === 0 || cy === h - 1) touchesBorder = true;
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-          const nx = cx + dx, ny = cy + dy;
-          if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-            const np = ny * w + nx;
-            if (!isEdge[np] && labels[np] === 0) {
-              labels[np] = nextLabel;
-              queue.push([nx, ny]);
-            }
-          }
-        }
-      }
-      regions.push({ label: nextLabel, pixels, touchesBorder });
-      nextLabel++;
-    }
-  }
-
-  let meaningful = regions.filter(r => !r.touchesBorder && r.pixels.length > 50);
-  if (meaningful.length < 1) {
-    meaningful = regions.filter(r => !r.touchesBorder && r.pixels.length > 10);
-  }
-
-  if (meaningful.length < 1) {
-    meaningful = generateEdgeSegments(isEdge, w, h);
-  }
-
-  for (const reg of meaningful) {
-    if (reg.isBand) {
-      reg.boundaryPos = reg.pixels;
-    } else if (!reg.boundaryPos) {
-      reg.boundaryPos = traceRegionBoundary(reg.pixels, isEdge, w, h);
-    }
-    if (!reg.boundaryPos || reg.boundaryPos.length === 0) {
-      reg.boundaryPos = reg.pixels.slice(0, Math.min(reg.pixels.length, 500));
-    }
-    let sy = 0;
-    for (const pos of reg.boundaryPos) sy += Math.floor(pos / w);
-    reg.centerY = reg.boundaryPos.length > 0 ? sy / reg.boundaryPos.length : 0;
-
-    reg.samplePoints = [];
-    for (let i = 0; i < reg.boundaryPos.length; i += 5) reg.samplePoints.push(reg.boundaryPos[i]);
-  }
-
-  meaningful.sort((a, b) => a.centerY - b.centerY);
-  if (meaningful.length > 8) meaningful = meaningful.slice(0, 8);
-  return meaningful;
+export function detectParts(lineartData, w, h, options = {}) {
+  return detectTraceParts(lineartData, w, h, options);
 }
 
 export function buildFillRegions(lineartData, w, h, minArea = 24) {
@@ -658,171 +594,6 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
   return { lineMask, regionMap, regions };
 }
 
-function traceRegionBoundary(regionPixels, isEdge, w, h) {
-  const edgeSet = new Uint8Array(w * h);
-  for (const pos of regionPixels) {
-    const x = pos % w, y = Math.floor(pos / w);
-    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]) {
-      const nx = x + dx, ny = y + dy;
-      if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx]) {
-        edgeSet[ny * w + nx] = 1;
-      }
-    }
-  }
-
-  let startPos = -1;
-  for (let i = 0; i < w * h; i++) {
-    if (edgeSet[i]) { startPos = i; break; }
-  }
-  if (startPos < 0) return [];
-
-  const dx8 = [1, 1, 0, -1, -1, -1, 0, 1];
-  const dy8 = [0, 1, 1, 1, 0, -1, -1, -1];
-  const visited = new Uint8Array(w * h);
-  const contour = [];
-
-  let cx = startPos % w, cy = Math.floor(startPos / w);
-  for (let step = 0; step < w * h; step++) {
-    const pos = cy * w + cx;
-    if (visited[pos]) break;
-    visited[pos] = 1;
-    contour.push(pos);
-
-    let found = false;
-    for (let k = 0; k < 8; k++) {
-      const nx = cx + dx8[k], ny = cy + dy8[k];
-      if (nx >= 0 && nx < w && ny >= 0 && ny < h && edgeSet[ny * w + nx] && !visited[ny * w + nx]) {
-        cx = nx; cy = ny; found = true; break;
-      }
-    }
-    if (!found) break;
-  }
-
-  const step = Math.max(1, Math.floor(contour.length / 600));
-  const sampled = [];
-  for (let i = 0; i < contour.length; i += step) sampled.push(contour[i]);
-  return sampled;
-}
-
-function traceOuterContour(isEdge, w, h) {
-  const contour = [];
-  const visited = new Uint8Array(w * h);
-  const dx8 = [1, 1, 0, -1, -1, -1, 0, 1];
-  const dy8 = [0, 1, 1, 1, 0, -1, -1, -1];
-
-  let sx = -1, sy = -1;
-  outer: for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (isEdge[y * w + x]) {
-        let hasNonEdge = false;
-        for (let k = 0; k < 8; k++) {
-          const nx = x + dx8[k], ny = y + dy8[k];
-          if (nx < 0 || nx >= w || ny < 0 || ny >= h || !isEdge[ny * w + nx]) {
-            hasNonEdge = true;
-            break;
-          }
-        }
-        if (hasNonEdge) { sx = x; sy = y; break outer; }
-      }
-    }
-  }
-  if (sx < 0) return [];
-
-  let cx = sx, cy = sy;
-  const maxSteps = w * h;
-  for (let step = 0; step < maxSteps; step++) {
-    const pos = cy * w + cx;
-    if (visited[pos]) {
-      if (cx === sx && cy === sy) break;
-      let found = false;
-      for (let k = 0; k < 8; k++) {
-        const nx = cx + dx8[k], ny = cy + dy8[k];
-        if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx] && !visited[ny * w + nx]) {
-          cx = nx; cy = ny; found = true; break;
-        }
-      }
-      if (!found) break;
-      continue;
-    }
-    visited[pos] = 1;
-    contour.push(pos);
-
-    let found = false;
-    for (let k = 0; k < 8; k++) {
-      const nx = cx + dx8[k], ny = cy + dy8[k];
-      if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx] && !visited[ny * w + nx]) {
-        let onBorder = false;
-        for (let j = 0; j < 8; j++) {
-          const bx = nx + dx8[j], by = ny + dy8[j];
-          if (bx < 0 || bx >= w || by < 0 || by >= h || !isEdge[by * w + bx]) {
-            onBorder = true; break;
-          }
-        }
-        if (onBorder) { cx = nx; cy = ny; found = true; break; }
-      }
-    }
-    if (!found) {
-      for (let k = 0; k < 8; k++) {
-        const nx = cx + dx8[k], ny = cy + dy8[k];
-        if (nx >= 0 && nx < w && ny >= 0 && ny < h && isEdge[ny * w + nx] && !visited[ny * w + nx]) {
-          cx = nx; cy = ny; found = true; break;
-        }
-      }
-    }
-    if (!found) break;
-  }
-  return contour;
-}
-
-function generateEdgeSegments(isEdge, w, h) {
-  const contour = traceOuterContour(isEdge, w, h);
-
-  if (contour.length < 20) {
-    const allEdge = [];
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        if (isEdge[y * w + x]) allEdge.push(y * w + x);
-      }
-    }
-    if (allEdge.length < 10) return [];
-    const sampled = [];
-    const step = Math.max(1, Math.floor(allEdge.length / 500));
-    for (let i = 0; i < allEdge.length; i += step) sampled.push(allEdge[i]);
-    return [{
-      pixels: sampled,
-      boundaryPos: sampled,
-      samplePoints: sampled.filter((_, i) => i % 3 === 0),
-      touchesBorder: false,
-      isBand: true,
-      centerY: h / 2
-    }];
-  }
-
-  const sampled = [];
-  const sampleStep = Math.max(1, Math.floor(contour.length / 600));
-  for (let i = 0; i < contour.length; i += sampleStep) sampled.push(contour[i]);
-
-  const segCount = Math.min(5, Math.max(3, Math.floor(sampled.length / 40)));
-  const segSize = Math.ceil(sampled.length / segCount);
-  const segments = [];
-
-  for (let s = 0; s < segCount; s++) {
-    const pxs = sampled.slice(s * segSize, Math.min((s + 1) * segSize, sampled.length));
-    if (pxs.length < 3) continue;
-    let sy = 0;
-    for (const pos of pxs) sy += Math.floor(pos / w);
-    segments.push({
-      pixels: pxs,
-      boundaryPos: pxs,
-      samplePoints: pxs.filter((_, i) => i % 3 === 0),
-      touchesBorder: false,
-      isBand: true,
-      centerY: sy / pxs.length
-    });
-  }
-  return segments;
-}
-
 export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
   const px = imageData;
   const gray = new Float32Array(w * h);
@@ -894,7 +665,7 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
     outData[i * 4 + 3] = 255;
   }
 
-  const parts = detectParts(outData, w, h);
+  const parts = detectParts(outData, w, h, { mode, detail });
   const fillRegions = buildFillRegions(outData, w, h);
   return { lineartData: outData, parts, fillRegions };
 }
