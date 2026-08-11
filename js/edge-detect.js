@@ -594,6 +594,63 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
   return { lineMask, regionMap, regions };
 }
 
+function measureDarkRatio(lineartData, w, h) {
+  let dark = 0;
+  for (let i = 0; i < w * h; i++) {
+    if (lineartData[i * 4] < 80) dark++;
+  }
+  return dark / Math.max(1, w * h);
+}
+
+function renderLineartVariant(smoothed, w, h, mode, detail, options = {}) {
+  const {
+    detailOffset = 0,
+    portraitFuseThreshold = 0.20,
+    portraitMinAreaBoost = 0,
+    portraitBridge = 10,
+  } = options;
+  const effectiveDetail = Math.max(5, Math.min(95, detail + detailOffset));
+  const t = effectiveDetail / 100;
+  const baseHi = mode === 'portrait' ? 0.12 : 0.10;
+  const baseLo = mode === 'portrait' ? 0.03 : 0.02;
+  const thHi = baseHi * (1.5 - t * 0.9);
+  const thLo = baseLo * (1.5 - t * 0.9);
+
+  let rawEdge;
+  if (mode === 'portrait') {
+    const innerHi = thHi * 0.35;
+    const innerLo = thLo * 0.35;
+    rawEdge = dualPassEdge(smoothed, w, h, thHi, thLo, innerHi, innerLo, 0.45);
+  } else {
+    rawEdge = cannyEdge(smoothed, w, h, thHi, thLo);
+  }
+
+  const widened = mode === 'portrait' ? dilate(rawEdge, w, h, 1) : rawEdge;
+  const fused = mode === 'portrait'
+    ? fuseLines(widened, w, h, 2, portraitFuseThreshold)
+    : fuseLines(widened, w, h, 1, 0.24);
+  const bridged = bridgeEndpoints(fused, w, h, 15);
+  const closed = morphClose(bridged, w, h, 3);
+  const bridged2 = bridgeEndpoints(closed, w, h, 10);
+
+  const minArea = mode === 'portrait'
+    ? (50 - t * 30) + portraitMinAreaBoost
+    : 15;
+  const cleaned = removeSmallComponents(bridged2, w, h, Math.max(6, minArea));
+  const meaningful = selectMeaningfulEdges(cleaned, w, h, { mode, detail: effectiveDetail });
+  const refined = bridgeEndpoints(meaningful, w, h, mode === 'portrait' ? portraitBridge : 8);
+  let final = normalizeLineWidth(refined, w, h, 2);
+
+  const { leakCount } = validateFloodFillIntegrity(final, w, h);
+  if (leakCount > 0) {
+    const d2 = dilate(meaningful, w, h, 2);
+    const fused2 = fuseLines(d2, w, h, 1, 0.18);
+    final = normalizeLineWidth(fused2, w, h, 2);
+  }
+
+  return final;
+}
+
 export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
   const px = imageData;
   const gray = new Float32Array(w * h);
@@ -621,40 +678,7 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
     smoothed = bilateralFilter(s2, w, h);
   }
 
-  const baseHi = mode === 'portrait' ? 0.12 : 0.10;
-  const baseLo = mode === 'portrait' ? 0.03 : 0.02;
-  const thHi = baseHi * (1.5 - t * 0.9);
-  const thLo = baseLo * (1.5 - t * 0.9);
-
-  let rawEdge;
-  if (mode === 'portrait') {
-    const innerHi = thHi * 0.35;
-    const innerLo = thLo * 0.35;
-    rawEdge = dualPassEdge(smoothed, w, h, thHi, thLo, innerHi, innerLo, 0.45);
-  } else {
-    rawEdge = cannyEdge(smoothed, w, h, thHi, thLo);
-  }
-
-  const widened = mode === 'portrait' ? dilate(rawEdge, w, h, 1) : rawEdge;
-  const fused = mode === 'portrait'
-    ? fuseLines(widened, w, h, 2, 0.20)
-    : fuseLines(widened, w, h, 1, 0.24);
-  const bridged = bridgeEndpoints(fused, w, h, 15);
-  const closed = morphClose(bridged, w, h, 3);
-  const bridged2 = bridgeEndpoints(closed, w, h, 10);
-
-  const minArea = mode === 'portrait' ? (50 - t * 30) : 15;
-  const cleaned = removeSmallComponents(bridged2, w, h, Math.max(6, minArea));
-  const meaningful = selectMeaningfulEdges(cleaned, w, h, { mode, detail });
-  const refined = bridgeEndpoints(meaningful, w, h, mode === 'portrait' ? 10 : 8);
-  let final = normalizeLineWidth(refined, w, h, 2);
-
-  const { leakCount } = validateFloodFillIntegrity(final, w, h);
-  if (leakCount > 0) {
-    const d2 = dilate(meaningful, w, h, 2);
-    const fused2 = fuseLines(d2, w, h, 1, 0.18);
-    final = normalizeLineWidth(fused2, w, h, 2);
-  }
+  let final = renderLineartVariant(smoothed, w, h, mode, detail);
 
   const outData = new Uint8ClampedArray(w * h * 4);
   for (let i = 0; i < w * h; i++) {
@@ -663,6 +687,42 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
     outData[i * 4 + 1] = v;
     outData[i * 4 + 2] = v;
     outData[i * 4 + 3] = 255;
+  }
+
+  if (mode === 'portrait') {
+    let darkRatio = measureDarkRatio(outData, w, h);
+    if (darkRatio > 0.58) {
+      final = renderLineartVariant(smoothed, w, h, mode, detail, {
+        detailOffset: -18,
+        portraitFuseThreshold: 0.23,
+        portraitMinAreaBoost: 12,
+        portraitBridge: 8,
+      });
+      for (let i = 0; i < w * h; i++) {
+        const v = final[i] ? 40 : 255;
+        outData[i * 4] = v;
+        outData[i * 4 + 1] = v;
+        outData[i * 4 + 2] = v;
+        outData[i * 4 + 3] = 255;
+      }
+      darkRatio = measureDarkRatio(outData, w, h);
+
+      if (darkRatio > 0.62) {
+        final = renderLineartVariant(smoothed, w, h, mode, detail, {
+          detailOffset: -28,
+          portraitFuseThreshold: 0.25,
+          portraitMinAreaBoost: 20,
+          portraitBridge: 7,
+        });
+        for (let i = 0; i < w * h; i++) {
+          const v = final[i] ? 40 : 255;
+          outData[i * 4] = v;
+          outData[i * 4 + 1] = v;
+          outData[i * 4 + 2] = v;
+          outData[i * 4 + 3] = 255;
+        }
+      }
+    }
   }
 
   const parts = detectParts(outData, w, h, { mode, detail });

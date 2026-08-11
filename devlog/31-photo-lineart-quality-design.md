@@ -67,3 +67,4 @@
 - `verify-fill-regions.html`를 preset/photo 이중 섹션 구조로 정리하고, 현재 회귀 기준 수치를 화면과 문서에 동시에 노출했다.
 - portrait fallback background removal은 `중앙 얼굴/상반신 보호`, `가장자리/상하 밝은 배경 백화` 방향으로 한 번 더 조정했다.
 - portrait trace interior 선별은 `얼굴 상단 중심부`를 더 우선 보존하고, 내부 파트 수와 샘플링 수를 줄여 `잘린 조각` 느낌을 더 완화하도록 조정했다.
+- portrait lineart가 여전히 과하게 어두우면, `runFullPipeline()` 안에서 더 높은 임계값/큰 최소 면적/짧은 bridge 거리로 한 번 더 보수적인 variant를 재시도하는 adaptive density guard를 추가했다.
