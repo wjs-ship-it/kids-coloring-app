@@ -418,7 +418,7 @@
   </script>
   <script type="module">
     import { PRESETS, renderPreset } from './js/presets.js';
-    import { detectParts, buildFillRegions, runFullPipeline } from './js/edge-detect.js';
+    import { detectParts, buildFillRegions, runFullPipeline, resolvePipelineMode } from './js/edge-detect.js';
     import { removeBackground } from './js/bg-remove.js';
 
     const runBtn = document.getElementById('run-btn');
@@ -580,7 +580,8 @@
       const meta = document.createElement('div');
       meta.className = 'meta';
       meta.innerHTML = [
-        renderMetric('Mode', result.mode),
+        renderMetric('Selected', result.mode),
+        renderMetric('Resolved', result.resolvedMode),
         renderMetric('Detail', result.detail),
         renderMetric('Dark Ratio', result.darkRatio.toFixed(3)),
         renderMetric('Parts', result.parts),
@@ -636,8 +637,10 @@
       const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
       sourceCtx.drawImage(bitmap, 0, 0, width, height);
       const imageData = sourceCtx.getImageData(0, 0, width, height);
+      const resolution = resolvePipelineMode(mode, imageData.data, width, height);
+      const resolvedMode = resolution.resolvedMode;
 
-      const { lineartData, parts, fillRegions } = runFullPipeline(imageData.data, width, height, mode, detail);
+      const { lineartData, parts, fillRegions } = runFullPipeline(imageData.data, width, height, resolvedMode, detail);
 
       const canvas = document.createElement('canvas');
       canvas.width = width;
@@ -653,15 +656,16 @@
       const darkRatio = total ? dark / total : 0;
       const largestRegionArea = (fillRegions.regions || []).reduce((max, region) => Math.max(max, region.area || 0), 0);
       const durationMs = performance.now() - startedAt;
-      const ok = mode === 'portrait'
+      const ok = resolvedMode === 'portrait'
         ? darkRatio < 0.7 && parts.length >= 3 && parts.length <= 10 && fillRegions.regions.length >= 4
-        : mode === 'illustration'
+        : resolvedMode === 'illustration'
           ? darkRatio < 0.35 && parts.length >= 3 && parts.length <= 8 && fillRegions.regions.length >= 4
           : darkRatio < 0.55 && parts.length >= 3 && fillRegions.regions.length >= 4;
 
       return {
         name: file.name,
         mode,
+        resolvedMode,
         detail,
         darkRatio,
         parts: parts.length,

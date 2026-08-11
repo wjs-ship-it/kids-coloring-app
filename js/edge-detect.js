@@ -182,6 +182,87 @@ function readAlphaAwareRgb(px, idx) {
   };
 }
 
+export function analyzeInputStyle(imageData, w, h) {
+  const data = imageData.data || imageData;
+  const step = Math.max(1, Math.floor(Math.max(w, h) / 220));
+  const buckets = new Set();
+  let sampled = 0;
+  let whiteCount = 0;
+  let darkCount = 0;
+  let vividCount = 0;
+  let contrastSum = 0;
+  let contrastSamples = 0;
+
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const idx = (y * w + x) * 4;
+      const pixel = readAlphaAwareRgb(data, idx);
+      const max = Math.max(pixel.r, pixel.g, pixel.b);
+      const min = Math.min(pixel.r, pixel.g, pixel.b);
+      const lum = 0.299 * pixel.r + 0.587 * pixel.g + 0.114 * pixel.b;
+      const sat = max > 0 ? (max - min) / max : 0;
+      sampled++;
+      if (lum > 236 && sat < 0.12) whiteCount++;
+      if (lum < 90) darkCount++;
+      if (sat > 0.45 && lum > 35 && lum < 235) vividCount++;
+      buckets.add(((pixel.r >> 5) << 6) | ((pixel.g >> 5) << 3) | (pixel.b >> 5));
+
+      if (x + step < w) {
+        const rightIdx = (y * w + (x + step)) * 4;
+        const right = readAlphaAwareRgb(data, rightIdx);
+        const rightLum = 0.299 * right.r + 0.587 * right.g + 0.114 * right.b;
+        contrastSum += Math.abs(lum - rightLum);
+        contrastSamples++;
+      }
+      if (y + step < h) {
+        const downIdx = ((y + step) * w + x) * 4;
+        const down = readAlphaAwareRgb(data, downIdx);
+        const downLum = 0.299 * down.r + 0.587 * down.g + 0.114 * down.b;
+        contrastSum += Math.abs(lum - downLum);
+        contrastSamples++;
+      }
+    }
+  }
+
+  const whiteRatio = sampled ? whiteCount / sampled : 0;
+  const darkRatio = sampled ? darkCount / sampled : 0;
+  const vividRatio = sampled ? vividCount / sampled : 0;
+  const paletteBuckets = buckets.size;
+  const textureScore = contrastSamples ? contrastSum / contrastSamples : 0;
+  const illustrationLike = (
+    whiteRatio > 0.20 &&
+    paletteBuckets < 140 &&
+    textureScore < 28 &&
+    darkRatio < 0.25 &&
+    (vividRatio > 0.015 || whiteRatio > 0.42)
+  );
+
+  return {
+    whiteRatio,
+    darkRatio,
+    vividRatio,
+    paletteBuckets,
+    textureScore,
+    illustrationLike
+  };
+}
+
+export function resolvePipelineMode(selectedMode, imageData, w, h) {
+  if (selectedMode === 'portrait' || selectedMode === 'illustration') {
+    return {
+      selectedMode,
+      resolvedMode: selectedMode,
+      profile: null
+    };
+  }
+  const profile = analyzeInputStyle(imageData, w, h);
+  return {
+    selectedMode,
+    resolvedMode: profile.illustrationLike ? 'illustration' : selectedMode,
+    profile
+  };
+}
+
 function extractIllustrationEdges(px, w, h, detail = 50) {
   const detailBias = Math.max(0, Math.min(1, detail / 100));
   const darkThreshold = 176 - Math.round(detailBias * 24);

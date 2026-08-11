@@ -2,7 +2,7 @@ import { createDemoCatBlob } from './demo.js';
 import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonBg, rebuildPalette } from './creative.js';
 import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showScreen, setLoadingText } from './ui-utils.js';
 import { PRESETS, renderPreset } from './presets.js';
-import { detectParts, dilate, fuseLines, normalizeLineWidth, buildFillRegions } from './edge-detect.js';
+import { detectParts, dilate, fuseLines, normalizeLineWidth, buildFillRegions, resolvePipelineMode } from './edge-detect.js';
 import { removeBackground } from './bg-remove.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
@@ -57,89 +57,22 @@ function getPipelineMode() {
   return activeEdgeMode || edgeMode;
 }
 
-function analyzeInputStyle(imageData, w, h) {
-  const data = imageData.data || imageData;
-  const step = Math.max(1, Math.floor(Math.max(w, h) / 220));
-  const buckets = new Set();
-  let sampled = 0;
-  let whiteCount = 0;
-  let darkCount = 0;
-  let vividCount = 0;
-  let contrastSum = 0;
-  let contrastSamples = 0;
-
-  const readPixel = (x, y) => {
-    const idx = (y * w + x) * 4;
-    const alpha = (data[idx + 3] ?? 255) / 255;
-    const r = data[idx] * alpha + 255 * (1 - alpha);
-    const g = data[idx + 1] * alpha + 255 * (1 - alpha);
-    const b = data[idx + 2] * alpha + 255 * (1 - alpha);
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-    const sat = max > 0 ? (max - min) / max : 0;
-    return { r, g, b, lum, sat };
-  };
-
-  for (let y = 0; y < h; y += step) {
-    for (let x = 0; x < w; x += step) {
-      const pixel = readPixel(x, y);
-      sampled++;
-      if (pixel.lum > 236 && pixel.sat < 0.12) whiteCount++;
-      if (pixel.lum < 90) darkCount++;
-      if (pixel.sat > 0.45 && pixel.lum > 35 && pixel.lum < 235) vividCount++;
-      buckets.add(((pixel.r >> 5) << 6) | ((pixel.g >> 5) << 3) | (pixel.b >> 5));
-
-      if (x + step < w) {
-        const right = readPixel(x + step, y);
-        contrastSum += Math.abs(pixel.lum - right.lum);
-        contrastSamples++;
-      }
-      if (y + step < h) {
-        const down = readPixel(x, y + step);
-        contrastSum += Math.abs(pixel.lum - down.lum);
-        contrastSamples++;
-      }
-    }
+function updateModeGuide(selectedMode, resolvedMode) {
+  const guide = document.getElementById('mode-guide');
+  if (!guide) return;
+  if (selectedMode === 'object' && resolvedMode === 'illustration') {
+    guide.textContent = '자동으로 그림·캐릭터 모드로 맞췄어요 🪄';
+    return;
   }
-
-  const whiteRatio = sampled ? whiteCount / sampled : 0;
-  const darkRatio = sampled ? darkCount / sampled : 0;
-  const vividRatio = sampled ? vividCount / sampled : 0;
-  const paletteBuckets = buckets.size;
-  const textureScore = contrastSamples ? contrastSum / contrastSamples : 0;
-  const illustrationLike = (
-    whiteRatio > 0.20 &&
-    paletteBuckets < 140 &&
-    textureScore < 28 &&
-    darkRatio < 0.25 &&
-    (vividRatio > 0.015 || whiteRatio > 0.42)
-  );
-
-  return {
-    whiteRatio,
-    darkRatio,
-    vividRatio,
-    paletteBuckets,
-    textureScore,
-    illustrationLike
-  };
-}
-
-function resolveEdgeMode(selectedMode, imageData, w, h) {
-  if (selectedMode === 'portrait' || selectedMode === 'illustration') return selectedMode;
-  const profile = analyzeInputStyle(imageData, w, h);
-  const resolvedMode = profile.illustrationLike ? 'illustration' : selectedMode;
-  debugMark('edge-mode-resolved', {
-    selectedMode,
-    resolvedMode,
-    whiteRatio: Number(profile.whiteRatio.toFixed(3)),
-    darkRatio: Number(profile.darkRatio.toFixed(3)),
-    vividRatio: Number(profile.vividRatio.toFixed(3)),
-    paletteBuckets: profile.paletteBuckets,
-    textureScore: Number(profile.textureScore.toFixed(2))
-  });
-  return resolvedMode;
+  if (selectedMode === 'illustration') {
+    guide.textContent = '그림·캐릭터는 선을 더 살려서 변환해요 🖼️';
+    return;
+  }
+  if (selectedMode === 'portrait') {
+    guide.textContent = '인물은 얼굴과 몸 윤곽을 중심으로 정리해요 🧒';
+    return;
+  }
+  guide.textContent = '사물 사진도 그림처럼 보이면 자동으로 더 부드럽게 바꿔요 ✨';
 }
 
 function isRegionFillColorMode() {
@@ -250,6 +183,7 @@ function goHome() {
   lineBoundary = null;
   lineartOverlay = null;
   activeClip = false;
+  updateModeGuide(edgeMode, edgeMode);
   showScreen('upload-screen');
   document.getElementById('photo-input').value = '';
 }
@@ -303,7 +237,20 @@ function convertToLineart(img) {
   SC.width = w; SC.height = h;
   sx.drawImage(img, 0, 0, w, h);
   const imageData = sx.getImageData(0, 0, w, h);
-  activeEdgeMode = resolveEdgeMode(edgeMode, imageData, w, h);
+  const { resolvedMode, profile } = resolvePipelineMode(edgeMode, imageData, w, h);
+  activeEdgeMode = resolvedMode;
+  if (profile) {
+    debugMark('edge-mode-resolved', {
+      selectedMode: edgeMode,
+      resolvedMode,
+      whiteRatio: Number(profile.whiteRatio.toFixed(3)),
+      darkRatio: Number(profile.darkRatio.toFixed(3)),
+      vividRatio: Number(profile.vividRatio.toFixed(3)),
+      paletteBuckets: profile.paletteBuckets,
+      textureScore: Number(profile.textureScore.toFixed(2))
+    });
+  }
+  updateModeGuide(edgeMode, resolvedMode);
 
   _sourceImgData = imageData.data.slice();
   _sourceW = w;
@@ -1748,6 +1695,7 @@ document.querySelectorAll('.mtbtn').forEach(btn => {
     activeEdgeMode = edgeMode;
     document.querySelectorAll('.mtbtn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    updateModeGuide(edgeMode, edgeMode);
   });
 });
 
