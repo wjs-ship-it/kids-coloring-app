@@ -4,6 +4,8 @@ import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showSc
 import { PRESETS, renderPreset } from './presets.js';
 import { detectParts, dilate, fuseLines, normalizeLineWidth, buildFillRegions, resolvePipelineMode } from './edge-detect.js';
 import { removeBackground } from './bg-remove.js';
+import { setAnalyticsContext, trackEvent } from './analytics.js';
+import { getBuiltinPresetPack } from './packs.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -52,6 +54,7 @@ let smartMissionPulseTimer = null;
 let almostCompleteCelebrated = false;
 let completeCelebrated = false;
 let suppressColorHintReschedule = false;
+const builtinPresetPack = getBuiltinPresetPack();
 
 function getPipelineMode() {
   return activeEdgeMode || edgeMode;
@@ -121,6 +124,15 @@ function debugMark(stage, extra = {}) {
   window.__kidsDebug = store;
   console.log('[kids-debug]', entry);
   return entry;
+}
+
+function getLargestFillRegionArea(fillData) {
+  const regions = fillData?.regions || [];
+  let max = 0;
+  for (const region of regions) {
+    if ((region?.area || 0) > max) max = region.area || 0;
+  }
+  return max;
 }
 
 window.addEventListener('error', (event) => {
@@ -202,6 +214,10 @@ async function processPhoto(blob) {
   if (now - lastProcessTime < 500) return;
   lastProcessTime = now;
   isProcessing = true;
+  trackEvent('upload_started', {
+    mimeType: blob?.type || 'unknown',
+    fileSize: blob?.size || null
+  });
   debugMark('processPhoto-start', { blobType: blob?.type || 'unknown', blobSize: blob?.size || null });
   showScreen('processing-screen');
   setLoadingText('AI 요정이 그림을 그리고 있어요... ✨');
@@ -239,10 +255,22 @@ function convertToLineart(img) {
   const imageData = sx.getImageData(0, 0, w, h);
   const { resolvedMode, profile } = resolvePipelineMode(edgeMode, imageData, w, h);
   activeEdgeMode = resolvedMode;
+  setAnalyticsContext({
+    selectedMode: edgeMode,
+    resolvedMode,
+    detail: detailLevel
+  });
   if (profile) {
     debugMark('edge-mode-resolved', {
       selectedMode: edgeMode,
       resolvedMode,
+      whiteRatio: Number(profile.whiteRatio.toFixed(3)),
+      darkRatio: Number(profile.darkRatio.toFixed(3)),
+      vividRatio: Number(profile.vividRatio.toFixed(3)),
+      paletteBuckets: profile.paletteBuckets,
+      textureScore: Number(profile.textureScore.toFixed(2))
+    });
+    trackEvent('pipeline_resolved', {
       whiteRatio: Number(profile.whiteRatio.toFixed(3)),
       darkRatio: Number(profile.darkRatio.toFixed(3)),
       vividRatio: Number(profile.vividRatio.toFixed(3)),
@@ -272,6 +300,7 @@ function runEdgeWorker(rawData, w, h, isFirstRun) {
   debugMark('worker-start', { width: w, height: h, isFirstRun, edgeMode: getPipelineMode(), detailLevel });
 
   const sliderWrap = document.getElementById('detail-slider-wrap');
+  const startedAt = performance.now();
 
   edgeWorker.onmessage = (e) => {
     if (e.data.type === 'progress') {
@@ -290,6 +319,14 @@ function runEdgeWorker(rawData, w, h, isFirstRun) {
       parts = e.data.parts;
       laW = e.data.w; laH = e.data.h;
       hydrateFillData(e.data.fillRegions);
+      const runtimeMs = Number((performance.now() - startedAt).toFixed(1));
+      trackEvent('lineart_completed', {
+        detail: detailLevel,
+        parts: parts?.length || 0,
+        fillRegions: e.data.fillRegions?.regions?.length || 0,
+        largestRegion: getLargestFillRegionArea(e.data.fillRegions),
+        runtimeMs
+      });
 
       if (isFirstRun) {
         document.getElementById('preview-img').src = SC.toDataURL();
@@ -298,7 +335,12 @@ function runEdgeWorker(rawData, w, h, isFirstRun) {
       lp.width = laW; lp.height = laH;
       lp.getContext('2d').putImageData(lineartData, 0, 0);
 
-      if (isFirstRun) showScreen('preview-screen');
+      if (isFirstRun) {
+        showScreen('preview-screen');
+        trackEvent('preview_opened', {
+          detail: detailLevel
+        });
+      }
       isProcessing = false;
       sliderWrap.classList.remove('processing');
       edgeWorker.terminate();
@@ -505,6 +547,10 @@ function beginActivity() {
 
   curPartIdx = 0;
   appMode = 'trace';
+  trackEvent('trace_started', {
+    parts: parts.length,
+    traceStrategy: parts[0]?.traceStrategy || 'legacy'
+  });
   historyStack = [];
   document.getElementById('side-palette').classList.add('hidden');
   document.getElementById('brush-bar').classList.add('hidden');
@@ -758,6 +804,9 @@ function advancePart() {
   const burstY = lastY;
   curPartIdx++;
   if (curPartIdx >= parts.length) {
+    trackEvent('trace_completed', {
+      parts: parts.length
+    });
     showPartDone('잘했어요! 🌟');
     setTimeout(transitionToColor, 1500);
   } else {
@@ -778,6 +827,9 @@ function transitionToColor() {
   previewRegionId = 0;
   resetColorMissionState();
   appMode = 'color';
+  trackEvent('color_started', {
+    fillRegions: fillRegions.length
+  });
   historyStack = [];
   paintByRegion = [];
   buildLineBoundary();
@@ -1297,6 +1349,12 @@ function fillRegionAtCanvasPoint(x, y, color) {
   if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
   triggerFillBurst(region, color, x, y);
   if (smartMissionRegionId === regionId) smartMissionRegionId = 0;
+  trackEvent('fill_action', {
+    regionId,
+    regionArea: region.area || 0,
+    color,
+    burstTriggered: true
+  });
   return { regionId, prevColor, nextColor: color, changed: true };
 }
 
@@ -1644,6 +1702,10 @@ function undo() {
     redrawColorScene();
     clearSmartMissionPulse();
     scheduleSmartMissionHint({ immediate: true, announce: true });
+    trackEvent('undo_used', {
+      mode: appMode,
+      regionFillUndo: true
+    });
     return;
   }
 
@@ -1653,6 +1715,10 @@ function undo() {
     if (snapshotEntry?.kind === 'snapshot') {
       cx.putImageData(snapshotEntry.imageData, 0, 0);
     }
+    trackEvent('undo_used', {
+      mode: appMode,
+      regionFillUndo: false
+    });
   }
 }
 
@@ -1661,6 +1727,9 @@ function saveImage() {
   link.download = 'coloring-' + Date.now() + '.png';
   link.href = DC.toDataURL();
   link.click();
+  trackEvent('save_image', {
+    mode: appMode
+  });
   const t = document.getElementById('save-toast');
   t.style.display = 'block';
   setTimeout(() => t.style.display = 'none', 2000);
@@ -1693,6 +1762,11 @@ document.querySelectorAll('.mtbtn').forEach(btn => {
   btn.addEventListener('click', () => {
     edgeMode = btn.dataset.edge;
     activeEdgeMode = edgeMode;
+    setAnalyticsContext({
+      selectedMode: edgeMode,
+      resolvedMode: edgeMode,
+      detail: detailLevel
+    });
     document.querySelectorAll('.mtbtn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     updateModeGuide(edgeMode, edgeMode);
@@ -1729,11 +1803,14 @@ document.getElementById('btn-preset-back').addEventListener('click', () => showS
 
 function buildPresetGrid() {
   const grid = document.getElementById('preset-grid');
-  PRESETS.forEach((preset, idx) => {
+  const items = builtinPresetPack?.items || [];
+  items.forEach((item) => {
+    const preset = PRESETS[item.presetIndex];
+    if (!preset) return;
     const card = document.createElement('button');
     card.className = 'preset-card';
     card.innerHTML = `<span class="preset-emoji">${preset.emoji}</span><span class="preset-name">${preset.name}</span>`;
-    card.addEventListener('click', () => loadPreset(idx));
+    card.addEventListener('click', () => loadPreset(item.presetIndex));
     grid.appendChild(card);
   });
 }
@@ -1746,6 +1823,11 @@ function loadPreset(idx) {
     lineartData = result.lineartData;
     laW = result.size; laH = result.size;
     activeEdgeMode = 'illustration';
+    setAnalyticsContext({
+      selectedMode: 'illustration',
+      resolvedMode: 'illustration',
+      detail: detailLevel
+    });
     parts = [];
     hydrateFillData(null);
     const lp = document.getElementById('lineart-preview');
@@ -1755,6 +1837,11 @@ function loadPreset(idx) {
     hasPhoto = true;
     isProcessing = false;
     showScreen('mode-screen');
+    trackEvent('preview_opened', {
+      detail: detailLevel,
+      source: 'preset',
+      presetName: PRESETS[idx]?.name || null
+    });
     debugMark('preset-mode-screen-ready', { hasPhoto });
   } catch (error) {
     debugMark('preset-error', { message: error?.message || String(error) });

@@ -187,3 +187,9 @@
 - 이벤트 이름과 필드가 구현 가능한 수준으로 구체적일 것
 - pack 구조가 현재 파일 구조를 깨지 않고 도입 가능할 것
 - v2 로드맵이 `엔진 품질`과 `제품 운영` 둘 다 연결할 것
+
+## Implemented on 2026-08-11
+- `js/analytics.js`를 추가해 경량 이벤트 큐와 `window.__kidsAnalytics` 디버그 스냅샷을 도입했다.
+- `js/app.js`에 `upload_started`, `pipeline_resolved`, `lineart_completed`, `preview_opened`, `trace_started`, `trace_completed`, `color_started`, `fill_action`, `undo_used`, `save_image` 이벤트를 최소 침습으로 연결했다.
+- `js/packs.js`와 `js/packs/` 아래 registry/preset/sample/theme/premium pack 파일을 추가했다.
+- 기존 `js/presets.js`는 그대로 두고, `preset-pack`이 이를 감싸는 thin adapter 방식으로 연결했다.
