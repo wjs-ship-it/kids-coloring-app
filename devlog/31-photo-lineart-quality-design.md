@@ -37,3 +37,8 @@
 - contour spline 단순화
 - portrait/object별 ROI 규칙 강화
 - subject segmentation 또는 salient contour ranking 도입
+
+## Implemented on 2026-08-11
+- `js/lineart-shape.js`를 추가해 edge connected-component를 score 기반으로 선별하도록 했다.
+- 가장 큰 border-touch contour는 silhouette로 강제 보존하고, 작은 질감선/잔선을 우선 제거한다.
+- object 모드는 덜 공격적으로 fuse하고 최종 선 두께를 `2px`로 낮춰 `먹물 덩어리` 느낌을 줄였다.

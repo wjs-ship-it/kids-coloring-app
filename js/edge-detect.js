@@ -1,3 +1,5 @@
+import { selectMeaningfulEdges } from './lineart-shape.js';
+
 export function applyCLAHE(gray, w, h, tileSize = 8, clipLimit = 2.0) {
   const out = new Float32Array(w * h);
   const tw = Math.ceil(w / tileSize);
@@ -858,21 +860,25 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
     rawEdge = cannyEdge(smoothed, w, h, thHi, thLo);
   }
 
-  const d1 = dilate(rawEdge, w, h, 1);
-  const fused = fuseLines(d1, w, h, 2, 0.20);
+  const widened = mode === 'portrait' ? dilate(rawEdge, w, h, 1) : rawEdge;
+  const fused = mode === 'portrait'
+    ? fuseLines(widened, w, h, 2, 0.20)
+    : fuseLines(widened, w, h, 1, 0.24);
   const bridged = bridgeEndpoints(fused, w, h, 15);
   const closed = morphClose(bridged, w, h, 3);
   const bridged2 = bridgeEndpoints(closed, w, h, 10);
 
   const minArea = mode === 'portrait' ? (50 - t * 30) : 15;
   const cleaned = removeSmallComponents(bridged2, w, h, Math.max(6, minArea));
-  let final = normalizeLineWidth(cleaned, w, h, 3);
+  const meaningful = selectMeaningfulEdges(cleaned, w, h, { mode, detail });
+  const refined = bridgeEndpoints(meaningful, w, h, mode === 'portrait' ? 10 : 8);
+  let final = normalizeLineWidth(refined, w, h, 2);
 
   const { leakCount } = validateFloodFillIntegrity(final, w, h);
   if (leakCount > 0) {
-    const d2 = dilate(cleaned, w, h, 2);
-    const fused2 = fuseLines(d2, w, h, 1, 0.15);
-    final = normalizeLineWidth(fused2, w, h, 3);
+    const d2 = dilate(meaningful, w, h, 2);
+    const fused2 = fuseLines(d2, w, h, 1, 0.18);
+    final = normalizeLineWidth(fused2, w, h, 2);
   }
 
   const outData = new Uint8ClampedArray(w * h * 4);
