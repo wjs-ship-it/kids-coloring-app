@@ -76,13 +76,13 @@ export function selectMeaningfulEdges(edges, w, h, options = {}) {
   const centerX = w / 2;
   const centerY = h / 2;
   const maxComponents = mode === 'portrait'
-    ? 18 + Math.round(detailBias * 8)
+    ? 12 + Math.round(detailBias * 6)
     : 12 + Math.round(detailBias * 6);
   const minArea = mode === 'portrait'
-    ? 10 + Math.round((1 - detailBias) * 10)
+    ? 14 + Math.round((1 - detailBias) * 14)
     : 20 + Math.round((1 - detailBias) * 22);
   const minSpan = mode === 'portrait'
-    ? 10 + Math.round((1 - detailBias) * 6)
+    ? 12 + Math.round((1 - detailBias) * 8)
     : 16 + Math.round((1 - detailBias) * 8);
 
   let silhouetteId = 0;
@@ -99,18 +99,34 @@ export function selectMeaningfulEdges(edges, w, h, options = {}) {
     const bboxArea = component.width * component.height;
     const coverage = bboxArea / (w * h);
     const centerDist = Math.hypot(component.centerX - centerX, component.centerY - centerY) / diag;
-    const centerWeight = mode === 'portrait' ? (1 - centerDist) * 120 : (1 - centerDist) * 50;
+    const centerDx = Math.abs(component.centerX - centerX) / Math.max(1, w);
+    const centerDy = Math.abs(component.centerY - centerY) / Math.max(1, h);
+    const portraitBand = centerDx < 0.18 && centerDy < 0.22;
+    const portraitFeatureBand = centerDx < 0.28 && component.centerY > h * 0.16 && component.centerY < h * 0.72;
+    const centerWeight = mode === 'portrait'
+      ? (1 - centerDist) * 180 + (portraitBand ? 140 : 0) + (portraitFeatureBand ? 80 : 0)
+      : (1 - centerDist) * 50;
     const borderWeight = component.touchesBorder ? 220 : 0;
-    const score = component.area + span * 10 + coverage * 9000 + centerWeight + borderWeight;
-    return { ...component, span, centerDist, score };
+    const portraitPenalty = mode === 'portrait' && !component.touchesBorder && !portraitFeatureBand && component.area < minArea * 2
+      ? 180
+      : 0;
+    const score = component.area + span * 10 + coverage * 9000 + centerWeight + borderWeight - portraitPenalty;
+    return { ...component, span, centerDist, centerDx, centerDy, portraitBand, portraitFeatureBand, score };
   }).sort((a, b) => b.score - a.score);
 
   const keep = new Set();
   if (silhouetteId) keep.add(silhouetteId);
 
   for (const component of ranked) {
-    const centralFeature = mode === 'portrait' && component.centerDist < 0.24 && component.area >= 8;
-    const broadStructure = component.area >= minArea || component.span >= minSpan;
+    const centralFeature = mode === 'portrait'
+      && component.portraitFeatureBand
+      && component.area >= Math.max(8, minArea - 4)
+      && component.span >= Math.max(8, minSpan - 2);
+    const broadStructure = mode === 'portrait'
+      ? component.touchesBorder
+        || component.area >= minArea * 1.6
+        || component.span >= minSpan * 1.4
+      : component.area >= minArea || component.span >= minSpan;
     if (centralFeature || broadStructure) keep.add(component.id);
     if (keep.size >= maxComponents) break;
   }
