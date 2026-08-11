@@ -28,6 +28,7 @@ let edgeWorker = null;
 let creativeMode = null;
 let hasPhoto = false;
 let edgeMode = 'object';
+let activeEdgeMode = 'object';
 let detailLevel = 50;
 let _sourceImgData = null, _sourceW = 0, _sourceH = 0;
 let detailTimer = null;
@@ -51,6 +52,95 @@ let smartMissionPulseTimer = null;
 let almostCompleteCelebrated = false;
 let completeCelebrated = false;
 let suppressColorHintReschedule = false;
+
+function getPipelineMode() {
+  return activeEdgeMode || edgeMode;
+}
+
+function analyzeInputStyle(imageData, w, h) {
+  const data = imageData.data || imageData;
+  const step = Math.max(1, Math.floor(Math.max(w, h) / 220));
+  const buckets = new Set();
+  let sampled = 0;
+  let whiteCount = 0;
+  let darkCount = 0;
+  let vividCount = 0;
+  let contrastSum = 0;
+  let contrastSamples = 0;
+
+  const readPixel = (x, y) => {
+    const idx = (y * w + x) * 4;
+    const alpha = (data[idx + 3] ?? 255) / 255;
+    const r = data[idx] * alpha + 255 * (1 - alpha);
+    const g = data[idx + 1] * alpha + 255 * (1 - alpha);
+    const b = data[idx + 2] * alpha + 255 * (1 - alpha);
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    const sat = max > 0 ? (max - min) / max : 0;
+    return { r, g, b, lum, sat };
+  };
+
+  for (let y = 0; y < h; y += step) {
+    for (let x = 0; x < w; x += step) {
+      const pixel = readPixel(x, y);
+      sampled++;
+      if (pixel.lum > 236 && pixel.sat < 0.12) whiteCount++;
+      if (pixel.lum < 90) darkCount++;
+      if (pixel.sat > 0.45 && pixel.lum > 35 && pixel.lum < 235) vividCount++;
+      buckets.add(((pixel.r >> 5) << 6) | ((pixel.g >> 5) << 3) | (pixel.b >> 5));
+
+      if (x + step < w) {
+        const right = readPixel(x + step, y);
+        contrastSum += Math.abs(pixel.lum - right.lum);
+        contrastSamples++;
+      }
+      if (y + step < h) {
+        const down = readPixel(x, y + step);
+        contrastSum += Math.abs(pixel.lum - down.lum);
+        contrastSamples++;
+      }
+    }
+  }
+
+  const whiteRatio = sampled ? whiteCount / sampled : 0;
+  const darkRatio = sampled ? darkCount / sampled : 0;
+  const vividRatio = sampled ? vividCount / sampled : 0;
+  const paletteBuckets = buckets.size;
+  const textureScore = contrastSamples ? contrastSum / contrastSamples : 0;
+  const illustrationLike = (
+    whiteRatio > 0.20 &&
+    paletteBuckets < 140 &&
+    textureScore < 28 &&
+    darkRatio < 0.25 &&
+    (vividRatio > 0.015 || whiteRatio > 0.42)
+  );
+
+  return {
+    whiteRatio,
+    darkRatio,
+    vividRatio,
+    paletteBuckets,
+    textureScore,
+    illustrationLike
+  };
+}
+
+function resolveEdgeMode(selectedMode, imageData, w, h) {
+  if (selectedMode === 'portrait' || selectedMode === 'illustration') return selectedMode;
+  const profile = analyzeInputStyle(imageData, w, h);
+  const resolvedMode = profile.illustrationLike ? 'illustration' : selectedMode;
+  debugMark('edge-mode-resolved', {
+    selectedMode,
+    resolvedMode,
+    whiteRatio: Number(profile.whiteRatio.toFixed(3)),
+    darkRatio: Number(profile.darkRatio.toFixed(3)),
+    vividRatio: Number(profile.vividRatio.toFixed(3)),
+    paletteBuckets: profile.paletteBuckets,
+    textureScore: Number(profile.textureScore.toFixed(2))
+  });
+  return resolvedMode;
+}
 
 function isRegionFillColorMode() {
   return appMode === 'color' && !creativeMode && !!fillRegionMap && fillRegions.length > 0;
@@ -155,6 +245,7 @@ function goHome() {
   isProcessing = false;
   creativeMode = null;
   hasPhoto = false;
+  activeEdgeMode = edgeMode;
   resetColorMissionState();
   lineBoundary = null;
   lineartOverlay = null;
@@ -165,6 +256,7 @@ function goHome() {
 
 async function loadDemoImage() {
   debugMark('demo-start');
+  activeEdgeMode = 'illustration';
   showScreen('processing-screen');
   const blob = await createDemoCatBlob();
   processPhoto(blob);
@@ -211,12 +303,16 @@ function convertToLineart(img) {
   SC.width = w; SC.height = h;
   sx.drawImage(img, 0, 0, w, h);
   const imageData = sx.getImageData(0, 0, w, h);
+  activeEdgeMode = resolveEdgeMode(edgeMode, imageData, w, h);
 
   _sourceImgData = imageData.data.slice();
   _sourceW = w;
   _sourceH = h;
   detailLevel = 50;
-  debugMark('convertToLineart-ready', { width: w, height: h });
+  debugMark('convertToLineart-ready', { width: w, height: h, activeEdgeMode });
+  if (activeEdgeMode === 'illustration') {
+    setLoadingText('그림 선을 정리하는 중... 🪄');
+  }
   document.getElementById('detail-slider').value = 50;
   document.getElementById('detail-slider-wrap').style.display = '';
 
@@ -226,7 +322,7 @@ function convertToLineart(img) {
 function runEdgeWorker(rawData, w, h, isFirstRun) {
   if (edgeWorker) edgeWorker.terminate();
   edgeWorker = new Worker('./js/edge-worker.js', { type: 'module' });
-  debugMark('worker-start', { width: w, height: h, isFirstRun, edgeMode, detailLevel });
+  debugMark('worker-start', { width: w, height: h, isFirstRun, edgeMode: getPipelineMode(), detailLevel });
 
   const sliderWrap = document.getElementById('detail-slider-wrap');
 
@@ -279,7 +375,7 @@ function runEdgeWorker(rawData, w, h, isFirstRun) {
     }
   };
 
-  edgeWorker.postMessage({ imageData: rawData, w, h, mode: edgeMode, detail: detailLevel });
+  edgeWorker.postMessage({ imageData: rawData, w, h, mode: getPipelineMode(), detail: detailLevel });
 }
 
 function analyzeLineartInWorker(lineart, w, h, task, onDone) {
@@ -334,7 +430,7 @@ function analyzeLineartInWorker(lineart, w, h, task, onDone) {
     imageData: lineart.data || lineart,
     w,
     h,
-    mode: edgeMode,
+    mode: getPipelineMode(),
     detail: detailLevel
   });
 }
@@ -379,7 +475,7 @@ function onDetailChange(val) {
         d[i] = v; d[i + 1] = v; d[i + 2] = v;
       }
       parts = detectParts(lineartData, laW, laH, {
-        mode: edgeMode,
+        mode: getPipelineMode(),
         detail: detailLevel
       });
       recomputeFillData(lineartData, laW, laH);
@@ -448,7 +544,7 @@ function beginActivity() {
 
   if (!parts || parts.length === 0) {
     parts = detectParts(lineartData, laW, laH, {
-      mode: edgeMode,
+      mode: getPipelineMode(),
       detail: detailLevel
     });
   }
@@ -834,7 +930,7 @@ function fitLineartToCanvas() {
   laW = newW;
   laH = newH;
   parts = detectParts(sd, newW, newH, {
-    mode: edgeMode,
+    mode: getPipelineMode(),
     detail: detailLevel
   });
   recomputeFillData(sd, newW, newH);
@@ -1649,6 +1745,7 @@ document.getElementById('btn-mode-back').addEventListener('click', () => {
 document.querySelectorAll('.mtbtn').forEach(btn => {
   btn.addEventListener('click', () => {
     edgeMode = btn.dataset.edge;
+    activeEdgeMode = edgeMode;
     document.querySelectorAll('.mtbtn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   });
@@ -1700,6 +1797,7 @@ function loadPreset(idx) {
     debugMark('preset-rendered', { size: result.size });
     lineartData = result.lineartData;
     laW = result.size; laH = result.size;
+    activeEdgeMode = 'illustration';
     parts = [];
     hydrateFillData(null);
     const lp = document.getElementById('lineart-preview');

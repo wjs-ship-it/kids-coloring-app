@@ -77,12 +77,18 @@ export function selectMeaningfulEdges(edges, w, h, options = {}) {
   const centerY = h / 2;
   const maxComponents = mode === 'portrait'
     ? 12 + Math.round(detailBias * 6)
+    : mode === 'illustration'
+      ? 18 + Math.round(detailBias * 6)
     : 12 + Math.round(detailBias * 6);
   const minArea = mode === 'portrait'
     ? 14 + Math.round((1 - detailBias) * 14)
+    : mode === 'illustration'
+      ? 6 + Math.round((1 - detailBias) * 6)
     : 20 + Math.round((1 - detailBias) * 22);
   const minSpan = mode === 'portrait'
     ? 12 + Math.round((1 - detailBias) * 8)
+    : mode === 'illustration'
+      ? 8 + Math.round((1 - detailBias) * 4)
     : 16 + Math.round((1 - detailBias) * 8);
 
   let silhouetteId = 0;
@@ -110,7 +116,10 @@ export function selectMeaningfulEdges(edges, w, h, options = {}) {
     const portraitPenalty = mode === 'portrait' && !component.touchesBorder && !portraitFeatureBand && component.area < minArea * 2
       ? 180
       : 0;
-    const score = component.area + span * 10 + coverage * 9000 + centerWeight + borderWeight - portraitPenalty;
+    const illustrationBoost = mode === 'illustration'
+      ? (component.touchesBorder ? 180 : 0) + (span >= minSpan * 1.2 ? 60 : 0)
+      : 0;
+    const score = component.area + span * 10 + coverage * 9000 + centerWeight + borderWeight + illustrationBoost - portraitPenalty;
     return { ...component, span, centerDist, centerDx, centerDy, portraitBand, portraitFeatureBand, score };
   }).sort((a, b) => b.score - a.score);
 
@@ -126,6 +135,12 @@ export function selectMeaningfulEdges(edges, w, h, options = {}) {
       ? component.touchesBorder
         || component.area >= minArea * 1.6
         || component.span >= minSpan * 1.4
+      : mode === 'illustration'
+        ? component.touchesBorder
+          || component.area >= minArea
+          || component.span >= minSpan
+          || component.width >= w * 0.08
+          || component.height >= h * 0.08
       : component.area >= minArea || component.span >= minSpan;
     if (centralFeature || broadStructure) keep.add(component.id);
     if (keep.size >= maxComponents) break;

@@ -213,10 +213,17 @@ function buildOuterContourParts(isEdge, w, h, options = {}) {
 
   const tolerance = mode === 'portrait'
     ? Math.max(1.8, 4.8 - detail / 32)
+    : mode === 'illustration'
+      ? Math.max(1.1, 3.2 - detail / 40)
     : Math.max(1.4, 4.2 - detail / 34);
-  const simplified = evenlySampleContour(simplifyContour(contour, w, tolerance), mode === 'portrait' ? 180 : 220);
+  const simplified = evenlySampleContour(
+    simplifyContour(contour, w, tolerance),
+    mode === 'portrait' ? 180 : mode === 'illustration' ? 200 : 220
+  );
   const segmentCount = mode === 'portrait'
     ? Math.max(3, Math.min(5, Math.round(3 + detail / 45)))
+    : mode === 'illustration'
+      ? Math.max(4, Math.min(6, Math.round(4 + detail / 55)))
     : Math.max(4, Math.min(6, Math.round(4 + detail / 40)));
   return splitContour(simplified, segmentCount).map((chunk) => buildPart(chunk, w));
 }
@@ -244,9 +251,13 @@ function buildInteriorParts(isEdge, w, h, options = {}) {
   const detailBias = Math.max(0, Math.min(1, detail / 100));
   const minArea = mode === 'portrait'
     ? 24 + Math.round((1 - detailBias) * 16)
+    : mode === 'illustration'
+      ? 10 + Math.round((1 - detailBias) * 8)
     : 28 + Math.round((1 - detailBias) * 20);
   const maxParts = mode === 'portrait'
     ? 3 + Math.round(detailBias * 2)
+    : mode === 'illustration'
+      ? 4 + Math.round(detailBias * 2)
     : 3 + Math.round(detailBias * 2);
 
   return regions
@@ -258,10 +269,12 @@ function buildInteriorParts(isEdge, w, h, options = {}) {
       const contour = traceBoundaryFromPixels(region.pixels, isEdge, w, h);
       const tolerance = mode === 'portrait'
         ? Math.max(2.0, 4.6 - detail / 32)
+        : mode === 'illustration'
+          ? Math.max(1.2, 3.2 - detail / 40)
         : Math.max(1.4, 3.8 - detail / 36);
       const simplified = evenlySampleContour(
         simplifyContour(contour, w, tolerance),
-        mode === 'portrait' ? 96 : 100
+        mode === 'portrait' ? 96 : mode === 'illustration' ? 88 : 100
       );
       return buildPart(simplified, w);
     })
@@ -280,6 +293,8 @@ export function detectTraceParts(lineartData, w, h, options = {}) {
   parts.sort((a, b) => a.centerY - b.centerY);
   const maxFinalParts = mode === 'portrait'
     ? Math.max(4, Math.min(7, Math.round(4 + detail / 42)))
+    : mode === 'illustration'
+      ? Math.max(5, Math.min(8, Math.round(5 + detail / 50)))
     : Math.max(6, Math.min(9, Math.round(6 + detail / 38)));
   if (parts.length > maxFinalParts) parts = parts.slice(0, maxFinalParts);
   return parts;

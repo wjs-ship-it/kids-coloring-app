@@ -322,6 +322,7 @@
             <li>Preset fill은 parts, fill region, fill pixels, undo diff를 함께 통과해야 합니다.</li>
             <li>Portrait photo는 dark ratio 0.70 미만, parts 3~10, fill regions 4+가 기준입니다.</li>
             <li>Object photo는 dark ratio 0.55 미만, parts 3+, fill regions 4+가 기준입니다.</li>
+            <li>Illustration photo는 dark ratio 0.35 미만, parts 3~8, fill regions 4+가 기준입니다.</li>
           </ul>
         </article>
         <article class="hero-card">
@@ -364,6 +365,7 @@
           <select id="photo-mode">
             <option value="portrait">Portrait</option>
             <option value="object">Object</option>
+            <option value="illustration">Illustration</option>
           </select>
         </label>
         <label>
@@ -380,7 +382,7 @@
         </label>
         <button id="run-photo-btn" type="button">Run Photo Verification</button>
       </div>
-      <p class="status-note">Portrait gate: dark ratio &lt; 0.70, parts 3~10, fill regions 4+. Object gate: dark ratio &lt; 0.55, parts 3+, fill regions 4+.</p>
+      <p class="status-note">Portrait gate: dark ratio &lt; 0.70, parts 3~10, fill regions 4+. Object gate: dark ratio &lt; 0.55, parts 3+, fill regions 4+. Illustration gate: dark ratio &lt; 0.35, parts 3~8, fill regions 4+.</p>
       <div id="photo-results" class="grid"></div>
     </section>
   </main>
@@ -653,7 +655,9 @@
       const durationMs = performance.now() - startedAt;
       const ok = mode === 'portrait'
         ? darkRatio < 0.7 && parts.length >= 3 && parts.length <= 10 && fillRegions.regions.length >= 4
-        : darkRatio < 0.55 && parts.length >= 3 && fillRegions.regions.length >= 4;
+        : mode === 'illustration'
+          ? darkRatio < 0.35 && parts.length >= 3 && parts.length <= 8 && fillRegions.regions.length >= 4
+          : darkRatio < 0.55 && parts.length >= 3 && fillRegions.regions.length >= 4;
 
       return {
         name: file.name,

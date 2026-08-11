@@ -173,6 +173,61 @@ export function dualPassEdge(gray, w, h, outerHi = 0.15, outerLo = 0.06, innerHi
   return result;
 }
 
+function readAlphaAwareRgb(px, idx) {
+  const alpha = (px[idx + 3] ?? 255) / 255;
+  return {
+    r: px[idx] * alpha + 255 * (1 - alpha),
+    g: px[idx + 1] * alpha + 255 * (1 - alpha),
+    b: px[idx + 2] * alpha + 255 * (1 - alpha),
+  };
+}
+
+function extractIllustrationEdges(px, w, h, detail = 50) {
+  const detailBias = Math.max(0, Math.min(1, detail / 100));
+  const darkThreshold = 176 - Math.round(detailBias * 24);
+  const contrastThreshold = 44 - detailBias * 12;
+  const edges = new Uint8Array(w * h);
+  const luminance = new Float32Array(w * h);
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const { r, g, b } = readAlphaAwareRgb(px, idx);
+      luminance[y * w + x] = 0.299 * r + 0.587 * g + 0.114 * b;
+    }
+  }
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const pos = y * w + x;
+      const idx = pos * 4;
+      const { r, g, b } = readAlphaAwareRgb(px, idx);
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const sat = max > 0 ? (max - min) / max : 0;
+      const lum = luminance[pos];
+      const localContrast = Math.max(
+        Math.abs(lum - luminance[pos - 1]),
+        Math.abs(lum - luminance[pos + 1]),
+        Math.abs(lum - luminance[pos - w]),
+        Math.abs(lum - luminance[pos + w])
+      );
+      const neighborDark = (
+        luminance[pos - 1] < 170 ||
+        luminance[pos + 1] < 170 ||
+        luminance[pos - w] < 170 ||
+        luminance[pos + w] < 170
+      );
+
+      const isInk = lum < darkThreshold && sat < 0.92;
+      const isContour = localContrast > contrastThreshold && (lum < 215 || neighborDark);
+      if (isInk || isContour) edges[pos] = 1;
+    }
+  }
+
+  return edges;
+}
+
 export function morphClose(edges, w, h, kernelSize = 3) {
   const half = Math.floor(kernelSize / 2);
   const dilated = new Uint8Array(w * h);
@@ -611,8 +666,8 @@ function renderLineartVariant(smoothed, w, h, mode, detail, options = {}) {
   } = options;
   const effectiveDetail = Math.max(5, Math.min(95, detail + detailOffset));
   const t = effectiveDetail / 100;
-  const baseHi = mode === 'portrait' ? 0.12 : 0.10;
-  const baseLo = mode === 'portrait' ? 0.03 : 0.02;
+  const baseHi = mode === 'portrait' ? 0.12 : mode === 'illustration' ? 0.08 : 0.10;
+  const baseLo = mode === 'portrait' ? 0.03 : mode === 'illustration' ? 0.018 : 0.02;
   const thHi = baseHi * (1.5 - t * 0.9);
   const thLo = baseLo * (1.5 - t * 0.9);
 
@@ -625,21 +680,25 @@ function renderLineartVariant(smoothed, w, h, mode, detail, options = {}) {
     rawEdge = cannyEdge(smoothed, w, h, thHi, thLo);
   }
 
-  const widened = mode === 'portrait' ? dilate(rawEdge, w, h, 1) : rawEdge;
+  const widened = mode === 'portrait' ? dilate(rawEdge, w, h, 1) : mode === 'illustration' ? dilate(rawEdge, w, h, 1) : rawEdge;
   const fused = mode === 'portrait'
     ? fuseLines(widened, w, h, 2, portraitFuseThreshold)
+    : mode === 'illustration'
+      ? fuseLines(widened, w, h, 1, 0.18)
     : fuseLines(widened, w, h, 1, 0.24);
-  const bridged = bridgeEndpoints(fused, w, h, 15);
-  const closed = morphClose(bridged, w, h, 3);
-  const bridged2 = bridgeEndpoints(closed, w, h, 10);
+  const bridged = bridgeEndpoints(fused, w, h, mode === 'illustration' ? 9 : 15);
+  const closed = morphClose(bridged, w, h, mode === 'illustration' ? 2 : 3);
+  const bridged2 = bridgeEndpoints(closed, w, h, mode === 'illustration' ? 7 : 10);
 
   const minArea = mode === 'portrait'
     ? (50 - t * 30) + portraitMinAreaBoost
+    : mode === 'illustration'
+      ? Math.max(4, 10 - Math.round(t * 4))
     : 15;
   const cleaned = removeSmallComponents(bridged2, w, h, Math.max(6, minArea));
   const meaningful = selectMeaningfulEdges(cleaned, w, h, { mode, detail: effectiveDetail });
-  const refined = bridgeEndpoints(meaningful, w, h, mode === 'portrait' ? portraitBridge : 8);
-  let final = normalizeLineWidth(refined, w, h, 2);
+  const refined = bridgeEndpoints(meaningful, w, h, mode === 'portrait' ? portraitBridge : mode === 'illustration' ? 6 : 8);
+  let final = normalizeLineWidth(refined, w, h, mode === 'illustration' ? 1 : 2);
 
   const { leakCount } = validateFloodFillIntegrity(final, w, h);
   if (leakCount > 0) {
@@ -672,13 +731,26 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
     const s1 = applyCLAHE(gray, w, h, 8, 1.5);
     const s2 = bilateralFilter(s1, w, h, 13, sigC, sigS);
     smoothed = bilateralFilter(s2, w, h, 13, sigC, sigS);
+  } else if (mode === 'illustration') {
+    const s1 = applyCLAHE(gray, w, h, 10, 1.1);
+    smoothed = bilateralFilter(s1, w, h, 5, 42, 42);
   } else {
     const s1 = applyCLAHE(gray, w, h);
     const s2 = bilateralFilter(s1, w, h);
     smoothed = bilateralFilter(s2, w, h);
   }
 
-  let final = renderLineartVariant(smoothed, w, h, mode, detail);
+  let final = mode === 'illustration'
+    ? renderLineartVariant(smoothed, w, h, mode, detail)
+    : renderLineartVariant(smoothed, w, h, mode, detail);
+
+  if (mode === 'illustration') {
+    const illustrationEdge = extractIllustrationEdges(px, w, h, detail);
+    const fusedIllustration = morphClose(fuseLines(dilate(illustrationEdge, w, h, 1), w, h, 1, 0.18), w, h, 2);
+    const cleanedIllustration = removeSmallComponents(fusedIllustration, w, h, 4);
+    const meaningfulIllustration = selectMeaningfulEdges(cleanedIllustration, w, h, { mode, detail });
+    final = normalizeLineWidth(bridgeEndpoints(meaningfulIllustration, w, h, 6), w, h, 1);
+  }
 
   const outData = new Uint8ClampedArray(w * h * 4);
   for (let i = 0; i < w * h; i++) {

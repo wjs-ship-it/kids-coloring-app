@@ -68,3 +68,5 @@
 - portrait fallback background removal은 `중앙 얼굴/상반신 보호`, `가장자리/상하 밝은 배경 백화` 방향으로 한 번 더 조정했다.
 - portrait trace interior 선별은 `얼굴 상단 중심부`를 더 우선 보존하고, 내부 파트 수와 샘플링 수를 줄여 `잘린 조각` 느낌을 더 완화하도록 조정했다.
 - portrait lineart가 여전히 과하게 어두우면, `runFullPipeline()` 안에서 더 높은 임계값/큰 최소 면적/짧은 bridge 거리로 한 번 더 보수적인 variant를 재시도하는 adaptive density guard를 추가했다.
+- flat illustration / character 입력은 photo edge 규칙으로 망가질 가능성이 높아서, `illustration` 전용 lane을 추가했다. object 선택 상태에서도 흰 배경 비율, palette bucket 수, texture score를 보고 illustration-like 입력이면 내부적으로 `illustration` 모드로 자동 전환한다.
+- illustration lane은 `dark pixel + local contrast` 기반 선 추출을 우선 사용하고, line width / trace part 분할 / meaningful edge selection도 더 보존적으로 조정했다. verify 하네스에도 `illustration` 모드를 추가해 dark ratio `< 0.35`, parts `3~8`, fill regions `4+`를 gate로 둔다.
