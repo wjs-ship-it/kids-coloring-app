@@ -69,6 +69,32 @@
     .status.ok { color: var(--ok); }
     .status.bad { color: var(--bad); }
 
+    .toolbar.secondary {
+      margin-top: -4px;
+      margin-bottom: 28px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255,255,255,0.78);
+    }
+
+    .toolbar label {
+      font-weight: 700;
+      font-size: 14px;
+      color: #475569;
+    }
+
+    select,
+    input[type="file"] {
+      font: inherit;
+    }
+
+    .section-title {
+      margin: 28px 0 10px;
+      font-size: 22px;
+      line-height: 1.15;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -141,7 +167,32 @@
       <button id="run-btn" type="button">Run Verification</button>
       <span id="summary" class="status">Idle</span>
     </div>
+    <h2 class="section-title">Photo Lineart Verification</h2>
+    <div class="toolbar secondary">
+      <label>
+        Mode
+        <select id="photo-mode">
+          <option value="portrait">Portrait</option>
+          <option value="object">Object</option>
+        </select>
+      </label>
+      <label>
+        Detail
+        <select id="photo-detail">
+          <option value="20">20</option>
+          <option value="50" selected>50</option>
+          <option value="80">80</option>
+        </select>
+      </label>
+      <label>
+        Photos
+        <input id="photo-files" type="file" accept="image/*" multiple>
+      </label>
+      <button id="run-photo-btn" type="button">Run Photo Verification</button>
+      <span id="photo-summary" class="status">No photos selected</span>
+    </div>
     <div id="results" class="grid"></div>
+    <div id="photo-results" class="grid"></div>
   </main>
 
   <script>
@@ -175,11 +226,18 @@
   </script>
   <script type="module">
     import { PRESETS, renderPreset } from './js/presets.js';
-    import { detectParts, buildFillRegions } from './js/edge-detect.js';
+    import { detectParts, buildFillRegions, runFullPipeline } from './js/edge-detect.js';
+    import { removeBackground } from './js/bg-remove.js';
 
     const runBtn = document.getElementById('run-btn');
     const summary = document.getElementById('summary');
     const results = document.getElementById('results');
+    const runPhotoBtn = document.getElementById('run-photo-btn');
+    const photoSummary = document.getElementById('photo-summary');
+    const photoResults = document.getElementById('photo-results');
+    const photoFiles = document.getElementById('photo-files');
+    const photoMode = document.getElementById('photo-mode');
+    const photoDetail = document.getElementById('photo-detail');
 
     function renderMetric(label, value) {
       return `<div><strong>${label}</strong><br>${value}</div>`;
@@ -240,7 +298,7 @@
       const { width, height } = ctx.canvas;
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, width, height);
-      const line = lineartData.data;
+      const line = lineartData.data || lineartData;
       ctx.fillStyle = color;
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
@@ -309,6 +367,36 @@
       return card;
     }
 
+    function makePhotoCard(result) {
+      const card = document.createElement('article');
+      card.className = 'card';
+
+      const title = document.createElement('h2');
+      title.textContent = result.name;
+      card.appendChild(title);
+
+      const badge = document.createElement('div');
+      badge.className = `badge ${result.ok ? 'ok' : 'bad'}`;
+      badge.textContent = result.ok ? 'PASS' : 'FAIL';
+      card.appendChild(badge);
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.innerHTML = [
+        renderMetric('Mode', result.mode),
+        renderMetric('Detail', result.detail),
+        renderMetric('Dark Ratio', result.darkRatio.toFixed(3)),
+        renderMetric('Parts', result.parts),
+        renderMetric('Fill Regions', result.fillRegions),
+        renderMetric('Largest Region', result.largestRegionArea),
+        renderMetric('Runtime', `${result.durationMs.toFixed(1)} ms`)
+      ].join('');
+      card.appendChild(meta);
+
+      card.appendChild(result.canvas);
+      return card;
+    }
+
     function verifyPreset(preset) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -337,6 +425,55 @@
       };
     }
 
+    async function verifyPhoto(file, mode, detail) {
+      const startedAt = performance.now();
+      const workingBlob = mode === 'portrait' ? await removeBackground(file) : file;
+      const bitmap = await createImageBitmap(workingBlob);
+      const max = 480;
+      const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+      const width = Math.max(1, Math.round(bitmap.width * scale));
+      const height = Math.max(1, Math.round(bitmap.height * scale));
+      const sourceCanvas = document.createElement('canvas');
+      sourceCanvas.width = width;
+      sourceCanvas.height = height;
+      const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+      sourceCtx.drawImage(bitmap, 0, 0, width, height);
+      const imageData = sourceCtx.getImageData(0, 0, width, height);
+
+      const { lineartData, parts, fillRegions } = runFullPipeline(imageData.data, width, height, mode, detail);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      paintLineartOnly(canvas.getContext('2d'), lineartData, '#1e293b');
+
+      let dark = 0;
+      const total = width * height;
+      const lineData = lineartData.data || lineartData;
+      for (let i = 0; i < lineData.length; i += 4) {
+        if (lineData[i] < 80 && lineData[i + 1] < 80 && lineData[i + 2] < 80) dark++;
+      }
+      const darkRatio = total ? dark / total : 0;
+      const largestRegionArea = (fillRegions.regions || []).reduce((max, region) => Math.max(max, region.area || 0), 0);
+      const durationMs = performance.now() - startedAt;
+      const ok = mode === 'portrait'
+        ? darkRatio < 0.7 && parts.length >= 3 && parts.length <= 10 && fillRegions.regions.length >= 4
+        : darkRatio < 0.55 && parts.length >= 3 && fillRegions.regions.length >= 4;
+
+      return {
+        name: file.name,
+        mode,
+        detail,
+        darkRatio,
+        parts: parts.length,
+        fillRegions: fillRegions.regions.length,
+        largestRegionArea,
+        durationMs,
+        ok,
+        canvas
+      };
+    }
+
     function runVerification() {
       if (window.__verifyNoSwReady !== true) return;
       summary.textContent = 'Running...';
@@ -355,7 +492,37 @@
       summary.className = `status ${allPassed ? 'ok' : 'bad'}`;
     }
 
+    async function runPhotoVerification() {
+      if (window.__verifyNoSwReady !== true) return;
+      const files = [...photoFiles.files];
+      if (files.length === 0) {
+        photoSummary.textContent = 'Select one or more photos';
+        photoSummary.className = 'status bad';
+        return;
+      }
+
+      photoSummary.textContent = 'Running...';
+      photoSummary.className = 'status';
+      photoResults.innerHTML = '';
+
+      const mode = photoMode.value;
+      const detail = Number(photoDetail.value);
+      const resultsData = [];
+      for (const file of files) {
+        resultsData.push(await verifyPhoto(file, mode, detail));
+      }
+
+      const passCount = resultsData.filter((result) => result.ok).length;
+      for (const result of resultsData) {
+        photoResults.appendChild(makePhotoCard(result));
+      }
+
+      photoSummary.textContent = `${passCount}/${resultsData.length} photos passed`;
+      photoSummary.className = `status ${passCount === resultsData.length ? 'ok' : 'bad'}`;
+    }
+
     runBtn.addEventListener('click', runVerification);
+    runPhotoBtn.addEventListener('click', () => { runPhotoVerification(); });
     if (window.__verifyNoSwReady === true) {
       runVerification();
     }
