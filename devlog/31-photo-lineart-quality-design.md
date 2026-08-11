@@ -42,3 +42,6 @@
 - `js/lineart-shape.js`를 추가해 edge connected-component를 score 기반으로 선별하도록 했다.
 - 가장 큰 border-touch contour는 silhouette로 강제 보존하고, 작은 질감선/잔선을 우선 제거한다.
 - object 모드는 덜 공격적으로 fuse하고 최종 선 두께를 `2px`로 낮춰 `먹물 덩어리` 느낌을 줄였다.
+- portrait 모드에서 RGB만 보던 grayscale 변환을 alpha-aware 합성으로 바꿨다. 투명 배경은 흰색으로 합성해 edge 입력에 덜 섞이게 한다.
+- `bg-remove.js`의 fallback을 no-op 원본 반환에서 `중앙 인물 보존 + 가장자리 백화` 휴리스틱으로 교체했다.
+- 실제 인물 사진 업로드 검증에서 `lineart-preview` dark ratio가 `0.93 → 0.47`로 내려가 검정판 현상이 크게 줄었다.

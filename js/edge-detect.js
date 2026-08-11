@@ -828,7 +828,11 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
   const gray = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) {
     const j = i * 4;
-    gray[i] = 0.299 * px[j] + 0.587 * px[j + 1] + 0.114 * px[j + 2];
+    const alpha = (px[j + 3] ?? 255) / 255;
+    const r = px[j] * alpha + 255 * (1 - alpha);
+    const g = px[j + 1] * alpha + 255 * (1 - alpha);
+    const b = px[j + 2] * alpha + 255 * (1 - alpha);
+    gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
   }
 
   const t = detail / 100;
