@@ -38,6 +38,21 @@
 - portrait/object별 ROI 규칙 강화
 - subject segmentation 또는 salient contour ranking 도입
 
+## Regression Gates
+- `verify-fill-regions.html` preset gate
+  - parts `1+`
+  - largest region `100px+`
+  - fill pixels `> 0`
+  - undo diff `0`
+- photo gate: `portrait`
+  - dark ratio `< 0.70`
+  - parts `3~10`
+  - fill regions `4+`
+- photo gate: `object`
+  - dark ratio `< 0.55`
+  - parts `3+`
+  - fill regions `4+`
+
 ## Implemented on 2026-08-11
 - `js/lineart-shape.js`를 추가해 edge connected-component를 score 기반으로 선별하도록 했다.
 - 가장 큰 border-touch contour는 silhouette로 강제 보존하고, 작은 질감선/잔선을 우선 제거한다.
@@ -49,3 +64,6 @@
 - `detectParts()`는 이제 `mode/detail` 옵션을 받아 path 단순화 강도와 part 수를 조절한다. worker/app 경로에도 이 옵션을 전부 연결했다.
 - 새 simplified trace part가 생긴 뒤 `ensureFullCoverage()`가 다시 30개 파트까지 부풀리던 문제를 막아, portrait trace가 `1/30`이 아니라 실제 `1/6` 파트로 시작되도록 수정했다.
 - 실제 브라우저 검증에서 portrait 업로드 trace는 `1/6`, preset trace는 `1/5`로 시작했고, detail `20 → 80` 변경 시 worker 결과가 `parts 6 → 7`, `fillRegions 15 → 27`로 다시 계산되는 것을 확인했다.
+- `verify-fill-regions.html`를 preset/photo 이중 섹션 구조로 정리하고, 현재 회귀 기준 수치를 화면과 문서에 동시에 노출했다.
+- portrait fallback background removal은 `중앙 얼굴/상반신 보호`, `가장자리/상하 밝은 배경 백화` 방향으로 한 번 더 조정했다.
+- portrait trace interior 선별은 `얼굴 상단 중심부`를 더 우선 보존하고, 내부 파트 수와 샘플링 수를 줄여 `잘린 조각` 느낌을 더 완화하도록 조정했다.

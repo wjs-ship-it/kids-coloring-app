@@ -44,9 +44,9 @@ async function fallbackRemoveBackground(imageBlob) {
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
   const cx = canvas.width * 0.5;
-  const cy = canvas.height * 0.46;
-  const rx = canvas.width * 0.34;
-  const ry = canvas.height * 0.42;
+  const cy = canvas.height * 0.47;
+  const rx = canvas.width * 0.35;
+  const ry = canvas.height * 0.43;
 
   for (let i = 0; i < data.length; i += 4) {
     const pixelIndex = i / 4;
@@ -62,13 +62,22 @@ async function fallbackRemoveBackground(imageBlob) {
     const b = data[i + 2];
     const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
     const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+    const faceBand = radial < 0.34 && y > canvas.height * 0.10 && y < canvas.height * 0.62;
+    const torsoBand = radial < 0.58 && y > canvas.height * 0.18 && y < canvas.height * 0.88;
+    const edgeBand = radial > 0.72;
 
     let whiten = 0;
-    if (radial > 0.78) whiten += Math.min(1, (radial - 0.78) / 0.42) * 0.9;
-    if (radial > 0.58 && luminance > 165 && chroma < 55) {
-      whiten += Math.min(1, (radial - 0.58) / 0.36) * 0.55;
+    if (edgeBand) whiten += Math.min(1, (radial - 0.72) / 0.34) * 0.98;
+    if (radial > 0.54 && luminance > 150 && chroma < 62) {
+      whiten += Math.min(1, (radial - 0.54) / 0.32) * 0.62;
     }
-    if (y < canvas.height * 0.18 && luminance > 175) whiten += 0.25;
+    if (radial > 0.44 && luminance > 182) whiten += 0.18;
+    if (y < canvas.height * 0.22 && luminance > 172) whiten += 0.28;
+    if (y > canvas.height * 0.82 && luminance > 150 && chroma < 58) whiten += 0.22;
+
+    if (faceBand) whiten *= 0.18;
+    else if (torsoBand) whiten *= 0.45;
+    else whiten *= 1.08;
 
     whiten = Math.min(0.97, whiten);
     if (whiten <= 0) continue;

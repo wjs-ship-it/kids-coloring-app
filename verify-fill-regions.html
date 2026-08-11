@@ -11,11 +11,15 @@
       --ink: #1e293b;
       --card: #ffffff;
       --line: #e7d7c5;
+      --panel: rgba(255,255,255,0.82);
       --ok: #166534;
       --ok-bg: #dcfce7;
       --bad: #991b1b;
       --bad-bg: #fee2e2;
       --accent: #f97316;
+      --muted: #64748b;
+      --warm: #fff4e6;
+      --warm-line: #f1dcc5;
     }
 
     * { box-sizing: border-box; }
@@ -70,18 +74,122 @@
     .status.bad { color: var(--bad); }
 
     .toolbar.secondary {
-      margin-top: -4px;
+      margin-top: 0;
       margin-bottom: 28px;
-      padding: 14px 16px;
+      padding: 16px 18px;
       border: 1px solid var(--line);
-      border-radius: 20px;
-      background: rgba(255,255,255,0.78);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: 0 16px 48px rgba(148, 163, 184, 0.10);
     }
 
     .toolbar label {
       font-weight: 700;
       font-size: 14px;
       color: #475569;
+      display: grid;
+      gap: 8px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 28px;
+      padding: 22px 22px 20px;
+      border-radius: 28px;
+      border: 1px solid var(--line);
+      background:
+        radial-gradient(circle at top right, rgba(249, 115, 22, 0.14), transparent 34%),
+        radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.12), transparent 28%),
+        var(--panel);
+      box-shadow: 0 20px 60px rgba(148, 163, 184, 0.12);
+    }
+
+    .hero-copy {
+      display: grid;
+      gap: 8px;
+    }
+
+    .hero-kicker {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      margin: 0;
+      max-width: 72ch;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+      text-wrap: balance;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+    }
+
+    .hero-card {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border-radius: 22px;
+      background: var(--warm);
+      border: 1px solid var(--warm-line);
+    }
+
+    .hero-card h2 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .hero-card p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .criteria-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .section {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .toolbar-cluster {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .status-label {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
     }
 
     select,
@@ -90,9 +198,17 @@
     }
 
     .section-title {
-      margin: 28px 0 10px;
+      margin: 0;
       font-size: 22px;
       line-height: 1.15;
+      text-wrap: balance;
+    }
+
+    .section-copy {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--muted);
     }
 
     .grid {
@@ -112,6 +228,7 @@
     .card h2 {
       margin: 0 0 12px;
       font-size: 20px;
+      text-wrap: balance;
     }
 
     .meta {
@@ -150,6 +267,13 @@
       background: var(--bad-bg);
     }
 
+    .status-note {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
     canvas {
       width: 100%;
       height: auto;
@@ -157,42 +281,108 @@
       border: 1px solid var(--line);
       background: white;
     }
+
+    @media (max-width: 860px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 16px;
+      }
+
+      .hero {
+        padding: 18px 16px;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      .toolbar.secondary {
+        padding: 14px;
+      }
+    }
   </style>
 </head>
 <body>
   <main>
-    <h1>Fill Region Verification</h1>
-    <p>Local browser harness for preset lineart, trace parts, and fill-region generation.</p>
-    <div class="toolbar">
-      <button id="run-btn" type="button">Run Verification</button>
-      <span id="summary" class="status">Idle</span>
-    </div>
-    <h2 class="section-title">Photo Lineart Verification</h2>
-    <div class="toolbar secondary">
-      <label>
-        Mode
-        <select id="photo-mode">
-          <option value="portrait">Portrait</option>
-          <option value="object">Object</option>
-        </select>
-      </label>
-      <label>
-        Detail
-        <select id="photo-detail">
-          <option value="20">20</option>
-          <option value="50" selected>50</option>
-          <option value="80">80</option>
-        </select>
-      </label>
-      <label>
-        Photos
-        <input id="photo-files" type="file" accept="image/*" multiple>
-      </label>
-      <button id="run-photo-btn" type="button">Run Photo Verification</button>
-      <span id="photo-summary" class="status">No photos selected</span>
-    </div>
-    <div id="results" class="grid"></div>
-    <div id="photo-results" class="grid"></div>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="hero-kicker">Regression Harness</p>
+        <h1>Kids Coloring Verification</h1>
+        <p class="hero-sub">Preset fill 회귀와 photo lineart 품질을 한 페이지에서 함께 검증합니다. portrait는 배경 정리 이후 실제 업로드 경로를, object는 구조선 단순화 결과를 그대로 측정합니다.</p>
+      </div>
+      <div class="hero-grid">
+        <article class="hero-card">
+          <h2>Current Gates</h2>
+          <ul class="criteria-list">
+            <li>Preset fill은 parts, fill region, fill pixels, undo diff를 함께 통과해야 합니다.</li>
+            <li>Portrait photo는 dark ratio 0.70 미만, parts 3~10, fill regions 4+가 기준입니다.</li>
+            <li>Object photo는 dark ratio 0.55 미만, parts 3+, fill regions 4+가 기준입니다.</li>
+          </ul>
+        </article>
+        <article class="hero-card">
+          <h2>Why This Exists</h2>
+          <p>이 화면은 검정판처럼 뭉개지는 portrait, 과분할 trace, fill/undo 회귀를 배포본에서 바로 잡아내기 위한 시각적 검증 하네스입니다.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="preset-section-title">
+      <div class="status-row">
+        <div>
+          <h2 id="preset-section-title" class="section-title">Preset Fill Verification</h2>
+          <p class="section-copy">내장 프리셋 5종에서 trace parts, fill regions, fill pixels, undo diff를 함께 확인합니다.</p>
+        </div>
+        <div class="toolbar-cluster">
+          <button id="run-btn" type="button">Run Preset Verification</button>
+          <span class="status-label">Preset Status</span>
+          <span id="summary" class="status">Idle</span>
+        </div>
+      </div>
+      <p class="status-note">PASS 기준: parts 1+, largest region 100px+, fill pixels 양수, undo diff 0.</p>
+      <div id="results" class="grid"></div>
+    </section>
+
+    <section class="section" aria-labelledby="photo-section-title">
+      <div class="status-row">
+        <div>
+          <h2 id="photo-section-title" class="section-title">Photo Lineart Verification</h2>
+          <p class="section-copy">실제 사진 업로드 경로를 따라 portrait/object 모드의 lineart 품질을 측정합니다.</p>
+        </div>
+        <div class="toolbar-cluster">
+          <span class="status-label">Photo Status</span>
+          <span id="photo-summary" class="status">No photos selected</span>
+        </div>
+      </div>
+      <div class="toolbar secondary">
+        <label>
+          Mode
+          <select id="photo-mode">
+            <option value="portrait">Portrait</option>
+            <option value="object">Object</option>
+          </select>
+        </label>
+        <label>
+          Detail
+          <select id="photo-detail">
+            <option value="20">20</option>
+            <option value="50" selected>50</option>
+            <option value="80">80</option>
+          </select>
+        </label>
+        <label>
+          Photos
+          <input id="photo-files" type="file" accept="image/*" multiple>
+        </label>
+        <button id="run-photo-btn" type="button">Run Photo Verification</button>
+      </div>
+      <p class="status-note">Portrait gate: dark ratio &lt; 0.70, parts 3~10, fill regions 4+. Object gate: dark ratio &lt; 0.55, parts 3+, fill regions 4+.</p>
+      <div id="photo-results" class="grid"></div>
+    </section>
   </main>
 
   <script>
@@ -238,6 +428,11 @@
     const photoFiles = document.getElementById('photo-files');
     const photoMode = document.getElementById('photo-mode');
     const photoDetail = document.getElementById('photo-detail');
+
+    function setStatus(target, text, kind = '') {
+      target.textContent = text;
+      target.className = `status${kind ? ` ${kind}` : ''}`;
+    }
 
     function renderMetric(label, value) {
       return `<div><strong>${label}</strong><br>${value}</div>`;
@@ -476,8 +671,7 @@
 
     function runVerification() {
       if (window.__verifyNoSwReady !== true) return;
-      summary.textContent = 'Running...';
-      summary.className = 'status';
+      setStatus(summary, 'Running...');
       results.innerHTML = '';
 
       const runs = PRESETS.map(verifyPreset);
@@ -488,21 +682,18 @@
       }
 
       const allPassed = passCount === runs.length;
-      summary.textContent = `${passCount}/${runs.length} presets passed`;
-      summary.className = `status ${allPassed ? 'ok' : 'bad'}`;
+      setStatus(summary, `${passCount}/${runs.length} presets passed`, allPassed ? 'ok' : 'bad');
     }
 
     async function runPhotoVerification() {
       if (window.__verifyNoSwReady !== true) return;
       const files = [...photoFiles.files];
       if (files.length === 0) {
-        photoSummary.textContent = 'Select one or more photos';
-        photoSummary.className = 'status bad';
+        setStatus(photoSummary, 'Select one or more photos', 'bad');
         return;
       }
 
-      photoSummary.textContent = 'Running...';
-      photoSummary.className = 'status';
+      setStatus(photoSummary, 'Running...');
       photoResults.innerHTML = '';
 
       const mode = photoMode.value;
@@ -517,12 +708,19 @@
         photoResults.appendChild(makePhotoCard(result));
       }
 
-      photoSummary.textContent = `${passCount}/${resultsData.length} photos passed`;
-      photoSummary.className = `status ${passCount === resultsData.length ? 'ok' : 'bad'}`;
+      setStatus(photoSummary, `${passCount}/${resultsData.length} photos passed`, passCount === resultsData.length ? 'ok' : 'bad');
     }
 
     runBtn.addEventListener('click', runVerification);
     runPhotoBtn.addEventListener('click', () => { runPhotoVerification(); });
+    photoFiles.addEventListener('change', () => {
+      const count = photoFiles.files?.length ?? 0;
+      if (!count) {
+        setStatus(photoSummary, 'No photos selected');
+        return;
+      }
+      setStatus(photoSummary, `${count} photo${count > 1 ? 's' : ''} ready`);
+    });
     if (window.__verifyNoSwReady === true) {
       runVerification();
     }

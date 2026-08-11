@@ -228,11 +228,12 @@ function scoreRegion(region, w, h, mode) {
   const centerDist = Math.hypot(region.centerX - centerX, region.centerY - centerY) / diag;
   const centerDx = Math.abs(region.centerX - centerX) / Math.max(1, w);
   const centerDy = Math.abs(region.centerY - centerY) / Math.max(1, h);
-  const portraitFeatureBand = centerDx < 0.28 && centerDy < 0.28 && region.centerY < h * 0.76;
+  const portraitFeatureBand = centerDx < 0.24 && centerDy < 0.22 && region.centerY > h * 0.12 && region.centerY < h * 0.70;
+  const portraitTorsoBand = centerDx < 0.32 && centerDy < 0.34 && region.centerY >= h * 0.28 && region.centerY < h * 0.90;
   const areaWeight = region.area;
   const spanWeight = Math.max(region.width, region.height) * 12;
   const centerWeight = mode === 'portrait'
-    ? (1 - centerDist) * 180 + (portraitFeatureBand ? 160 : 0)
+    ? (1 - centerDist) * 200 + (portraitFeatureBand ? 210 : 0) + (portraitTorsoBand ? 65 : 0)
     : (1 - centerDist) * 80;
   return areaWeight + spanWeight + centerWeight;
 }
@@ -242,10 +243,10 @@ function buildInteriorParts(isEdge, w, h, options = {}) {
   const regions = collectVoidRegions(isEdge, w, h);
   const detailBias = Math.max(0, Math.min(1, detail / 100));
   const minArea = mode === 'portrait'
-    ? 18 + Math.round((1 - detailBias) * 14)
+    ? 24 + Math.round((1 - detailBias) * 16)
     : 28 + Math.round((1 - detailBias) * 20);
   const maxParts = mode === 'portrait'
-    ? 4 + Math.round(detailBias * 2)
+    ? 3 + Math.round(detailBias * 2)
     : 3 + Math.round(detailBias * 2);
 
   return regions
@@ -256,11 +257,11 @@ function buildInteriorParts(isEdge, w, h, options = {}) {
     .map(({ region }) => {
       const contour = traceBoundaryFromPixels(region.pixels, isEdge, w, h);
       const tolerance = mode === 'portrait'
-        ? Math.max(1.6, 4.2 - detail / 34)
+        ? Math.max(2.0, 4.6 - detail / 32)
         : Math.max(1.4, 3.8 - detail / 36);
       const simplified = evenlySampleContour(
         simplifyContour(contour, w, tolerance),
-        mode === 'portrait' ? 120 : 100
+        mode === 'portrait' ? 96 : 100
       );
       return buildPart(simplified, w);
     })
@@ -278,7 +279,7 @@ export function detectTraceParts(lineartData, w, h, options = {}) {
 
   parts.sort((a, b) => a.centerY - b.centerY);
   const maxFinalParts = mode === 'portrait'
-    ? Math.max(5, Math.min(8, Math.round(5 + detail / 40)))
+    ? Math.max(4, Math.min(7, Math.round(4 + detail / 42)))
     : Math.max(6, Math.min(9, Math.round(6 + detail / 38)));
   if (parts.length > maxFinalParts) parts = parts.slice(0, maxFinalParts);
   return parts;
