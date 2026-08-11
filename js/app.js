@@ -3,6 +3,7 @@ import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonB
 import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showScreen, setLoadingText } from './ui-utils.js';
 import { PRESETS, renderPreset } from './presets.js';
 import { detectParts, dilate, fuseLines, normalizeLineWidth, buildFillRegions } from './edge-detect.js';
+import { removeBackground } from './bg-remove.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -179,7 +180,22 @@ async function processPhoto(blob) {
   showScreen('processing-screen');
   setLoadingText('AI 요정이 그림을 그리고 있어요... ✨');
 
-  const img = await createImageBitmap(blob);
+  let workingBlob = blob;
+  if (edgeMode === 'portrait') {
+    setLoadingText('배경을 정리하는 중... ✂️');
+    try {
+      workingBlob = await removeBackground(blob);
+      debugMark('processPhoto-background-ready', {
+        originalSize: blob?.size || null,
+        processedSize: workingBlob?.size || null
+      });
+    } catch (error) {
+      debugMark('processPhoto-background-failed', { message: error?.message || String(error) });
+      workingBlob = blob;
+    }
+  }
+
+  const img = await createImageBitmap(workingBlob);
   debugMark('processPhoto-imageBitmap-ready', { width: img.width, height: img.height });
   setLoadingText('선을 그리는 중... ✏️');
   convertToLineart(img);
