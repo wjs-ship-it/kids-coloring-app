@@ -1,4 +1,5 @@
 import { detectSemanticTraceParts } from './trace-semantic.js';
+import { pruneTraceParts } from './trace-part-quality.js';
 
 function buildEdgeMap(lineartData, w, h) {
   const data = lineartData.data || lineartData;
@@ -287,7 +288,9 @@ export function detectTraceParts(lineartData, w, h, options = {}) {
   const { mode = 'object', detail = 50 } = options;
   if (mode === 'illustration') {
     const semanticParts = detectSemanticTraceParts(lineartData, w, h, { detail });
-    if (semanticParts.length >= 4) return semanticParts;
+    if (semanticParts.length >= 4) {
+      return pruneTraceParts(semanticParts, w, h, { mode });
+    }
   }
 
   const isEdge = buildEdgeMap(lineartData, w, h);
@@ -304,5 +307,5 @@ export function detectTraceParts(lineartData, w, h, options = {}) {
       ? Math.max(5, Math.min(8, Math.round(5 + detail / 50)))
     : Math.max(6, Math.min(9, Math.round(6 + detail / 38)));
   if (parts.length > maxFinalParts) parts = parts.slice(0, maxFinalParts);
-  return parts;
+  return pruneTraceParts(parts, w, h, { mode });
 }

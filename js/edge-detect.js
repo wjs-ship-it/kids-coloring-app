@@ -588,6 +588,14 @@ export function detectParts(lineartData, w, h, options = {}) {
   return detectTraceParts(lineartData, w, h, options);
 }
 
+function isSelectableFillRegion(area, width, height, minArea, w, h) {
+  if (area < minArea) return false;
+  const minReach = Math.max(8, Math.round(Math.min(w, h) * 0.022));
+  const maxSpan = Math.max(width, height);
+  if (maxSpan >= minReach) return true;
+  return width >= 6 && height >= 6;
+}
+
 export function buildFillRegions(lineartData, w, h, minArea = 24) {
   const d = lineartData.data || lineartData;
   const total = w * h;
@@ -707,7 +715,9 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
         }
       }
 
-      const keep = tail >= minArea;
+      const regionWidth = maxX - minX + 1;
+      const regionHeight = maxY - minY + 1;
+      const keep = isSelectableFillRegion(tail, regionWidth, regionHeight, minArea, w, h);
       const regionId = keep ? nextRegionId++ : 0;
       for (let i = 0; i < tail; i++) {
         const pos = queue[i];
@@ -718,7 +728,9 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
       regions.push({
         id: regionId,
         area: tail,
-        bounds: { minX, minY, maxX, maxY }
+        bounds: { minX, minY, maxX, maxY },
+        width: regionWidth,
+        height: regionHeight,
       });
     }
   }

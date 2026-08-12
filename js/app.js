@@ -6,6 +6,7 @@ import { detectParts, dilate, fuseLines, normalizeLineWidth, buildFillRegions, r
 import { removeBackground } from './bg-remove.js';
 import { exportAnalyticsSession, setAnalyticsContext, trackEvent } from './analytics.js';
 import { getBuiltinPresetPack } from './packs.js';
+import { pruneTraceParts } from './trace-part-quality.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -543,6 +544,7 @@ function beginActivity() {
   }
 
   parts = ensureFullCoverage(parts, lineartData, laW, laH);
+  parts = pruneTraceParts(parts, laW, laH, { mode: getPipelineMode() });
   parts = limitParts(parts, 30, laW);
 
   curPartIdx = 0;
