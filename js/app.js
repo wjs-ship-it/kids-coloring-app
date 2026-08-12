@@ -4,7 +4,7 @@ import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showSc
 import { PRESETS, renderPreset } from './presets.js';
 import { detectParts, dilate, fuseLines, normalizeLineWidth, buildFillRegions, resolvePipelineMode } from './edge-detect.js';
 import { removeBackground } from './bg-remove.js';
-import { setAnalyticsContext, trackEvent } from './analytics.js';
+import { exportAnalyticsSession, setAnalyticsContext, trackEvent } from './analytics.js';
 import { getBuiltinPresetPack } from './packs.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
@@ -1736,6 +1736,17 @@ function saveImage() {
   celebrate();
 }
 
+function exportSession() {
+  exportAnalyticsSession();
+  const t = document.getElementById('save-toast');
+  t.textContent = '📤 세션 저장 완료!';
+  t.style.display = 'block';
+  setTimeout(() => {
+    t.style.display = 'none';
+    t.textContent = '💾 저장 완료!';
+  }, 2000);
+}
+
 
 // Event bindings (no inline onclick)
 document.getElementById('photo-input').addEventListener('change', (e) => {
@@ -1753,6 +1764,7 @@ document.getElementById('btn-other-photo').addEventListener('click', goHome);
 document.getElementById('btn-back').addEventListener('click', goHome);
 document.getElementById('btn-undo').addEventListener('click', undo);
 document.getElementById('btn-save').addEventListener('click', saveImage);
+document.getElementById('btn-export').addEventListener('click', exportSession);
 document.getElementById('btn-creative').addEventListener('click', () => { hasPhoto = false; showScreen('mode-screen'); });
 document.getElementById('btn-mode-back').addEventListener('click', () => {
   showScreen(hasPhoto ? 'preview-screen' : 'upload-screen');

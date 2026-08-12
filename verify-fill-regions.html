@@ -420,6 +420,7 @@
     import { PRESETS, renderPreset } from './js/presets.js';
     import { detectParts, buildFillRegions, runFullPipeline, resolvePipelineMode } from './js/edge-detect.js';
     import { removeBackground } from './js/bg-remove.js';
+    import { setAnalyticsContext, trackEvent } from './js/analytics.js';
 
     const runBtn = document.getElementById('run-btn');
     const summary = document.getElementById('summary');
@@ -608,6 +609,23 @@
       const regions = fillData.regions || [];
       const largestRegionArea = regions.reduce((max, region) => Math.max(max, region.area || 0), 0);
       const ok = parts.length > 0 && regions.length > 0 && largestRegionArea >= 100 && interaction.ok;
+      if (!ok) {
+        setAnalyticsContext({
+          selectedMode: 'illustration',
+          resolvedMode: 'illustration',
+          detail: 50
+        });
+        trackEvent('verification_failed', {
+          source: 'preset',
+          presetName: preset.name,
+          parts: parts.length,
+          fillRegions: regions.length,
+          largestRegion: largestRegionArea,
+          fillPixels: interaction.filledPixels,
+          undoDiff: interaction.undoDiff,
+          reason: 'preset_gate_failed'
+        });
+      }
 
       return {
         name: preset.name,
@@ -661,6 +679,22 @@
         : resolvedMode === 'illustration'
           ? darkRatio < 0.35 && parts.length >= 3 && parts.length <= 8 && fillRegions.regions.length >= 4
           : darkRatio < 0.55 && parts.length >= 3 && fillRegions.regions.length >= 4;
+      if (!ok) {
+        setAnalyticsContext({
+          selectedMode: mode,
+          resolvedMode,
+          detail
+        });
+        trackEvent('verification_failed', {
+          source: 'photo',
+          fileName: file.name,
+          darkRatio: Number(darkRatio.toFixed(3)),
+          parts: parts.length,
+          fillRegions: fillRegions.regions.length,
+          largestRegion: largestRegionArea,
+          reason: 'photo_gate_failed'
+        });
+      }
 
       return {
         name: file.name,

@@ -191,5 +191,7 @@
 ## Implemented on 2026-08-11
 - `js/analytics.js`를 추가해 경량 이벤트 큐와 `window.__kidsAnalytics` 디버그 스냅샷을 도입했다.
 - `js/app.js`에 `upload_started`, `pipeline_resolved`, `lineart_completed`, `preview_opened`, `trace_started`, `trace_completed`, `color_started`, `fill_action`, `undo_used`, `save_image` 이벤트를 최소 침습으로 연결했다.
+- `index.html`과 `js/app.js`에 `📤` 세션 export 버튼을 추가하고, `window.__kidsAnalytics.exportJson()`으로 JSON 세션 덤프를 내려받을 수 있게 했다.
+- `verify-fill-regions.html`의 preset/photo gate 실패는 `verification_failed` 이벤트로 기록되도록 연결했다.
 - `js/packs.js`와 `js/packs/` 아래 registry/preset/sample/theme/premium pack 파일을 추가했다.
 - 기존 `js/presets.js`는 그대로 두고, `preset-pack`이 이를 감싸는 thin adapter 방식으로 연결했다.
