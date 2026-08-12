@@ -1,4 +1,4 @@
-import { detectIllustrationShapeFamily } from './trace-shape-family.js';
+import { detectIllustrationShapeFamily, getSemanticLabel } from './trace-shape-family.js';
 
 function buildEdgeMap(lineartData, w, h) {
   const data = lineartData.data || lineartData;
@@ -257,6 +257,7 @@ function buildPart(boundaryPos, w, meta = {}) {
     centerY: centroid.y,
     semanticCategory: meta.semanticCategory || 'ornament',
     semanticScore: meta.semanticScore || 0,
+    semanticLabel: meta.semanticLabel || '',
     sourceRegionId: meta.sourceRegionId || 0,
     attachSide: meta.attachSide || 'center',
     drawOrder: meta.drawOrder || 99,
@@ -341,6 +342,7 @@ function selectSemanticRegions(regions, metrics, family) {
     return buildPart(simplified, metrics.canvasW, {
       semanticCategory,
       semanticScore: region.area,
+      semanticLabel: getSemanticLabel(family, semanticCategory, drawOrder),
       sourceRegionId: region.label,
       attachSide,
       drawOrder,
@@ -357,6 +359,7 @@ function buildRoundCharacterSilhouette(contour, metrics, w, detail, family = 'ro
   return buildPart(simplified, w, {
     semanticCategory: 'silhouette',
     semanticScore: simplified.length,
+    semanticLabel: getSemanticLabel(family, 'silhouette', 1),
     drawOrder: 1,
     shapeFamily: family,
   });
@@ -385,6 +388,7 @@ function buildRoundCharacterContourParts(contour, metrics, w, detail, family = '
     parts.push(buildPart(simplified, w, {
       semanticCategory,
       semanticScore: simplified.length,
+      semanticLabel: getSemanticLabel(family, semanticCategory, drawOrder),
       drawOrder,
       shapeFamily: family,
     }));
@@ -426,6 +430,7 @@ function buildLongneckSilhouetteParts(contour, metrics, w, detail) {
     result.push(buildPart(simplified, w, {
       semanticCategory,
       semanticScore: simplified.length,
+      semanticLabel: getSemanticLabel('longneck_animal', semanticCategory, drawOrder),
       drawOrder,
       shapeFamily: 'longneck_animal',
     }));

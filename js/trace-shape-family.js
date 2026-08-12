@@ -36,3 +36,20 @@ export function detectIllustrationShapeFamily(metrics) {
 
   return 'illustration_generic';
 }
+
+export function getSemanticLabel(family, semanticCategory, drawOrder) {
+  if (family === 'longneck_animal') {
+    if (drawOrder === 1) return '머리';
+    if (drawOrder === 2) return '목';
+    if (drawOrder === 3) return '몸통';
+    if (semanticCategory === 'limb') return '다리';
+    if (semanticCategory === 'tail_feature') return '꼬리';
+  }
+  if (family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic') {
+    if (drawOrder === 1) return '몸통';
+    if (drawOrder === 2 || drawOrder === 3) return '손';
+    if (drawOrder === 4 || drawOrder === 5) return '발';
+    if (semanticCategory === 'head_feature') return '얼굴';
+  }
+  return semanticCategory === 'ornament' ? '장식' : '';
+}

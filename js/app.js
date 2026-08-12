@@ -769,11 +769,12 @@ function showCurrentPart() {
     tail_feature: '🦕',
     ornament: '✨'
   };
+  const semanticLabel = part.traceStrategy === 'semantic' ? (part.semanticLabel || '') : '';
   const suffix = part.traceStrategy === 'semantic'
-    ? ` ${semanticEmoji[part.semanticCategory] || '⭐'}`
+    ? ` ${semanticEmoji[part.semanticCategory] || '⭐'}${semanticLabel ? ` ${semanticLabel}` : ''}`
     : ' ⭐';
   document.getElementById('part-label').textContent = `${curPartIdx + 1}/${parts.length}${suffix}`;
-  showHint('점선을 따라 그려봐요! ✏️');
+  showHint(semanticLabel ? `${semanticLabel}부터 따라 그려봐요! ✏️` : '점선을 따라 그려봐요! ✏️');
   currentColor = '#1e293b'; brushSize = 6; isEraser = false;
 }
 
