@@ -197,6 +197,11 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 .brush-pick:active{transform:scale(.9)}
 .brush-pick.active{background:#FFE6A6;box-shadow:inset 0 0 0 3px var(--yellow-deep)}
 .bdot{border-radius:50%;background:var(--ink)}
+.fill-tool-bar{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:50;background:rgba(255,253,248,.92);backdrop-filter:blur(8px);padding:8px 12px;border-radius:22px;box-shadow:0 6px 20px rgba(73,58,53,.1);transition:opacity .3s,transform .3s}
+.fill-tool-bar.hidden{opacity:0;transform:translateX(-50%) translateY(60px);pointer-events:none}
+.fill-tool-pick{min-width:62px;height:38px;padding:0 12px;border-radius:16px;background:#FFF9F0;color:var(--ink);font-size:13px;font-weight:900;letter-spacing:-.2px;transition:all .15s}
+.fill-tool-pick:active{transform:scale(.96)}
+.fill-tool-pick.active{background:#FFE6A6;box-shadow:inset 0 0 0 3px var(--yellow-deep)}
 
 .hint-toast{position:absolute;top:100px;left:50%;transform:translateX(-50%);background:var(--yellow);color:#78350f;padding:10px 24px;border-radius:20px;font-size:15px;font-weight:800;z-index:60;pointer-events:none;white-space:nowrap;transition:opacity .5s;animation:hint-pulse 2s infinite;box-shadow:0 5px 0 var(--yellow-deep),0 10px 16px rgba(230,185,73,.2)}
 @keyframes hint-pulse{0%,100%{opacity:1;transform:translateX(-50%) scale(1)}50%{opacity:.7;transform:translateX(-50%) scale(.96)}}
@@ -339,6 +344,7 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
   </div>
   <div class="side-palette hidden" id="side-palette"></div>
   <div class="brush-bar hidden" id="brush-bar"></div>
+  <div class="fill-tool-bar hidden" id="fill-tool-bar"></div>
   <div class="hint-toast" id="hint-toast" style="display:none;"></div>
 </div>
 

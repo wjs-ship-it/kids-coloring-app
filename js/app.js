@@ -7,6 +7,7 @@ import { removeBackground } from './bg-remove.js';
 import { exportAnalyticsSession, setAnalyticsContext, trackEvent } from './analytics.js';
 import { getBuiltinPresetPack } from './packs.js';
 import { pruneTraceParts } from './trace-part-quality.js';
+import { FILL_TOOLS, drawRegionFill } from './color-fill-tools.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -44,7 +45,9 @@ let fillRegionMap = null;
 let fillRegions = [];
 let fillRegionsById = [];
 let paintByRegion = [];
+let paintToolByRegion = [];
 let previewRegionId = 0;
+let currentFillTool = 'solid';
 let traceHasPendingGap = false;
 let lastTraceHintAt = 0;
 let traceGuideVisible = false;
@@ -172,6 +175,24 @@ function buildPalette() {
   });
 }
 
+function buildFillToolBar() {
+  const bar = document.getElementById('fill-tool-bar');
+  if (!bar) return;
+  bar.innerHTML = '';
+  for (const tool of FILL_TOOLS) {
+    const btn = document.createElement('button');
+    btn.className = `fill-tool-pick${tool.id === currentFillTool ? ' active' : ''}`;
+    btn.textContent = tool.label;
+    btn.addEventListener('click', () => {
+      currentFillTool = tool.id;
+      document.querySelectorAll('.fill-tool-pick').forEach((node) => node.classList.remove('active'));
+      btn.classList.add('active');
+      if (previewRegionId > 0) renderColorPreview(previewRegionId);
+    });
+    bar.appendChild(btn);
+  }
+}
+
 function pickColor(c, el) {
   currentColor = c; isEraser = false;
   document.getElementById('eraser-btn').classList.remove('active');
@@ -196,6 +217,8 @@ function goHome() {
   lineBoundary = null;
   lineartOverlay = null;
   activeClip = false;
+  paintToolByRegion = [];
+  currentFillTool = 'solid';
   updateModeGuide(edgeMode, edgeMode);
   showScreen('upload-screen');
   document.getElementById('photo-input').value = '';
@@ -556,6 +579,7 @@ function beginActivity() {
   historyStack = [];
   document.getElementById('side-palette').classList.add('hidden');
   document.getElementById('brush-bar').classList.add('hidden');
+  document.getElementById('fill-tool-bar').classList.add('hidden');
   drawTraceBackground();
   showCurrentPart();
   showScreen('canvas-screen');
@@ -845,12 +869,16 @@ function transitionToColor() {
   });
   historyStack = [];
   paintByRegion = [];
+  paintToolByRegion = [];
   buildLineBoundary();
   createLineartOverlay();
   redrawColorScene();
   saveState();
   document.getElementById('side-palette').classList.remove('hidden');
-  document.getElementById('brush-bar').classList.remove('hidden');
+  document.getElementById('brush-bar').classList.add('hidden');
+  document.getElementById('fill-tool-bar').classList.remove('hidden');
+  currentFillTool = 'solid';
+  buildFillToolBar();
   updateProgress(1);
   updateColorModeLabel('🎨 색칠!');
   showHint('터치해서 색칠해봐요! 🎨');
@@ -902,6 +930,7 @@ function startCreativeMode(mode) {
 
   document.getElementById('side-palette').classList.remove('hidden');
   document.getElementById('brush-bar').classList.remove('hidden');
+  document.getElementById('fill-tool-bar').classList.add('hidden');
   document.getElementById('progress-fill').style.width = '100%';
   document.getElementById('part-label').textContent = mode === 'neon' ? '✨' : mode === 'kaleidoscope' ? '🔮' : '🖍️';
   saveState();
@@ -955,6 +984,7 @@ function hydrateFillData(fillData) {
     fillRegions = [];
     fillRegionsById = [];
     paintByRegion = [];
+    paintToolByRegion = [];
     previewRegionId = 0;
     return;
   }
@@ -964,6 +994,7 @@ function hydrateFillData(fillData) {
   fillRegions = Array.isArray(fillData.regions) ? fillData.regions : [];
   fillRegionsById = [];
   paintByRegion = [];
+  paintToolByRegion = [];
   for (const region of fillRegions) {
     fillRegionsById[region.id] = region;
   }
@@ -1113,21 +1144,7 @@ function getRegionIdAtCanvasPoint(x, y) {
 function drawFilledRegion(regionId, color) {
   const region = fillRegionsById[regionId];
   if (!region || !region.bounds) return false;
-
-  cx.fillStyle = color;
-  const { minX, maxX, minY, maxY } = region.bounds;
-  for (let iy = minY; iy <= maxY; iy++) {
-    const rowBase = iy * laW;
-    for (let ix = minX; ix <= maxX; ix++) {
-      if (fillRegionMap[rowBase + ix] !== regionId) continue;
-      const px = ix + offX;
-      const py = iy + offY;
-      if (px >= 0 && px < DC.width && py >= 0 && py < DC.height) {
-        cx.fillRect(px, py, 1, 1);
-      }
-    }
-  }
-  return true;
+  return drawRegionFill(cx, region, fillRegionMap, laW, { offX, offY }, color, paintToolByRegion[regionId] || 'solid');
 }
 
 function redrawColorScene() {
@@ -1150,7 +1167,7 @@ function renderColorPreview(regionId) {
   redrawColorScene();
   cx.save();
   cx.globalAlpha = getPreviewAlpha(regionId);
-  drawFilledRegion(regionId, currentColor);
+  drawRegionFill(cx, fillRegionsById[regionId], fillRegionMap, laW, { offX, offY }, currentColor, currentFillTool);
   cx.restore();
   if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
 }
@@ -1352,11 +1369,13 @@ function fillRegionAtCanvasPoint(x, y, color) {
   if (!region || !region.bounds) return null;
 
   const prevColor = paintByRegion[regionId] || null;
+  const prevTool = paintToolByRegion[regionId] || 'solid';
   if (prevColor === color) {
-    return { regionId, prevColor, nextColor: color, changed: false };
+    return { regionId, prevColor, prevTool, nextColor: color, nextTool: currentFillTool, changed: false };
   }
 
   paintByRegion[regionId] = color;
+  paintToolByRegion[regionId] = currentFillTool;
   previewRegionId = 0;
   drawFilledRegion(regionId, color);
   if (lineartOverlay) cx.drawImage(lineartOverlay, 0, 0);
@@ -1366,17 +1385,20 @@ function fillRegionAtCanvasPoint(x, y, color) {
     regionId,
     regionArea: region.area || 0,
     color,
+    fillTool: currentFillTool,
     burstTriggered: true
   });
-  return { regionId, prevColor, nextColor: color, changed: true };
+  return { regionId, prevColor, prevTool, nextColor: color, nextTool: currentFillTool, changed: true };
 }
 
-function saveRegionFillAction(regionId, prevColor, nextColor) {
+function saveRegionFillAction(regionId, prevColor, prevTool, nextColor, nextTool) {
   historyStack.push({
     kind: 'region-fill',
     regionId,
     prevColor,
-    nextColor
+    prevTool,
+    nextColor,
+    nextTool
   });
   if (historyStack.length > 10) historyStack.shift();
 }
@@ -1443,7 +1465,7 @@ function onStart(e) {
       const fillAction = fillRegionAtCanvasPoint(px, py, currentColor);
       if (fillAction?.changed) {
         suppressColorHintReschedule = true;
-        saveRegionFillAction(fillAction.regionId, fillAction.prevColor, fillAction.nextColor);
+        saveRegionFillAction(fillAction.regionId, fillAction.prevColor, fillAction.prevTool, fillAction.nextColor, fillAction.nextTool);
         scheduleSmartMissionHint({ announce: true });
       }
       return;
@@ -1709,8 +1731,10 @@ function undo() {
     historyStack.pop();
     if (lastEntry.prevColor) {
       paintByRegion[lastEntry.regionId] = lastEntry.prevColor;
+      paintToolByRegion[lastEntry.regionId] = lastEntry.prevTool || 'solid';
     } else {
       delete paintByRegion[lastEntry.regionId];
+      delete paintToolByRegion[lastEntry.regionId];
     }
     redrawColorScene();
     clearSmartMissionPulse();
