@@ -766,6 +766,48 @@ function drawTraceBackground() {
   }
 }
 
+function projectBoundaryToCanvas(boundaryPos) {
+  return boundaryPos.map((pos) => ({
+    x: (pos % laW) + offX,
+    y: Math.floor(pos / laW) + offY
+  }));
+}
+
+function collapseDenseTracePoints(points, gapThreshold) {
+  if (points.length <= 2) return points;
+  const collapsed = [points[0]];
+  for (let i = 1; i < points.length - 1; i++) {
+    const prev = collapsed[collapsed.length - 1];
+    const point = points[i];
+    if (Math.hypot(point.x - prev.x, point.y - prev.y) >= 3.5) {
+      collapsed.push(point);
+    }
+  }
+  collapsed.push(points[points.length - 1]);
+  return collapsed;
+}
+
+function strokeSmoothTraceSegment(points) {
+  if (points.length < 2) return;
+  if (points.length === 2) {
+    cx.moveTo(points[0].x, points[0].y);
+    cx.lineTo(points[1].x, points[1].y);
+    return;
+  }
+
+  cx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length - 1; i++) {
+    const current = points[i];
+    const next = points[i + 1];
+    const midX = (current.x + next.x) / 2;
+    const midY = (current.y + next.y) / 2;
+    cx.quadraticCurveTo(current.x, current.y, midX, midY);
+  }
+  const penultimate = points[points.length - 2];
+  const last = points[points.length - 1];
+  cx.quadraticCurveTo(penultimate.x, penultimate.y, last.x, last.y);
+}
+
 function strokeTracePart(boundaryPos, {
   strokeStyle,
   lineWidth,
@@ -776,6 +818,7 @@ function strokeTracePart(boundaryPos, {
   if (!Array.isArray(boundaryPos) || boundaryPos.length < 2) return;
 
   const gapThreshold = Math.max(16, TRACE_TOLERANCE * gapMultiplier);
+  const projected = projectBoundaryToCanvas(boundaryPos);
   cx.save();
   cx.strokeStyle = strokeStyle;
   cx.lineWidth = lineWidth;
@@ -785,22 +828,18 @@ function strokeTracePart(boundaryPos, {
   cx.setLineDash(lineDash);
   cx.beginPath();
 
-  let prevX = (boundaryPos[0] % laW) + offX;
-  let prevY = Math.floor(boundaryPos[0] / laW) + offY;
-  cx.moveTo(prevX, prevY);
-
-  for (let i = 1; i < boundaryPos.length; i++) {
-    const pos = boundaryPos[i];
-    const x = (pos % laW) + offX;
-    const y = Math.floor(pos / laW) + offY;
-    if (Math.hypot(x - prevX, y - prevY) > gapThreshold) {
-      cx.moveTo(x, y);
-    } else {
-      cx.lineTo(x, y);
+  let segment = [projected[0]];
+  for (let i = 1; i < projected.length; i++) {
+    const prev = projected[i - 1];
+    const point = projected[i];
+    if (Math.hypot(point.x - prev.x, point.y - prev.y) > gapThreshold) {
+      strokeSmoothTraceSegment(collapseDenseTracePoints(segment, gapThreshold));
+      segment = [point];
+      continue;
     }
-    prevX = x;
-    prevY = y;
+    segment.push(point);
   }
+  strokeSmoothTraceSegment(collapseDenseTracePoints(segment, gapThreshold));
 
   cx.stroke();
   cx.restore();
