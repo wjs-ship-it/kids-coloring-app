@@ -1,4 +1,19 @@
-import { detectIllustrationShapeFamily, getSemanticLabel } from './trace-shape-family.js';
+import {
+  applyFamilyOrdering,
+  buildFamilyMetrics,
+  detectIllustrationShapeFamily,
+  getFamilyPartCap,
+} from './trace-shape-family.js';
+import {
+  buildLongneckSilhouetteParts,
+  buildQuadrupedContourParts,
+  buildQuadrupedSilhouetteParts,
+  buildRoundCharacterContourParts,
+  buildRoundCharacterSilhouette,
+  buildVehicleContourParts,
+  buildVehicleSilhouetteParts,
+  selectSemanticRegions,
+} from './trace-semantic-builders.js';
 
 function buildEdgeMap(lineartData, w, h) {
   const data = lineartData.data || lineartData;
@@ -22,8 +37,12 @@ function collectVoidRegions(isEdge, w, h) {
       let front = 0;
       const pixels = [];
       let touchesBorder = false;
-      let minX = x, maxX = x, minY = y, maxY = y;
-      let sumX = 0, sumY = 0;
+      let minX = x;
+      let minY = y;
+      let maxX = x;
+      let maxY = y;
+      let sumX = 0;
+      let sumY = 0;
 
       while (front < queue.length) {
         const [cx, cy] = queue[front++];
@@ -92,6 +111,7 @@ function traceContour(edgeSet, w, h) {
     if (visited[pos]) break;
     visited[pos] = 1;
     contour.push(pos);
+
     let found = false;
     for (let k = 0; k < 8; k++) {
       const nx = cx + dx8[k];
@@ -106,6 +126,7 @@ function traceContour(edgeSet, w, h) {
     }
     if (!found) break;
   }
+
   return contour;
 }
 
@@ -143,6 +164,7 @@ function simplifyContour(contour, w, tolerance) {
   keep[0] = 1;
   keep[contour.length - 1] = 1;
   const stack = [[0, contour.length - 1]];
+
   while (stack.length) {
     const [startIdx, endIdx] = stack.pop();
     let maxDist = 0;
@@ -159,8 +181,11 @@ function simplifyContour(contour, w, tolerance) {
       stack.push([startIdx, splitIdx], [splitIdx, endIdx]);
     }
   }
+
   const simplified = [];
-  for (let i = 0; i < contour.length; i++) if (keep[i]) simplified.push(contour[i]);
+  for (let i = 0; i < contour.length; i++) {
+    if (keep[i]) simplified.push(contour[i]);
+  }
   return simplified.length >= 4 ? simplified : contour.slice();
 }
 
@@ -168,12 +193,19 @@ function evenlySampleContour(contour, maxPoints) {
   if (contour.length <= maxPoints) return contour.slice();
   const step = contour.length / maxPoints;
   const sampled = [];
-  for (let i = 0; i < maxPoints; i++) sampled.push(contour[Math.min(contour.length - 1, Math.floor(i * step))]);
+  for (let i = 0; i < maxPoints; i++) {
+    sampled.push(contour[Math.min(contour.length - 1, Math.floor(i * step))]);
+  }
   return sampled;
 }
 
 function contourMetrics(contour, w, h) {
-  let minX = w, minY = h, maxX = 0, maxY = 0, sumX = 0, sumY = 0;
+  let minX = w;
+  let minY = h;
+  let maxX = 0;
+  let maxY = 0;
+  let sumX = 0;
+  let sumY = 0;
   for (const pos of contour) {
     const x = pos % w;
     const y = Math.floor(pos / w);
@@ -185,7 +217,10 @@ function contourMetrics(contour, w, h) {
     sumY += y;
   }
   return {
-    minX, minY, maxX, maxY,
+    minX,
+    minY,
+    maxX,
+    maxY,
     width: Math.max(1, maxX - minX + 1),
     height: Math.max(1, maxY - minY + 1),
     centerX: contour.length ? sumX / contour.length : w / 2,
@@ -230,9 +265,12 @@ function sampleForPart(boundaryPos) {
 }
 
 function buildPart(boundaryPos, w, meta = {}) {
-  let sumY = 0;
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
   let sumX = 0;
+  let sumY = 0;
   for (const pos of boundaryPos) {
     const x = pos % w;
     const y = Math.floor(pos / w);
@@ -245,8 +283,9 @@ function buildPart(boundaryPos, w, meta = {}) {
   }
   const centroid = {
     x: boundaryPos.length ? sumX / boundaryPos.length : 0,
-    y: boundaryPos.length ? sumY / boundaryPos.length : 0
+    y: boundaryPos.length ? sumY / boundaryPos.length : 0,
   };
+
   return {
     pixels: boundaryPos,
     boundaryPos,
@@ -267,257 +306,6 @@ function buildPart(boundaryPos, w, meta = {}) {
   };
 }
 
-function classifyAttachSide(region, metrics) {
-  const centerX = metrics.minX + metrics.width / 2;
-  const centerY = metrics.minY + metrics.height / 2;
-  const dx = region.centerX - centerX;
-  const dy = region.centerY - centerY;
-  if (Math.abs(dx) > Math.abs(dy)) return dx < 0 ? 'left' : 'right';
-  return dy < 0 ? 'top' : 'bottom';
-}
-
-function buildFamilyMetrics(regions, metrics) {
-  const bottomLimbCount = regions.filter((region) =>
-    region.centerY > metrics.minY + metrics.height * 0.58 &&
-    region.area > metrics.width * 0.02 &&
-    region.area < metrics.width * metrics.height * 0.14
-  ).length;
-  const topFeatureCount = regions.filter((region) =>
-    region.centerY < metrics.minY + metrics.height * 0.42 &&
-    region.area < metrics.width * metrics.height * 0.12
-  ).length;
-  const rightTailMass = regions
-    .filter((region) => region.centerX > metrics.minX + metrics.width * 0.68)
-    .reduce((acc, region) => acc + region.area, 0);
-  return {
-    bboxWidth: metrics.width,
-    bboxHeight: metrics.height,
-    centerX: metrics.centerX / Math.max(1, metrics.maxX + 1),
-    centerY: metrics.centerY / Math.max(1, metrics.maxY + 1),
-    bottomLimbCount,
-    topFeatureCount,
-    rightTailBias: rightTailMass / Math.max(1, metrics.width * metrics.height),
-    lowerRightMass: rightTailMass / Math.max(1, metrics.width * metrics.height),
-    topMass: topFeatureCount / Math.max(1, regions.length)
-  };
-}
-
-function selectSemanticRegions(regions, metrics, family) {
-  const areaFloor = Math.max(12, Math.round(metrics.width * metrics.height * 0.008));
-  const candidates = regions.filter((region) => !region.touchesBorder && region.area >= areaFloor);
-
-  return candidates.map((region) => {
-    let semanticCategory = 'ornament';
-    let drawOrder = 5;
-    const attachSide = classifyAttachSide(region, metrics);
-
-    if (family === 'round_character') {
-      if (region.centerY > metrics.minY + metrics.height * 0.56) {
-        semanticCategory = 'limb';
-        drawOrder = 2;
-      } else if (region.centerY < metrics.minY + metrics.height * 0.5) {
-        semanticCategory = 'head_feature';
-        drawOrder = 3;
-      }
-    } else if (family === 'longneck_animal') {
-      if (region.centerY > metrics.minY + metrics.height * 0.54) {
-        semanticCategory = 'limb';
-        drawOrder = 4;
-      } else if (region.centerY < metrics.minY + metrics.height * 0.24) {
-        semanticCategory = 'head_feature';
-        drawOrder = 2;
-      } else if (region.centerX > metrics.minX + metrics.width * 0.72) {
-        semanticCategory = 'tail_feature';
-        drawOrder = 5;
-      }
-    } else if (region.centerY < metrics.minY + metrics.height * 0.45) {
-      semanticCategory = 'head_feature';
-      drawOrder = 3;
-    }
-
-    const edgeSet = buildEdgeSetFromRegion(region.pixels, metrics.isEdge, metrics.canvasW, metrics.canvasH);
-    const contour = traceContour(edgeSet, metrics.canvasW, metrics.canvasH);
-    if (contour.length < 8) return null;
-    const simplified = evenlySampleContour(simplifyContour(contour, metrics.canvasW, 1.8), 88);
-    return buildPart(simplified, metrics.canvasW, {
-      semanticCategory,
-      semanticScore: region.area,
-      semanticLabel: getSemanticLabel(family, semanticCategory, drawOrder),
-      sourceRegionId: region.label,
-      attachSide,
-      drawOrder,
-      shapeFamily: family,
-    });
-  }).filter(Boolean);
-}
-
-function buildRoundCharacterSilhouette(contour, metrics, w, detail, family = 'round_character') {
-  const simplified = evenlySampleContour(
-    simplifyContour(contour, w, Math.max(1.0, 2.8 - detail / 42)),
-    180
-  );
-  return buildPart(simplified, w, {
-    semanticCategory: 'silhouette',
-    semanticScore: simplified.length,
-    semanticLabel: getSemanticLabel(family, 'silhouette', 1),
-    drawOrder: 1,
-    shapeFamily: family,
-  });
-}
-
-function buildRoundCharacterContourParts(contour, metrics, w, detail, family = 'round_character') {
-  const leftX = metrics.minX + metrics.width * 0.28;
-  const rightX = metrics.minX + metrics.width * 0.72;
-  const upperY = metrics.minY + metrics.height * 0.36;
-  const midY = metrics.minY + metrics.height * 0.56;
-  const lowerY = metrics.minY + metrics.height * 0.68;
-  const centerX = metrics.minX + metrics.width / 2;
-  const defs = [
-    [extractLongestRun(contour, w, (x, y) => x <= leftX && y > upperY && y < lowerY), 'limb', 2],
-    [extractLongestRun(contour, w, (x, y) => x >= rightX && y > upperY && y < lowerY), 'limb', 3],
-    [extractLongestRun(contour, w, (x, y) => y >= midY && x < centerX), 'limb', 4],
-    [extractLongestRun(contour, w, (x, y) => y >= midY && x >= centerX), 'limb', 5],
-  ];
-  const parts = [];
-  for (const [boundaryPos, semanticCategory, drawOrder] of defs) {
-    if (boundaryPos.length < 10) continue;
-    const simplified = evenlySampleContour(
-      simplifyContour(boundaryPos, w, Math.max(1.0, 2.5 - detail / 45)),
-      72
-    );
-    parts.push(buildPart(simplified, w, {
-      semanticCategory,
-      semanticScore: simplified.length,
-      semanticLabel: getSemanticLabel(family, semanticCategory, drawOrder),
-      drawOrder,
-      shapeFamily: family,
-    }));
-  }
-  return parts;
-}
-
-function buildLongneckSilhouetteParts(contour, metrics, w, detail) {
-  const topCut = metrics.minY + metrics.height * 0.24;
-  const neckCut = metrics.minY + metrics.height * 0.5;
-  const bodyCut = metrics.minY + metrics.height * 0.44;
-  const tailX = metrics.minX + metrics.width * 0.72;
-  const centerBand = metrics.minX + metrics.width * 0.17;
-  const centerX = metrics.minX + metrics.width / 2;
-
-  const headRun = extractLongestRun(contour, w, (_x, y) => y <= topCut);
-  const neckRun = extractLongestRun(contour, w, (x, y) =>
-    y > topCut && y <= neckCut && Math.abs(x - centerX) <= centerBand
-  );
-  const bodyRun = extractLongestRun(contour, w, (x, y) =>
-    y >= bodyCut && x < tailX
-  );
-  const tailRun = extractLongestRun(contour, w, (x, y) =>
-    x >= tailX || (y >= metrics.minY + metrics.height * 0.66 && x >= centerX)
-  );
-
-  const result = [];
-  for (const [boundaryPos, semanticCategory, drawOrder] of [
-    [headRun, 'silhouette', 1],
-    [neckRun, 'silhouette', 2],
-    [bodyRun, 'silhouette', 3],
-    [tailRun, 'tail_feature', 5],
-  ]) {
-    if (boundaryPos.length < 12) continue;
-    const simplified = evenlySampleContour(
-      simplifyContour(boundaryPos, w, Math.max(1.1, 3.0 - detail / 40)),
-      semanticCategory === 'tail_feature' ? 72 : 96
-    );
-    result.push(buildPart(simplified, w, {
-      semanticCategory,
-      semanticScore: simplified.length,
-      semanticLabel: getSemanticLabel('longneck_animal', semanticCategory, drawOrder),
-      drawOrder,
-      shapeFamily: 'longneck_animal',
-    }));
-  }
-  return result;
-}
-
-function relabelRoundLikePart(part, metrics) {
-  if (part.semanticCategory === 'silhouette') return '몸통';
-  if (part.semanticCategory === 'head_feature') return '얼굴';
-  if (part.semanticCategory === 'ornament') return '장식';
-  if (part.semanticCategory !== 'limb') return part.semanticLabel || '';
-
-  const centerX = metrics.minX + metrics.width / 2;
-  const midY = metrics.minY + metrics.height * 0.56;
-  const isLeft = part.centroid.x < centerX;
-  const isUpper = part.centroid.y < midY;
-  if (isUpper) return isLeft ? '왼손' : '오른손';
-  return isLeft ? '왼발' : '오른발';
-}
-
-function relabelLongneckPart(part, metrics) {
-  if (part.semanticCategory === 'tail_feature') return '꼬리';
-  if (part.semanticCategory === 'ornament') return '장식';
-  if (part.semanticCategory === 'head_feature') return '얼굴';
-  if (part.semanticCategory === 'limb') {
-    const centerX = metrics.minX + metrics.width / 2;
-    return part.centroid.x < centerX ? '앞다리' : '뒷다리';
-  }
-  if (part.semanticCategory === 'silhouette') {
-    const topCut = metrics.minY + metrics.height * 0.24;
-    const neckCut = metrics.minY + metrics.height * 0.5;
-    if (part.centroid.y <= topCut) return '머리';
-    if (part.centroid.y <= neckCut) return '목';
-    return '몸통';
-  }
-  return part.semanticLabel || '';
-}
-
-function applyFamilyOrdering(parts, family, metrics) {
-  const cloned = parts.map((part) => ({ ...part }));
-
-  if (family === 'longneck_animal') {
-    const categoryRank = { silhouette: 0, limb: 1, head_feature: 2, tail_feature: 3, ornament: 4 };
-    cloned.sort((a, b) =>
-      (categoryRank[a.semanticCategory] ?? 9) - (categoryRank[b.semanticCategory] ?? 9) ||
-      a.centroid.y - b.centroid.y ||
-      a.centroid.x - b.centroid.x
-    );
-    return cloned.map((part, index) => ({
-      ...part,
-      drawOrder: index + 1,
-      semanticLabel: relabelLongneckPart(part, metrics),
-    }));
-  }
-
-  const roundLike = family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic';
-  if (roundLike) {
-    const categoryRank = { silhouette: 0, limb: 1, head_feature: 2, ornament: 3, tail_feature: 4 };
-    const centerX = metrics.minX + metrics.width / 2;
-    const midY = metrics.minY + metrics.height * 0.56;
-    cloned.sort((a, b) => {
-      const rankDiff = (categoryRank[a.semanticCategory] ?? 9) - (categoryRank[b.semanticCategory] ?? 9);
-      if (rankDiff !== 0) return rankDiff;
-      if (a.semanticCategory === 'limb' && b.semanticCategory === 'limb') {
-        const aUpper = a.centroid.y < midY ? 0 : 1;
-        const bUpper = b.centroid.y < midY ? 0 : 1;
-        if (aUpper !== bUpper) return aUpper - bUpper;
-        const aLeft = a.centroid.x < centerX ? 0 : 1;
-        const bLeft = b.centroid.x < centerX ? 0 : 1;
-        if (aLeft !== bLeft) return aLeft - bLeft;
-      }
-      if (a.semanticCategory === 'head_feature' && b.semanticCategory === 'head_feature') {
-        if (a.centroid.y !== b.centroid.y) return a.centroid.y - b.centroid.y;
-      }
-      return a.centroid.x - b.centroid.x || a.centroid.y - b.centroid.y;
-    });
-    return cloned.map((part, index) => ({
-      ...part,
-      drawOrder: index + 1,
-      semanticLabel: relabelRoundLikePart(part, metrics),
-    }));
-  }
-
-  return cloned;
-}
-
 function sortSemanticParts(parts, family, metrics) {
   const categoryRank = {
     silhouette: 0,
@@ -526,7 +314,7 @@ function sortSemanticParts(parts, family, metrics) {
     tail_feature: 3,
     ornament: 4,
   };
-  return parts
+  const sorted = parts
     .slice()
     .sort((a, b) =>
       a.drawOrder - b.drawOrder ||
@@ -535,6 +323,31 @@ function sortSemanticParts(parts, family, metrics) {
       a.centroid.y - b.centroid.y
     );
   return applyFamilyOrdering(sorted, family, metrics);
+}
+
+function normalizeFamilyParts(parts, family) {
+  if (family !== 'quadruped_animal' && family !== 'vehicle') return parts;
+
+  const deduped = [];
+  const seenLabels = new Set();
+  for (const part of parts) {
+    const label = part.semanticLabel || `${part.semanticCategory}:${part.drawOrder}`;
+    if (seenLabels.has(label)) continue;
+    seenLabels.add(label);
+    deduped.push(part);
+  }
+  return deduped;
+}
+
+function buildSemanticHelpers() {
+  return {
+    buildEdgeSetFromRegion,
+    traceContour,
+    simplifyContour,
+    evenlySampleContour,
+    extractLongestRun,
+    buildPart,
+  };
 }
 
 export function detectSemanticTraceParts(lineartData, w, h, options = {}) {
@@ -548,20 +361,36 @@ export function detectSemanticTraceParts(lineartData, w, h, options = {}) {
   metrics.canvasW = w;
   metrics.canvasH = h;
   const regions = collectVoidRegions(isEdge, w, h);
-  const family = detectIllustrationShapeFamily(buildFamilyMetrics(regions, metrics));
+  const familyMetrics = buildFamilyMetrics(regions, metrics);
+  const family = detectIllustrationShapeFamily(familyMetrics);
+  const helpers = buildSemanticHelpers();
 
   let silhouetteParts = [];
   if (family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic') {
-    silhouetteParts = [buildRoundCharacterSilhouette(contour, metrics, w, detail, family)];
+    silhouetteParts = [buildRoundCharacterSilhouette(contour, metrics, w, detail, family, helpers)];
   } else if (family === 'longneck_animal') {
-    silhouetteParts = buildLongneckSilhouetteParts(contour, metrics, w, detail);
+    silhouetteParts = buildLongneckSilhouetteParts(contour, metrics, w, detail, helpers);
+  } else if (family === 'quadruped_animal') {
+    silhouetteParts = buildQuadrupedSilhouetteParts(contour, metrics, w, detail, helpers);
+  } else if (family === 'vehicle') {
+    silhouetteParts = buildVehicleSilhouetteParts(contour, metrics, w, detail, helpers);
   }
 
-  const contourParts = (family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic')
-    ? buildRoundCharacterContourParts(contour, metrics, w, detail, family)
-    : [];
-  const semanticRegions = selectSemanticRegions(regions, metrics, family);
-  const parts = sortSemanticParts(silhouetteParts.concat(contourParts, semanticRegions), family, metrics);
-  const maxParts = family === 'round_character' ? 7 : family === 'longneck_animal' ? 7 : 6;
+  let contourParts = [];
+  if (family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic') {
+    contourParts = buildRoundCharacterContourParts(contour, metrics, w, detail, family, helpers);
+  } else if (family === 'quadruped_animal') {
+    contourParts = buildQuadrupedContourParts(contour, metrics, w, detail, helpers);
+  } else if (family === 'vehicle') {
+    contourParts = buildVehicleContourParts(contour, metrics, w, detail, helpers);
+  }
+
+  const semanticRegions = selectSemanticRegions(regions, metrics, family, helpers);
+  const parts = normalizeFamilyParts(sortSemanticParts(
+    silhouetteParts.concat(contourParts, semanticRegions),
+    family,
+    metrics
+  ), family);
+  const maxParts = getFamilyPartCap(family);
   return parts.filter((part) => part.boundaryPos.length >= 4).slice(0, maxParts);
 }
