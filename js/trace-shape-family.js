@@ -78,19 +78,21 @@ export function detectIllustrationShapeFamily(metrics) {
   }
 
   if (
-    bottomLimbCount >= 2 &&
-    aspect > 0.62 &&
-    aspect < 1.45 &&
+    aspect > 0.7 &&
+    aspect < 1.4 &&
     centered &&
-    centerMassRatio > 0.12 &&
-    lowerMassRatio < 0.08
+    centerMassRatio > 0.1 &&
+    topFeatureCount >= 2 &&
+    sideBalanced &&
+    lowerMassRatio < 0.12
   ) {
     return 'round_character';
   }
 
   if (
-    aspect >= 1.02 &&
-    (rightTailBias > 0.1 || lowerRightMass > 0.18 || topMass < 0.22)
+    aspect >= 1.16 &&
+    !sideBalanced &&
+    (rightTailBias > 0.12 || lowerRightMass > 0.2)
   ) {
     return 'longneck_animal';
   }
