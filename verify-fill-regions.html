@@ -583,6 +583,7 @@
       meta.innerHTML = [
         renderMetric('Selected', result.mode),
         renderMetric('Resolved', result.resolvedMode),
+        renderMetric('Family', result.semantic.family || 'n/a'),
         renderMetric('Detail', result.detail),
         renderMetric('Dark Ratio', result.darkRatio.toFixed(3)),
         renderMetric('Parts', result.parts),
@@ -592,8 +593,111 @@
       ].join('');
       card.appendChild(meta);
 
+      if (result.semantic.parts.length) {
+        const gate = document.createElement('div');
+        gate.className = 'meta';
+        gate.innerHTML = [
+          renderMetric('First Part', result.semantic.firstPartName || 'n/a'),
+          renderMetric('Name Coverage', `${result.semantic.nameCoverage}%`),
+          renderMetric('Ornament Last', result.semantic.ornamentLast ? 'yes' : 'no'),
+          renderMetric('Face Late', result.semantic.headFeatureLate ? 'yes' : 'no')
+        ].join('');
+        card.appendChild(gate);
+
+        const note = document.createElement('p');
+        note.className = 'status-note';
+        note.textContent = `Semantic Gates: ${result.semantic.gateSummary}`;
+        card.appendChild(note);
+
+        const semanticTable = document.createElement('div');
+        semanticTable.className = 'meta';
+        semanticTable.innerHTML = result.semantic.parts.map((part) =>
+          renderMetric(
+            `#${part.index} ${part.label || 'unnamed'}`,
+            `${part.category} / order ${part.drawOrder}`
+          )
+        ).join('');
+        card.appendChild(semanticTable);
+      }
+
       card.appendChild(result.canvas);
       return card;
+    }
+
+    function evaluateSemanticTrace(parts, resolvedMode) {
+      const semanticParts = parts
+        .filter((part) => part.traceStrategy === 'semantic')
+        .map((part, index) => ({
+          index: index + 1,
+          label: part.semanticLabel || '',
+          category: part.semanticCategory || 'unknown',
+          drawOrder: part.drawOrder ?? index + 1,
+          shapeFamily: part.shapeFamily || ''
+        }));
+
+      const family = semanticParts[0]?.shapeFamily || '';
+      if (resolvedMode !== 'illustration' || semanticParts.length === 0) {
+        return {
+          ok: true,
+          family,
+          parts: semanticParts,
+          firstPartName: semanticParts[0]?.label || '',
+          nameCoverage: semanticParts.length ? 100 : 0,
+          ornamentLast: true,
+          headFeatureLate: true,
+          gateSummary: 'n/a',
+          failureReason: ''
+        };
+      }
+
+      const firstPartName = semanticParts[0]?.label || '';
+      const namedCount = semanticParts.filter((part) => part.label.trim().length > 0).length;
+      const nameCoverage = semanticParts.length ? Math.round((namedCount / semanticParts.length) * 100) : 0;
+      const firstPartOk = firstPartName.length > 0;
+
+      const ornamentIndex = semanticParts.findIndex((part) => part.category === 'ornament');
+      const ornamentLast = ornamentIndex === -1 || ornamentIndex >= semanticParts.length - 1;
+
+      const headFeatureIndex = semanticParts.findIndex((part) => part.category === 'head_feature');
+      const bodyLikeIndex = semanticParts.findIndex((part) => part.category === 'silhouette' || part.category === 'limb');
+      const headFeatureLate = headFeatureIndex === -1 || bodyLikeIndex === -1 || headFeatureIndex > bodyLikeIndex;
+
+      let orderingMatchesExpected = true;
+      if (family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic') {
+        orderingMatchesExpected = firstPartName === '몸통';
+      } else if (family === 'longneck_animal') {
+        orderingMatchesExpected = ['몸통', '머리', '목'].includes(firstPartName);
+      }
+
+      const recognizabilityOk = semanticParts.length >= 2 && [semanticParts[0], semanticParts[1]].every((part) => part.label && part.category !== 'ornament');
+      const ok = firstPartOk && nameCoverage === 100 && ornamentLast && headFeatureLate && orderingMatchesExpected && recognizabilityOk;
+
+      let failureReason = '';
+      if (!firstPartOk) failureReason = 'semantic_first_part_unknown';
+      else if (nameCoverage < 100) failureReason = 'semantic_name_missing';
+      else if (!orderingMatchesExpected || !recognizabilityOk) failureReason = 'semantic_order_regressed';
+      else if (!headFeatureLate) failureReason = 'semantic_face_too_early';
+      else if (!ornamentLast) failureReason = 'semantic_order_regressed';
+
+      const gateSummary = [
+        `first:${firstPartOk ? 'ok' : 'fail'}`,
+        `names:${nameCoverage}%`,
+        `order:${orderingMatchesExpected ? 'ok' : 'fail'}`,
+        `ornament:${ornamentLast ? 'ok' : 'fail'}`,
+        `face:${headFeatureLate ? 'ok' : 'fail'}`
+      ].join(' · ');
+
+      return {
+        ok,
+        family,
+        parts: semanticParts,
+        firstPartName,
+        nameCoverage,
+        ornamentLast,
+        headFeatureLate,
+        gateSummary,
+        failureReason
+      };
     }
 
     function verifyPreset(preset) {
@@ -659,6 +763,7 @@
       const resolvedMode = resolution.resolvedMode;
 
       const { lineartData, parts, fillRegions } = runFullPipeline(imageData.data, width, height, resolvedMode, detail);
+      const semantic = evaluateSemanticTrace(parts, resolvedMode);
 
       const canvas = document.createElement('canvas');
       canvas.width = width;
@@ -674,11 +779,12 @@
       const darkRatio = total ? dark / total : 0;
       const largestRegionArea = (fillRegions.regions || []).reduce((max, region) => Math.max(max, region.area || 0), 0);
       const durationMs = performance.now() - startedAt;
-      const ok = resolvedMode === 'portrait'
+      const baseOk = resolvedMode === 'portrait'
         ? darkRatio < 0.7 && parts.length >= 3 && parts.length <= 10 && fillRegions.regions.length >= 4
         : resolvedMode === 'illustration'
           ? darkRatio < 0.35 && parts.length >= 3 && parts.length <= 8 && fillRegions.regions.length >= 4
           : darkRatio < 0.55 && parts.length >= 3 && fillRegions.regions.length >= 4;
+      const ok = baseOk && semantic.ok;
       if (!ok) {
         setAnalyticsContext({
           selectedMode: mode,
@@ -692,7 +798,9 @@
           parts: parts.length,
           fillRegions: fillRegions.regions.length,
           largestRegion: largestRegionArea,
-          reason: 'photo_gate_failed'
+          family: semantic.family || '',
+          firstPartName: semantic.firstPartName || '',
+          reason: semantic.failureReason || 'photo_gate_failed'
         });
       }
 
@@ -707,6 +815,7 @@
         largestRegionArea,
         durationMs,
         ok,
+        semantic,
         canvas
       };
     }
