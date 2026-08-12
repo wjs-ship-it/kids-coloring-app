@@ -766,24 +766,64 @@ function drawTraceBackground() {
   }
 }
 
+function strokeTracePart(boundaryPos, {
+  strokeStyle,
+  lineWidth,
+  lineDash = [],
+  alpha = 1,
+  gapMultiplier = 1.15
+}) {
+  if (!Array.isArray(boundaryPos) || boundaryPos.length < 2) return;
+
+  const gapThreshold = Math.max(16, TRACE_TOLERANCE * gapMultiplier);
+  cx.save();
+  cx.strokeStyle = strokeStyle;
+  cx.lineWidth = lineWidth;
+  cx.lineCap = 'round';
+  cx.lineJoin = 'round';
+  cx.globalAlpha = alpha;
+  cx.setLineDash(lineDash);
+  cx.beginPath();
+
+  let prevX = (boundaryPos[0] % laW) + offX;
+  let prevY = Math.floor(boundaryPos[0] / laW) + offY;
+  cx.moveTo(prevX, prevY);
+
+  for (let i = 1; i < boundaryPos.length; i++) {
+    const pos = boundaryPos[i];
+    const x = (pos % laW) + offX;
+    const y = Math.floor(pos / laW) + offY;
+    if (Math.hypot(x - prevX, y - prevY) > gapThreshold) {
+      cx.moveTo(x, y);
+    } else {
+      cx.lineTo(x, y);
+    }
+    prevX = x;
+    prevY = y;
+  }
+
+  cx.stroke();
+  cx.restore();
+}
+
 function showCurrentPart() {
   if (curPartIdx >= parts.length) { transitionToColor(); return; }
   const part = parts[curPartIdx];
   traceZone = buildTraceZone(part);
 
-  const ld = lineartData.data;
-  cx.fillStyle = 'rgba(100,126,234,0.5)';
-  for (const pos of part.boundaryPos) {
-    const x = pos % laW, y = Math.floor(pos / laW);
-    if ((x + y) % 6 < 4) cx.fillRect(offX + x, offY + y, 2, 2);
-  }
+  strokeTracePart(part.boundaryPos, {
+    strokeStyle: '#647eea',
+    lineWidth: 8,
+    lineDash: [18, 10],
+    alpha: 0.75
+  });
 
   for (let i = 0; i < curPartIdx; i++) {
-    cx.fillStyle = '#1e293b';
-    for (const pos of parts[i].boundaryPos) {
-      const x = pos % laW, y = Math.floor(pos / laW);
-      cx.fillRect(offX + x, offY + y, 1, 1);
-    }
+    strokeTracePart(parts[i].boundaryPos, {
+      strokeStyle: '#1e293b',
+      lineWidth: 5,
+      alpha: 0.95
+    });
   }
 
   saveState();
@@ -832,11 +872,11 @@ function checkTraceCompletion() {
 }
 
 function advancePart() {
-  cx.fillStyle = '#1e293b';
-  for (const pos of parts[curPartIdx].boundaryPos) {
-    const x = pos % laW, y = Math.floor(pos / laW);
-    cx.fillRect(offX + x, offY + y, 1, 1);
-  }
+  strokeTracePart(parts[curPartIdx].boundaryPos, {
+    strokeStyle: '#1e293b',
+    lineWidth: 5,
+    alpha: 0.95
+  });
   const burstX = lastX;
   const burstY = lastY;
   curPartIdx++;

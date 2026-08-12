@@ -6,12 +6,23 @@ function buildPartMetrics(part, w) {
   let maxY = -Infinity;
   let sumX = 0;
   let sumY = 0;
+  let pathLength = 0;
+  let prevX = 0;
+  let prevY = 0;
 
   for (const pos of boundary) {
     const x = pos % w;
     const y = Math.floor(pos / w);
     sumX += x;
     sumY += y;
+    if (pathLength === 0 && boundary.length) {
+      prevX = x;
+      prevY = y;
+    } else {
+      pathLength += Math.hypot(x - prevX, y - prevY);
+      prevX = x;
+      prevY = y;
+    }
     if (x < minX) minX = x;
     if (x > maxX) maxX = x;
     if (y < minY) minY = y;
@@ -26,6 +37,7 @@ function buildPartMetrics(part, w) {
     width,
     height,
     reach: Math.max(width, height),
+    pathLength,
     centroidX: boundary.length ? sumX / boundary.length : 0,
     centroidY: boundary.length ? sumY / boundary.length : 0,
   };
@@ -37,18 +49,38 @@ function getThresholds(mode, part, w, h) {
   const semantic = part?.traceStrategy === 'semantic';
 
   if (semantic && semanticCategory === 'silhouette') {
-    return { minBoundary: 18, minSamples: 5, minReach: minCanvasSpan };
+    return { minBoundary: 18, minSamples: 5, minReach: minCanvasSpan, minPathLength: minCanvasSpan * 2.1 };
   }
   if (semantic && (semanticCategory === 'head_feature' || semanticCategory === 'tail_feature')) {
-    return { minBoundary: 14, minSamples: 4, minReach: Math.max(10, Math.round(minCanvasSpan * 0.7)) };
+    return {
+      minBoundary: 14,
+      minSamples: 4,
+      minReach: Math.max(10, Math.round(minCanvasSpan * 0.7)),
+      minPathLength: Math.max(24, Math.round(minCanvasSpan * 1.15))
+    };
   }
   if (mode === 'illustration') {
-    return { minBoundary: 18, minSamples: 5, minReach: minCanvasSpan };
+    return {
+      minBoundary: 18,
+      minSamples: 5,
+      minReach: minCanvasSpan,
+      minPathLength: Math.max(28, Math.round(minCanvasSpan * 1.35))
+    };
   }
   if (mode === 'portrait') {
-    return { minBoundary: 14, minSamples: 4, minReach: Math.max(10, Math.round(minCanvasSpan * 0.72)) };
+    return {
+      minBoundary: 14,
+      minSamples: 4,
+      minReach: Math.max(10, Math.round(minCanvasSpan * 0.72)),
+      minPathLength: Math.max(24, Math.round(minCanvasSpan * 1.1))
+    };
   }
-  return { minBoundary: 16, minSamples: 4, minReach: Math.max(10, Math.round(minCanvasSpan * 0.82)) };
+  return {
+    minBoundary: 16,
+    minSamples: 4,
+    minReach: Math.max(10, Math.round(minCanvasSpan * 0.82)),
+    minPathLength: Math.max(24, Math.round(minCanvasSpan * 1.15))
+  };
 }
 
 function recalcPartGeometry(part, w) {
@@ -127,7 +159,8 @@ export function pruneTraceParts(parts, w, h, options = {}) {
       const weak = (
         metrics.boundaryCount < thresholds.minBoundary ||
         metrics.sampleCount < thresholds.minSamples ||
-        metrics.reach < thresholds.minReach
+        metrics.reach < thresholds.minReach ||
+        metrics.pathLength < thresholds.minPathLength
       );
       if (!weak || preserveSemanticCore) continue;
       current = mergeWeakPart(current, index, w);
