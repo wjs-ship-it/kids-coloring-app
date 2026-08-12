@@ -621,7 +621,7 @@ function buildEmergencyParts(ld, w, h) {
 }
 
 function ensureFullCoverage(parts, ld, w, h) {
-  if (parts.length > 0 && parts.every((part) => part.traceStrategy === 'simplified')) {
+  if (parts.length > 0 && parts.every((part) => part.traceStrategy === 'simplified' || part.traceStrategy === 'semantic')) {
     return parts;
   }
 
@@ -762,7 +762,17 @@ function showCurrentPart() {
 
   saveState();
   updateProgress(0);
-  document.getElementById('part-label').textContent = `${curPartIdx + 1}/${parts.length} ⭐`;
+  const semanticEmoji = {
+    silhouette: '🧩',
+    limb: '🦶',
+    head_feature: '😊',
+    tail_feature: '🦕',
+    ornament: '✨'
+  };
+  const suffix = part.traceStrategy === 'semantic'
+    ? ` ${semanticEmoji[part.semanticCategory] || '⭐'}`
+    : ' ⭐';
+  document.getElementById('part-label').textContent = `${curPartIdx + 1}/${parts.length}${suffix}`;
   showHint('점선을 따라 그려봐요! ✏️');
   currentColor = '#1e293b'; brushSize = 6; isEraser = false;
 }

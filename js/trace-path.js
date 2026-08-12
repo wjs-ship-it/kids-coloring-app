@@ -1,3 +1,5 @@
+import { detectSemanticTraceParts } from './trace-semantic.js';
+
 function buildEdgeMap(lineartData, w, h) {
   const data = lineartData.data || lineartData;
   const isEdge = new Uint8Array(w * h);
@@ -283,6 +285,11 @@ function buildInteriorParts(isEdge, w, h, options = {}) {
 
 export function detectTraceParts(lineartData, w, h, options = {}) {
   const { mode = 'object', detail = 50 } = options;
+  if (mode === 'illustration') {
+    const semanticParts = detectSemanticTraceParts(lineartData, w, h, { detail });
+    if (semanticParts.length >= 4) return semanticParts;
+  }
+
   const isEdge = buildEdgeMap(lineartData, w, h);
   const outerParts = buildOuterContourParts(isEdge, w, h, { mode, detail });
   const interiorParts = buildInteriorParts(isEdge, w, h, { mode, detail });
