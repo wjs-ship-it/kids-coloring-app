@@ -349,7 +349,7 @@ function selectSemanticRegions(regions, metrics, family) {
   }).filter(Boolean);
 }
 
-function buildRoundCharacterSilhouette(contour, metrics, w, detail) {
+function buildRoundCharacterSilhouette(contour, metrics, w, detail, family = 'round_character') {
   const simplified = evenlySampleContour(
     simplifyContour(contour, w, Math.max(1.0, 2.8 - detail / 42)),
     180
@@ -358,8 +358,38 @@ function buildRoundCharacterSilhouette(contour, metrics, w, detail) {
     semanticCategory: 'silhouette',
     semanticScore: simplified.length,
     drawOrder: 1,
-    shapeFamily: 'round_character',
+    shapeFamily: family,
   });
+}
+
+function buildRoundCharacterContourParts(contour, metrics, w, detail, family = 'round_character') {
+  const leftX = metrics.minX + metrics.width * 0.28;
+  const rightX = metrics.minX + metrics.width * 0.72;
+  const upperY = metrics.minY + metrics.height * 0.36;
+  const midY = metrics.minY + metrics.height * 0.56;
+  const lowerY = metrics.minY + metrics.height * 0.68;
+  const centerX = metrics.minX + metrics.width / 2;
+  const defs = [
+    [extractLongestRun(contour, w, (x, y) => x <= leftX && y > upperY && y < lowerY), 'limb', 2],
+    [extractLongestRun(contour, w, (x, y) => x >= rightX && y > upperY && y < lowerY), 'limb', 3],
+    [extractLongestRun(contour, w, (x, y) => y >= midY && x < centerX), 'limb', 4],
+    [extractLongestRun(contour, w, (x, y) => y >= midY && x >= centerX), 'limb', 5],
+  ];
+  const parts = [];
+  for (const [boundaryPos, semanticCategory, drawOrder] of defs) {
+    if (boundaryPos.length < 10) continue;
+    const simplified = evenlySampleContour(
+      simplifyContour(boundaryPos, w, Math.max(1.0, 2.5 - detail / 45)),
+      72
+    );
+    parts.push(buildPart(simplified, w, {
+      semanticCategory,
+      semanticScore: simplified.length,
+      drawOrder,
+      shapeFamily: family,
+    }));
+  }
+  return parts;
 }
 
 function buildLongneckSilhouetteParts(contour, metrics, w, detail) {
@@ -436,13 +466,16 @@ export function detectSemanticTraceParts(lineartData, w, h, options = {}) {
 
   let silhouetteParts = [];
   if (family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic') {
-    silhouetteParts = [buildRoundCharacterSilhouette(contour, metrics, w, detail)];
+    silhouetteParts = [buildRoundCharacterSilhouette(contour, metrics, w, detail, family)];
   } else if (family === 'longneck_animal') {
     silhouetteParts = buildLongneckSilhouetteParts(contour, metrics, w, detail);
   }
 
+  const contourParts = (family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic')
+    ? buildRoundCharacterContourParts(contour, metrics, w, detail, family)
+    : [];
   const semanticRegions = selectSemanticRegions(regions, metrics, family);
-  const parts = sortSemanticParts(silhouetteParts.concat(semanticRegions));
+  const parts = sortSemanticParts(silhouetteParts.concat(contourParts, semanticRegions));
   const maxParts = family === 'round_character' ? 7 : family === 'longneck_animal' ? 7 : 6;
   return parts.filter((part) => part.boundaryPos.length >= 4).slice(0, maxParts);
 }

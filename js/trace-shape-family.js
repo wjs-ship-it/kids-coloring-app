@@ -16,10 +16,9 @@ export function detectIllustrationShapeFamily(metrics) {
 
   if (
     bottomLimbCount >= 2 &&
-    aspect > 0.72 &&
-    aspect < 1.38 &&
-    centered &&
-    topFeatureCount >= 1
+    aspect > 0.62 &&
+    aspect < 1.45 &&
+    centered
   ) {
     return 'round_character';
   }
