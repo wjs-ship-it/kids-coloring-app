@@ -385,6 +385,22 @@
       <p class="status-note">Portrait gate: dark ratio &lt; 0.70, parts 3~10, fill regions 4+. Object gate: dark ratio &lt; 0.55, parts 3+, fill regions 4+. Illustration gate: dark ratio &lt; 0.35, parts 3~8, fill regions 4+.</p>
       <div id="photo-results" class="grid"></div>
     </section>
+
+    <section class="section" aria-labelledby="fixture-section-title">
+      <div class="status-row">
+        <div>
+          <h2 id="fixture-section-title" class="section-title">Built-in Illustration Fixtures</h2>
+          <p class="section-copy">레포에 포함된 실제 illustration 샘플 2종을 고정 기대값과 함께 검증합니다. legacy 파일명과 의미 family가 다를 수 있으므로 기대 family를 명시적으로 확인합니다.</p>
+        </div>
+        <div class="toolbar-cluster">
+          <button id="run-fixture-btn" type="button">Run Fixture Verification</button>
+          <span class="status-label">Fixture Status</span>
+          <span id="fixture-summary" class="status">Idle</span>
+        </div>
+      </div>
+      <p class="status-note">PASS 기준: expected family 일치, expected first part 일치, semantic gate 통과. 이 섹션은 fill-region 수나 dark ratio보다 semantic 분류/순서를 우선 검증합니다.</p>
+      <div id="fixture-results" class="grid"></div>
+    </section>
   </main>
 
   <script>
@@ -421,6 +437,7 @@
     import { detectParts, buildFillRegions, runFullPipeline, resolvePipelineMode } from './js/edge-detect.js';
     import { removeBackground } from './js/bg-remove.js';
     import { setAnalyticsContext, trackEvent } from './js/analytics.js';
+    import { ILLUSTRATION_FIXTURES } from './js/verification-fixtures.js';
 
     const runBtn = document.getElementById('run-btn');
     const summary = document.getElementById('summary');
@@ -431,6 +448,9 @@
     const photoFiles = document.getElementById('photo-files');
     const photoMode = document.getElementById('photo-mode');
     const photoDetail = document.getElementById('photo-detail');
+    const runFixtureBtn = document.getElementById('run-fixture-btn');
+    const fixtureSummary = document.getElementById('fixture-summary');
+    const fixtureResults = document.getElementById('fixture-results');
 
     function setStatus(target, text, kind = '') {
       target.textContent = text;
@@ -580,7 +600,7 @@
 
       const meta = document.createElement('div');
       meta.className = 'meta';
-      meta.innerHTML = [
+      const baseMetrics = [
         renderMetric('Selected', result.mode),
         renderMetric('Resolved', result.resolvedMode),
         renderMetric('Family', result.semantic.family || 'n/a'),
@@ -590,7 +610,20 @@
         renderMetric('Fill Regions', result.fillRegions),
         renderMetric('Largest Region', result.largestRegionArea),
         renderMetric('Runtime', `${result.durationMs.toFixed(1)} ms`)
-      ].join('');
+      ];
+      if (result.expectedFamily) {
+        baseMetrics.push(
+          renderMetric('Expected Family', result.expectedFamily),
+          renderMetric('Family Match', result.semantic.familyMatchesExpected ? 'yes' : 'no')
+        );
+      }
+      if (result.expectedFirstPart) {
+        baseMetrics.push(
+          renderMetric('Expected First', result.expectedFirstPart),
+          renderMetric('First Match', result.semantic.firstPartMatchesExpected ? 'yes' : 'no')
+        );
+      }
+      meta.innerHTML = baseMetrics.join('');
       card.appendChild(meta);
 
       if (result.semantic.parts.length) {
@@ -624,7 +657,7 @@
       return card;
     }
 
-    function evaluateSemanticTrace(parts, resolvedMode) {
+    function evaluateSemanticTrace(parts, resolvedMode, expectations = {}) {
       const semanticParts = parts
         .filter((part) => part.traceStrategy === 'semantic')
         .map((part, index) => ({
@@ -636,12 +669,16 @@
         }));
 
       const family = semanticParts[0]?.shapeFamily || '';
+      const expectedFamily = expectations.expectedFamily || '';
+      const expectedFirstPart = expectations.expectedFirstPart || '';
       if (resolvedMode !== 'illustration' || semanticParts.length === 0) {
         return {
           ok: true,
           family,
           parts: semanticParts,
           firstPartName: semanticParts[0]?.label || '',
+          familyMatchesExpected: true,
+          firstPartMatchesExpected: true,
           nameCoverage: semanticParts.length ? 100 : 0,
           ornamentLast: true,
           headFeatureLate: true,
@@ -654,6 +691,8 @@
       const namedCount = semanticParts.filter((part) => part.label.trim().length > 0).length;
       const nameCoverage = semanticParts.length ? Math.round((namedCount / semanticParts.length) * 100) : 0;
       const firstPartOk = firstPartName.length > 0;
+      const familyMatchesExpected = !expectedFamily || family === expectedFamily;
+      const firstPartMatchesExpected = !expectedFirstPart || firstPartName === expectedFirstPart;
 
       const ornamentIndex = semanticParts.findIndex((part) => part.category === 'ornament');
       const ornamentLast = ornamentIndex === -1 || ornamentIndex >= semanticParts.length - 1;
@@ -670,10 +709,19 @@
       }
 
       const recognizabilityOk = semanticParts.length >= 2 && [semanticParts[0], semanticParts[1]].every((part) => part.label && part.category !== 'ornament');
-      const ok = firstPartOk && nameCoverage === 100 && ornamentLast && headFeatureLate && orderingMatchesExpected && recognizabilityOk;
+      const ok = firstPartOk
+        && familyMatchesExpected
+        && firstPartMatchesExpected
+        && nameCoverage === 100
+        && ornamentLast
+        && headFeatureLate
+        && orderingMatchesExpected
+        && recognizabilityOk;
 
       let failureReason = '';
       if (!firstPartOk) failureReason = 'semantic_first_part_unknown';
+      else if (!familyMatchesExpected) failureReason = 'semantic_family_mismatch';
+      else if (!firstPartMatchesExpected) failureReason = 'semantic_first_part_mismatch';
       else if (nameCoverage < 100) failureReason = 'semantic_name_missing';
       else if (!orderingMatchesExpected || !recognizabilityOk) failureReason = 'semantic_order_regressed';
       else if (!headFeatureLate) failureReason = 'semantic_face_too_early';
@@ -692,6 +740,8 @@
         family,
         parts: semanticParts,
         firstPartName,
+        familyMatchesExpected,
+        firstPartMatchesExpected,
         nameCoverage,
         ornamentLast,
         headFeatureLate,
@@ -745,9 +795,18 @@
       };
     }
 
-    async function verifyPhoto(file, mode, detail) {
+    async function verifyPhotoSource(source) {
+      const {
+        name,
+        blob,
+        mode,
+        detail,
+        verificationKind = 'photo',
+        expectedFamily = '',
+        expectedFirstPart = '',
+      } = source;
       const startedAt = performance.now();
-      const workingBlob = mode === 'portrait' ? await removeBackground(file) : file;
+      const workingBlob = mode === 'portrait' ? await removeBackground(blob) : blob;
       const bitmap = await createImageBitmap(workingBlob);
       const max = 480;
       const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
@@ -763,7 +822,7 @@
       const resolvedMode = resolution.resolvedMode;
 
       const { lineartData, parts, fillRegions } = runFullPipeline(imageData.data, width, height, resolvedMode, detail);
-      const semantic = evaluateSemanticTrace(parts, resolvedMode);
+      const semantic = evaluateSemanticTrace(parts, resolvedMode, { expectedFamily, expectedFirstPart });
 
       const canvas = document.createElement('canvas');
       canvas.width = width;
@@ -779,11 +838,13 @@
       const darkRatio = total ? dark / total : 0;
       const largestRegionArea = (fillRegions.regions || []).reduce((max, region) => Math.max(max, region.area || 0), 0);
       const durationMs = performance.now() - startedAt;
-      const baseOk = resolvedMode === 'portrait'
-        ? darkRatio < 0.7 && parts.length >= 3 && parts.length <= 10 && fillRegions.regions.length >= 4
-        : resolvedMode === 'illustration'
-          ? darkRatio < 0.35 && parts.length >= 3 && parts.length <= 8 && fillRegions.regions.length >= 4
-          : darkRatio < 0.55 && parts.length >= 3 && fillRegions.regions.length >= 4;
+      const baseOk = verificationKind === 'semantic_fixture'
+        ? parts.length >= 2
+        : resolvedMode === 'portrait'
+          ? darkRatio < 0.7 && parts.length >= 3 && parts.length <= 10 && fillRegions.regions.length >= 4
+          : resolvedMode === 'illustration'
+            ? darkRatio < 0.35 && parts.length >= 3 && parts.length <= 8 && fillRegions.regions.length >= 4
+            : darkRatio < 0.55 && parts.length >= 3 && fillRegions.regions.length >= 4;
       const ok = baseOk && semantic.ok;
       if (!ok) {
         setAnalyticsContext({
@@ -793,7 +854,7 @@
         });
         trackEvent('verification_failed', {
           source: 'photo',
-          fileName: file.name,
+          fileName: name,
           darkRatio: Number(darkRatio.toFixed(3)),
           parts: parts.length,
           fillRegions: fillRegions.regions.length,
@@ -805,10 +866,12 @@
       }
 
       return {
-        name: file.name,
+        name,
         mode,
         resolvedMode,
         detail,
+        expectedFamily,
+        expectedFirstPart,
         darkRatio,
         parts: parts.length,
         fillRegions: fillRegions.regions.length,
@@ -818,6 +881,10 @@
         semantic,
         canvas
       };
+    }
+
+    async function verifyPhoto(file, mode, detail) {
+      return verifyPhotoSource({ name: file.name, blob: file, mode, detail });
     }
 
     function runVerification() {
@@ -862,8 +929,36 @@
       setStatus(photoSummary, `${passCount}/${resultsData.length} photos passed`, passCount === resultsData.length ? 'ok' : 'bad');
     }
 
+    async function runFixtureVerification() {
+      if (window.__verifyNoSwReady !== true) return;
+      setStatus(fixtureSummary, 'Running...');
+      fixtureResults.innerHTML = '';
+
+      const runs = [];
+      for (const fixture of ILLUSTRATION_FIXTURES) {
+        const response = await fetch(fixture.sourcePath);
+        const blob = await response.blob();
+        runs.push(await verifyPhotoSource({
+          name: fixture.name,
+          blob,
+          mode: fixture.mode,
+          detail: fixture.detail,
+          verificationKind: fixture.verificationKind,
+          expectedFamily: fixture.expectedFamily,
+          expectedFirstPart: fixture.expectedFirstPart,
+        }));
+      }
+
+      const passCount = runs.filter((result) => result.ok).length;
+      for (const result of runs) {
+        fixtureResults.appendChild(makePhotoCard(result));
+      }
+      setStatus(fixtureSummary, `${passCount}/${runs.length} fixtures passed`, passCount === runs.length ? 'ok' : 'bad');
+    }
+
     runBtn.addEventListener('click', runVerification);
     runPhotoBtn.addEventListener('click', () => { runPhotoVerification(); });
+    runFixtureBtn.addEventListener('click', () => { runFixtureVerification(); });
     photoFiles.addEventListener('change', () => {
       const count = photoFiles.files?.length ?? 0;
       if (!count) {
