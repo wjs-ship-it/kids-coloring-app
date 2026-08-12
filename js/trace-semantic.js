@@ -438,7 +438,87 @@ function buildLongneckSilhouetteParts(contour, metrics, w, detail) {
   return result;
 }
 
-function sortSemanticParts(parts) {
+function relabelRoundLikePart(part, metrics) {
+  if (part.semanticCategory === 'silhouette') return '몸통';
+  if (part.semanticCategory === 'head_feature') return '얼굴';
+  if (part.semanticCategory === 'ornament') return '장식';
+  if (part.semanticCategory !== 'limb') return part.semanticLabel || '';
+
+  const centerX = metrics.minX + metrics.width / 2;
+  const midY = metrics.minY + metrics.height * 0.56;
+  const isLeft = part.centroid.x < centerX;
+  const isUpper = part.centroid.y < midY;
+  if (isUpper) return isLeft ? '왼손' : '오른손';
+  return isLeft ? '왼발' : '오른발';
+}
+
+function relabelLongneckPart(part, metrics) {
+  if (part.semanticCategory === 'tail_feature') return '꼬리';
+  if (part.semanticCategory === 'ornament') return '장식';
+  if (part.semanticCategory === 'head_feature') return '얼굴';
+  if (part.semanticCategory === 'limb') {
+    const centerX = metrics.minX + metrics.width / 2;
+    return part.centroid.x < centerX ? '앞다리' : '뒷다리';
+  }
+  if (part.semanticCategory === 'silhouette') {
+    const topCut = metrics.minY + metrics.height * 0.24;
+    const neckCut = metrics.minY + metrics.height * 0.5;
+    if (part.centroid.y <= topCut) return '머리';
+    if (part.centroid.y <= neckCut) return '목';
+    return '몸통';
+  }
+  return part.semanticLabel || '';
+}
+
+function applyFamilyOrdering(parts, family, metrics) {
+  const cloned = parts.map((part) => ({ ...part }));
+
+  if (family === 'longneck_animal') {
+    const categoryRank = { silhouette: 0, limb: 1, head_feature: 2, tail_feature: 3, ornament: 4 };
+    cloned.sort((a, b) =>
+      (categoryRank[a.semanticCategory] ?? 9) - (categoryRank[b.semanticCategory] ?? 9) ||
+      a.centroid.y - b.centroid.y ||
+      a.centroid.x - b.centroid.x
+    );
+    return cloned.map((part, index) => ({
+      ...part,
+      drawOrder: index + 1,
+      semanticLabel: relabelLongneckPart(part, metrics),
+    }));
+  }
+
+  const roundLike = family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic';
+  if (roundLike) {
+    const categoryRank = { silhouette: 0, limb: 1, head_feature: 2, ornament: 3, tail_feature: 4 };
+    const centerX = metrics.minX + metrics.width / 2;
+    const midY = metrics.minY + metrics.height * 0.56;
+    cloned.sort((a, b) => {
+      const rankDiff = (categoryRank[a.semanticCategory] ?? 9) - (categoryRank[b.semanticCategory] ?? 9);
+      if (rankDiff !== 0) return rankDiff;
+      if (a.semanticCategory === 'limb' && b.semanticCategory === 'limb') {
+        const aUpper = a.centroid.y < midY ? 0 : 1;
+        const bUpper = b.centroid.y < midY ? 0 : 1;
+        if (aUpper !== bUpper) return aUpper - bUpper;
+        const aLeft = a.centroid.x < centerX ? 0 : 1;
+        const bLeft = b.centroid.x < centerX ? 0 : 1;
+        if (aLeft !== bLeft) return aLeft - bLeft;
+      }
+      if (a.semanticCategory === 'head_feature' && b.semanticCategory === 'head_feature') {
+        if (a.centroid.y !== b.centroid.y) return a.centroid.y - b.centroid.y;
+      }
+      return a.centroid.x - b.centroid.x || a.centroid.y - b.centroid.y;
+    });
+    return cloned.map((part, index) => ({
+      ...part,
+      drawOrder: index + 1,
+      semanticLabel: relabelRoundLikePart(part, metrics),
+    }));
+  }
+
+  return cloned;
+}
+
+function sortSemanticParts(parts, family, metrics) {
   const categoryRank = {
     silhouette: 0,
     limb: 1,
@@ -454,6 +534,7 @@ function sortSemanticParts(parts) {
       a.centroid.x - b.centroid.x ||
       a.centroid.y - b.centroid.y
     );
+  return applyFamilyOrdering(sorted, family, metrics);
 }
 
 export function detectSemanticTraceParts(lineartData, w, h, options = {}) {
@@ -480,7 +561,7 @@ export function detectSemanticTraceParts(lineartData, w, h, options = {}) {
     ? buildRoundCharacterContourParts(contour, metrics, w, detail, family)
     : [];
   const semanticRegions = selectSemanticRegions(regions, metrics, family);
-  const parts = sortSemanticParts(silhouetteParts.concat(contourParts, semanticRegions));
+  const parts = sortSemanticParts(silhouetteParts.concat(contourParts, semanticRegions), family, metrics);
   const maxParts = family === 'round_character' ? 7 : family === 'longneck_animal' ? 7 : 6;
   return parts.filter((part) => part.boundaryPos.length >= 4).slice(0, maxParts);
 }
