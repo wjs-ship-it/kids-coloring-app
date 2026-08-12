@@ -1,4 +1,4 @@
-function collectEdgeComponents(edges, w, h) {
+export function collectEdgeComponents(edges, w, h) {
   const labels = new Int32Array(w * h);
   const components = [];
   const queue = new Int32Array(w * h);

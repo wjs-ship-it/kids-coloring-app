@@ -705,7 +705,7 @@
       const ctx = canvas.getContext('2d');
       const startedAt = performance.now();
       const { lineartData, size } = renderPreset(preset, canvas, ctx);
-      const parts = detectParts(lineartData, size, size);
+      const parts = detectParts(lineartData, size, size, { mode: 'illustration', detail: 50 });
       const fillData = buildFillRegions(lineartData, size, size);
       const interaction = verifyFillUndo(lineartData, fillData, canvas);
       const durationMs = performance.now() - startedAt;

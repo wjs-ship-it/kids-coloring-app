@@ -4,6 +4,7 @@ import {
   detectIllustrationShapeFamily,
   getFamilyPartCap,
 } from './trace-shape-family.js';
+import { collectEdgeComponents } from './lineart-shape.js';
 import {
   buildLongneckSilhouetteParts,
   buildQuadrupedContourParts,
@@ -20,6 +21,34 @@ function buildEdgeMap(lineartData, w, h) {
   const isEdge = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) isEdge[i] = data[i * 4] < 128 ? 1 : 0;
   return isEdge;
+}
+
+function buildEdgeSetFromComponent(labels, componentId, w, h) {
+  const edgeSet = new Uint8Array(w * h);
+  for (let i = 0; i < labels.length; i++) {
+    if (labels[i] === componentId) edgeSet[i] = 1;
+  }
+  return edgeSet;
+}
+
+function selectPrimaryEdgeComponent(isEdge, w, h) {
+  const { labels, components } = collectEdgeComponents(isEdge, w, h);
+  if (components.length === 0) return null;
+
+  const centerX = w / 2;
+  const centerY = h / 2;
+  const diag = Math.hypot(w, h) || 1;
+  const ranked = components
+    .map((component) => {
+      const span = Math.max(component.width, component.height);
+      const coverage = (component.width * component.height) / Math.max(1, w * h);
+      const centerDist = Math.hypot(component.centerX - centerX, component.centerY - centerY) / diag;
+      const score = component.area + span * 10 + coverage * 10000 + (1 - centerDist) * 140 - (component.touchesBorder ? 60 : 0);
+      return { component, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return { labels, component: ranked[0].component };
 }
 
 function collectVoidRegions(isEdge, w, h) {
@@ -318,7 +347,7 @@ function sortSemanticParts(parts, family, metrics) {
     .slice()
     .sort((a, b) =>
       a.drawOrder - b.drawOrder ||
-      (categoryRank[a.semanticCategory] || 9) - (categoryRank[b.semanticCategory] || 9) ||
+      (categoryRank[a.semanticCategory] ?? 9) - (categoryRank[b.semanticCategory] ?? 9) ||
       a.centroid.x - b.centroid.x ||
       a.centroid.y - b.centroid.y
     );
@@ -353,10 +382,21 @@ function buildSemanticHelpers() {
 export function detectSemanticTraceParts(lineartData, w, h, options = {}) {
   const { detail = 50 } = options;
   const isEdge = buildEdgeMap(lineartData, w, h);
-  const contour = traceContour(isEdge, w, h);
+  const primary = selectPrimaryEdgeComponent(isEdge, w, h);
+  if (!primary?.component) return [];
+
+  const contour = traceContour(buildEdgeSetFromComponent(primary.labels, primary.component.id, w, h), w, h);
   if (contour.length < 24) return [];
 
   const metrics = contourMetrics(contour, w, h);
+  metrics.minX = primary.component.minX;
+  metrics.minY = primary.component.minY;
+  metrics.maxX = primary.component.maxX;
+  metrics.maxY = primary.component.maxY;
+  metrics.width = primary.component.width;
+  metrics.height = primary.component.height;
+  metrics.centerX = primary.component.centerX;
+  metrics.centerY = primary.component.centerY;
   metrics.isEdge = isEdge;
   metrics.canvasW = w;
   metrics.canvasH = h;

@@ -1,27 +1,29 @@
 export function buildFamilyMetrics(regions, metrics) {
-  const totalArea = Math.max(1, metrics.width * metrics.height);
-  const bottomLimbCount = regions.filter((region) =>
+  const innerRegions = regions.filter((region) => !region.touchesBorder);
+  const sourceRegions = innerRegions.length ? innerRegions : regions;
+  const totalArea = Math.max(1, sourceRegions.reduce((sum, region) => sum + region.area, 0));
+  const bottomLimbCount = sourceRegions.filter((region) =>
     region.centerY > metrics.minY + metrics.height * 0.58 &&
     region.area > metrics.width * 0.02 &&
     region.area < totalArea * 0.14
   ).length;
-  const topFeatureCount = regions.filter((region) =>
+  const topFeatureCount = sourceRegions.filter((region) =>
     region.centerY < metrics.minY + metrics.height * 0.42 &&
     region.area < totalArea * 0.12
   ).length;
-  const rightTailMass = regions
+  const rightTailMass = sourceRegions
     .filter((region) => region.centerX > metrics.minX + metrics.width * 0.68)
     .reduce((acc, region) => acc + region.area, 0);
-  const leftMass = regions
+  const leftMass = sourceRegions
     .filter((region) => region.centerX < metrics.minX + metrics.width * 0.34)
     .reduce((acc, region) => acc + region.area, 0);
-  const rightMass = regions
+  const rightMass = sourceRegions
     .filter((region) => region.centerX > metrics.minX + metrics.width * 0.66)
     .reduce((acc, region) => acc + region.area, 0);
-  const lowerMass = regions
+  const lowerMass = sourceRegions
     .filter((region) => region.centerY > metrics.minY + metrics.height * 0.62)
     .reduce((acc, region) => acc + region.area, 0);
-  const centerMass = regions
+  const centerMass = sourceRegions
     .filter((region) =>
       region.centerX > metrics.minX + metrics.width * 0.28 &&
       region.centerX < metrics.minX + metrics.width * 0.72
