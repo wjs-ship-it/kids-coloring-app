@@ -159,6 +159,40 @@ function relabelRoundLikePart(part, metrics) {
   return isLeft ? '왼발' : '오른발';
 }
 
+function promoteRoundLikeFacePart(parts, metrics) {
+  if (parts.some((part) => part.semanticCategory === 'head_feature')) return parts;
+  const faceLeft = metrics.minX + metrics.width * 0.24;
+  const faceRight = metrics.minX + metrics.width * 0.76;
+  const faceTop = metrics.minY + metrics.height * 0.18;
+  const faceBottom = metrics.minY + metrics.height * 0.62;
+
+  let bestIndex = -1;
+  let bestScore = -Infinity;
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (part.semanticCategory === 'silhouette') continue;
+    if (part.centroid.x < faceLeft || part.centroid.x > faceRight) continue;
+    if (part.centroid.y < faceTop || part.centroid.y > faceBottom) continue;
+    const boundaryLen = part.boundaryPos?.length || 0;
+    const bboxHeight = (part.bbox?.maxY ?? 0) - (part.bbox?.minY ?? 0);
+    const score = boundaryLen + bboxHeight * 1.5 - Math.abs(part.centroid.x - (metrics.minX + metrics.width / 2)) * 0.2;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = i;
+    }
+  }
+
+  if (bestIndex < 0) return parts;
+  const promoted = parts.slice();
+  promoted[bestIndex] = {
+    ...promoted[bestIndex],
+    semanticCategory: 'head_feature',
+    drawOrder: 2,
+    semanticLabel: '얼굴',
+  };
+  return promoted;
+}
+
 function relabelLongneckPart(part, metrics) {
   if (part.semanticCategory === 'tail_feature') return '꼬리';
   if (part.semanticCategory === 'ornament') return '장식';
@@ -256,7 +290,8 @@ export function applyFamilyOrdering(parts, family, metrics) {
     const categoryRank = { silhouette: 0, limb: 1, head_feature: 2, ornament: 3, tail_feature: 4 };
     const centerX = metrics.minX + metrics.width / 2;
     const midY = metrics.minY + metrics.height * 0.56;
-    cloned.sort((a, b) => {
+    const promoted = promoteRoundLikeFacePart(cloned, metrics);
+    promoted.sort((a, b) => {
       const rankDiff = (categoryRank[a.semanticCategory] ?? 9) - (categoryRank[b.semanticCategory] ?? 9);
       if (rankDiff !== 0) return rankDiff;
       if (a.semanticCategory === 'limb' && b.semanticCategory === 'limb') {
@@ -272,7 +307,7 @@ export function applyFamilyOrdering(parts, family, metrics) {
       }
       return a.centroid.x - b.centroid.x || a.centroid.y - b.centroid.y;
     });
-    return cloned.map((part, index) => ({
+    return promoted.map((part, index) => ({
       ...part,
       drawOrder: index + 1,
       semanticLabel: relabelRoundLikePart(part, metrics),

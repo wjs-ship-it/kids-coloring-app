@@ -97,18 +97,28 @@ export function buildRoundCharacterContourParts(contour, metrics, w, detail, fam
   const { extractLongestRun, simplifyContour, evenlySampleContour, buildPart } = helpers;
   const leftX = metrics.minX + metrics.width * 0.28;
   const rightX = metrics.minX + metrics.width * 0.72;
+  const faceLeftX = metrics.minX + metrics.width * 0.3;
+  const faceRightX = metrics.minX + metrics.width * 0.7;
   const upperY = metrics.minY + metrics.height * 0.36;
   const midY = metrics.minY + metrics.height * 0.56;
   const lowerY = metrics.minY + metrics.height * 0.68;
   const centerX = metrics.minX + metrics.width / 2;
   const defs = [
-    [extractLongestRun(contour, w, (x, y) => x <= leftX && y > upperY && y < lowerY), 'limb', 2],
-    [extractLongestRun(contour, w, (x, y) => x >= rightX && y > upperY && y < lowerY), 'limb', 3],
-    [extractLongestRun(contour, w, (x, y) => y >= midY && x < centerX), 'limb', 4],
-    [extractLongestRun(contour, w, (x, y) => y >= midY && x >= centerX), 'limb', 5],
+    [
+      extractLongestRun(contour, w, (x, y) =>
+        x >= faceLeftX && x <= faceRightX && y >= upperY && y <= midY
+      ),
+      'head_feature',
+      2
+    ],
+    [extractLongestRun(contour, w, (x, y) => x <= leftX && y > upperY && y < lowerY), 'limb', 3],
+    [extractLongestRun(contour, w, (x, y) => x >= rightX && y > upperY && y < lowerY), 'limb', 4],
+    [extractLongestRun(contour, w, (x, y) => y >= midY && x < centerX), 'limb', 5],
+    [extractLongestRun(contour, w, (x, y) => y >= midY && x >= centerX), 'limb', 6],
   ];
   return defs.flatMap(([boundaryPos, semanticCategory, drawOrder]) => {
-    if (boundaryPos.length < 10) return [];
+    const minBoundary = semanticCategory === 'head_feature' ? 6 : 10;
+    if (boundaryPos.length < minBoundary) return [];
     const simplified = evenlySampleContour(simplifyContour(boundaryPos, w, Math.max(1.0, 2.5 - detail / 45)), 72);
     return [buildPart(simplified, w, {
       semanticCategory,
