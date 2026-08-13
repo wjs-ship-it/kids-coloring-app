@@ -329,10 +329,55 @@ function buildPart(boundaryPos, w, meta = {}) {
     sourceRegionId: meta.sourceRegionId || 0,
     attachSide: meta.attachSide || 'center',
     drawOrder: meta.drawOrder || 99,
+    semanticId: meta.semanticId || '',
+    displayName: meta.displayName || '',
+    hint: meta.hint || '',
+    toleranceMultiplier: meta.toleranceMultiplier || 1,
     shapeFamily: meta.shapeFamily || 'illustration_generic',
     bbox: { minX, minY, maxX, maxY },
     centroid,
   };
+}
+
+function toSemanticId(label, category, drawOrder) {
+  const source = label || `${category}_${drawOrder}`;
+  return source
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^\w\u3131-\u318E\uAC00-\uD7A3]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
+}
+
+function getPartHint(label, family, category) {
+  if (!label) return '점선을 따라 그려봐요! ✏️';
+  if (category === 'head_feature') return `${label}는 나중에 또렷하게 그려봐요! ✏️`;
+  if (category === 'ornament') return `${label}으로 마무리해봐요! ✨`;
+  if (category === 'tail_feature') return `${label} 쪽으로 길게 이어 그려봐요! ✏️`;
+  if (family === 'longneck_animal' && label === '목') return '목을 길게 이어서 따라 그려봐요! ✏️';
+  return `${label}부터 따라 그려봐요! ✏️`;
+}
+
+function getToleranceMultiplier(family, category, label) {
+  if (category === 'silhouette') return family === 'longneck_animal' ? 1.2 : 1.16;
+  if (category === 'limb') return label === '앞다리' || label === '뒷다리' ? 1.08 : 1.1;
+  if (category === 'tail_feature') return 1.08;
+  if (category === 'head_feature') return 1.04;
+  if (category === 'ornament') return 1;
+  return 1.05;
+}
+
+function enrichSemanticPresentation(parts, family) {
+  return parts.map((part) => {
+    const displayName = part.semanticLabel || getSemanticLabel(family, part.semanticCategory, part.drawOrder);
+    return {
+      ...part,
+      semanticId: toSemanticId(displayName, part.semanticCategory, part.drawOrder),
+      displayName,
+      hint: getPartHint(displayName, family, part.semanticCategory),
+      toleranceMultiplier: getToleranceMultiplier(family, part.semanticCategory, displayName),
+    };
+  });
 }
 
 function sortSemanticParts(parts, family, metrics) {
@@ -432,5 +477,8 @@ export function detectSemanticTraceParts(lineartData, w, h, options = {}) {
     metrics
   ), family);
   const maxParts = getFamilyPartCap(family);
-  return parts.filter((part) => part.boundaryPos.length >= 4).slice(0, maxParts);
+  return enrichSemanticPresentation(
+    parts.filter((part) => part.boundaryPos.length >= 4).slice(0, maxParts),
+    family
+  );
 }

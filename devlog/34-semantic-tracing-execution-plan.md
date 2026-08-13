@@ -190,6 +190,11 @@ verification 하네스용 샘플 메타데이터는 아래 필드를 가져야 �
 - `verify-fill-regions.html`
   - semantic gate 카드와 failure reason 추가
 
+## 2026-08-13 진행 메모
+- illustration semantic part에 `semanticId`, `displayName`, `hint`, `toleranceMultiplier` 메타데이터를 추가했다.
+- `app.js`는 semantic part가 제공한 `hint`와 `displayName`을 직접 사용하도록 연결했다.
+- tracing 시작/스냅/완료 판정 반경이 `toleranceMultiplier`를 반영하도록 바꿨다.
+
 ## 정리
 - UX 조사 노트는 방향성을 준다.
 - semantic tracing 설계 문서는 코드 규칙을 준다.

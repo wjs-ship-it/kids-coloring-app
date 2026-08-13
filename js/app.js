@@ -514,6 +514,8 @@ function onDetailChange(val) {
 }
 
 function snapToLine(tx, ty, part) {
+  const snapRadius = Math.max(12, Math.round(SNAP_RADIUS * (part?.toleranceMultiplier || 1)));
+  const traceTolerance = Math.max(snapRadius + 4, Math.round(TRACE_TOLERANCE * (part?.toleranceMultiplier || 1)));
   let minDist = Infinity, snapX = tx, snapY = ty;
   for (let i = 0; i < part.boundaryPos.length; i += 3) {
     const pos = part.boundaryPos[i];
@@ -522,8 +524,8 @@ function snapToLine(tx, ty, part) {
     const d = Math.sqrt((tx - bx) ** 2 + (ty - by) ** 2);
     if (d < minDist) { minDist = d; snapX = bx; snapY = by; }
   }
-  if (minDist < SNAP_RADIUS) return { x: snapX, y: snapY, valid: true };
-  if (minDist < TRACE_TOLERANCE) {
+  if (minDist < snapRadius) return { x: snapX, y: snapY, valid: true };
+  if (minDist < traceTolerance) {
     const t = 0.6;
     return { x: tx + (snapX - tx) * t, y: ty + (snapY - ty) * t, valid: true };
   }
@@ -533,12 +535,13 @@ function snapToLine(tx, ty, part) {
 function buildTraceZone(part) {
   const cw = DC.width, ch = DC.height;
   const zone = new Uint8Array(cw * ch);
+  const traceTolerance = Math.max(14, Math.round(TRACE_TOLERANCE * (part?.toleranceMultiplier || 1)));
   for (const pos of part.boundaryPos) {
     const lx = pos % laW, ly = Math.floor(pos / laW);
     const cx = lx + offX, cy = ly + offY;
-    for (let dy = -TRACE_TOLERANCE; dy <= TRACE_TOLERANCE; dy++) {
-      for (let dx = -TRACE_TOLERANCE; dx <= TRACE_TOLERANCE; dx++) {
-        if (dx * dx + dy * dy <= TRACE_TOLERANCE * TRACE_TOLERANCE) {
+    for (let dy = -traceTolerance; dy <= traceTolerance; dy++) {
+      for (let dx = -traceTolerance; dx <= traceTolerance; dx++) {
+        if (dx * dx + dy * dy <= traceTolerance * traceTolerance) {
           const nx = cx + dx, ny = cy + dy;
           if (nx >= 0 && nx < cw && ny >= 0 && ny < ch) zone[ny * cw + nx] = 1;
         }
@@ -874,12 +877,12 @@ function showCurrentPart() {
     tail_feature: '🦕',
     ornament: '✨'
   };
-  const semanticLabel = part.traceStrategy === 'semantic' ? (part.semanticLabel || '') : '';
+  const semanticLabel = part.traceStrategy === 'semantic' ? (part.displayName || part.semanticLabel || '') : '';
   const suffix = part.traceStrategy === 'semantic'
     ? ` ${semanticEmoji[part.semanticCategory] || '⭐'}${semanticLabel ? ` ${semanticLabel}` : ''}`
     : ' ⭐';
   document.getElementById('part-label').textContent = `${curPartIdx + 1}/${parts.length}${suffix}`;
-  showHint(semanticLabel ? `${semanticLabel}부터 따라 그려봐요! ✏️` : '점선을 따라 그려봐요! ✏️');
+  showHint(part.hint || (semanticLabel ? `${semanticLabel}부터 따라 그려봐요! ✏️` : '점선을 따라 그려봐요! ✏️'));
   currentColor = '#1e293b'; brushSize = 6; isEraser = false;
 }
 
@@ -888,7 +891,7 @@ function checkTraceCompletion() {
   const part = parts[curPartIdx];
   const id = cx.getImageData(0, 0, DC.width, DC.height), d = id.data;
   let covered = 0;
-  const R = 8;
+  const R = Math.max(6, Math.round(8 * (part?.toleranceMultiplier || 1)));
   for (const pos of part.samplePoints) {
     const x = pos % laW + offX, y = Math.floor(pos / laW) + offY;
     if (x < 0 || x >= DC.width || y < 0 || y >= DC.height) continue;
