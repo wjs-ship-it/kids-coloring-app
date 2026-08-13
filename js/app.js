@@ -48,6 +48,7 @@ let paintByRegion = [];
 let paintToolByRegion = [];
 let previewRegionId = 0;
 let currentFillTool = 'solid';
+let colorInteractionMode = 'brush';
 let traceHasPendingGap = false;
 let lastTraceHintAt = 0;
 let traceGuideVisible = false;
@@ -83,7 +84,11 @@ function updateModeGuide(selectedMode, resolvedMode) {
 }
 
 function isRegionFillColorMode() {
-  return appMode === 'color' && !creativeMode && !!fillRegionMap && fillRegions.length > 0;
+  return appMode === 'color'
+    && !creativeMode
+    && colorInteractionMode === 'fill'
+    && !!fillRegionMap
+    && fillRegions.length > 0;
 }
 
 function clearSmartMissionTimer() {
@@ -952,13 +957,14 @@ function transitionToColor() {
   historyStack = [];
   paintByRegion = [];
   paintToolByRegion = [];
+  colorInteractionMode = 'brush';
   buildLineBoundary();
   createLineartOverlay();
   redrawColorScene();
   saveState();
   document.getElementById('side-palette').classList.remove('hidden');
-  document.getElementById('brush-bar').classList.add('hidden');
-  document.getElementById('fill-tool-bar').classList.remove('hidden');
+  document.getElementById('brush-bar').classList.remove('hidden');
+  document.getElementById('fill-tool-bar').classList.add('hidden');
   currentFillTool = 'solid';
   buildFillToolBar();
   updateProgress(1);
@@ -991,6 +997,7 @@ function startCreativeMode(mode) {
   previewRegionId = 0;
   resetColorMissionState();
   historyStack = [];
+  colorInteractionMode = 'brush';
   traceZone = null; colorMask = null;
 
   if (mode === 'sketch') {
@@ -1543,7 +1550,7 @@ function onStart(e) {
   }
 
   if (appMode === 'color' && !isEraser) {
-    if (fillRegionMap && fillRegions.length > 0) {
+    if (isRegionFillColorMode()) {
       const fillAction = fillRegionAtCanvasPoint(px, py, currentColor);
       if (fillAction?.changed) {
         suppressColorHintReschedule = true;
