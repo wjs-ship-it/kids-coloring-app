@@ -478,6 +478,25 @@
       return diff;
     }
 
+    async function createBitmapFromBlob(blob) {
+      try {
+        return await createImageBitmap(blob);
+      } catch (_error) {
+        const url = URL.createObjectURL(blob);
+        try {
+          const image = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error('image_decode_failed'));
+            img.src = url;
+          });
+          return image;
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      }
+    }
+
     function redrawFilledRegions(ctx, lineartData, fillData, paintByRegion, color) {
       const { width, height } = ctx.canvas;
       ctx.fillStyle = '#ffffff';
@@ -622,6 +641,11 @@
           renderMetric('Expected First', result.expectedFirstPart),
           renderMetric('First Match', result.semantic.firstPartMatchesExpected ? 'yes' : 'no')
         );
+      } else if (result.expectedFirstParts?.length) {
+        baseMetrics.push(
+          renderMetric('Expected First', result.expectedFirstParts.join(' / ')),
+          renderMetric('First Match', result.semantic.firstPartMatchesExpected ? 'yes' : 'no')
+        );
       }
       meta.innerHTML = baseMetrics.join('');
       card.appendChild(meta);
@@ -671,6 +695,7 @@
       const family = semanticParts[0]?.shapeFamily || '';
       const expectedFamily = expectations.expectedFamily || '';
       const expectedFirstPart = expectations.expectedFirstPart || '';
+      const expectedFirstParts = Array.isArray(expectations.expectedFirstParts) ? expectations.expectedFirstParts : [];
       if (resolvedMode !== 'illustration' || semanticParts.length === 0) {
         return {
           ok: true,
@@ -692,7 +717,9 @@
       const nameCoverage = semanticParts.length ? Math.round((namedCount / semanticParts.length) * 100) : 0;
       const firstPartOk = firstPartName.length > 0;
       const familyMatchesExpected = !expectedFamily || family === expectedFamily;
-      const firstPartMatchesExpected = !expectedFirstPart || firstPartName === expectedFirstPart;
+      const firstPartMatchesExpected = expectedFirstParts.length
+        ? expectedFirstParts.includes(firstPartName)
+        : (!expectedFirstPart || firstPartName === expectedFirstPart);
 
       const ornamentIndex = semanticParts.findIndex((part) => part.category === 'ornament');
       const ornamentLast = ornamentIndex === -1 || ornamentIndex >= semanticParts.length - 1;
@@ -804,10 +831,11 @@
         verificationKind = 'photo',
         expectedFamily = '',
         expectedFirstPart = '',
+        expectedFirstParts = [],
       } = source;
       const startedAt = performance.now();
       const workingBlob = mode === 'portrait' ? await removeBackground(blob) : blob;
-      const bitmap = await createImageBitmap(workingBlob);
+      const bitmap = await createBitmapFromBlob(workingBlob);
       const max = 480;
       const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
       const width = Math.max(1, Math.round(bitmap.width * scale));
@@ -822,7 +850,7 @@
       const resolvedMode = resolution.resolvedMode;
 
       const { lineartData, parts, fillRegions } = runFullPipeline(imageData.data, width, height, resolvedMode, detail);
-      const semantic = evaluateSemanticTrace(parts, resolvedMode, { expectedFamily, expectedFirstPart });
+      const semantic = evaluateSemanticTrace(parts, resolvedMode, { expectedFamily, expectedFirstPart, expectedFirstParts });
 
       const canvas = document.createElement('canvas');
       canvas.width = width;
@@ -872,6 +900,7 @@
         detail,
         expectedFamily,
         expectedFirstPart,
+        expectedFirstParts,
         darkRatio,
         parts: parts.length,
         fillRegions: fillRegions.regions.length,
@@ -946,6 +975,7 @@
           verificationKind: fixture.verificationKind,
           expectedFamily: fixture.expectedFamily,
           expectedFirstPart: fixture.expectedFirstPart,
+          expectedFirstParts: fixture.expectedFirstParts,
         }));
       }
 
