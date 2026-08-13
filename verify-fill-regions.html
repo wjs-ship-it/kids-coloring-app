@@ -656,6 +656,9 @@
         gate.innerHTML = [
           renderMetric('First Part', result.semantic.firstPartName || 'n/a'),
           renderMetric('Name Coverage', `${result.semantic.nameCoverage}%`),
+          renderMetric('Family Gate', result.semantic.familyMatchesExpected ? 'yes' : 'no'),
+          renderMetric('Order Gate', result.semantic.orderingMatchesExpected ? 'yes' : 'no'),
+          renderMetric('Recognizable', result.semantic.recognizabilityOk ? 'yes' : 'no'),
           renderMetric('Ornament Last', result.semantic.ornamentLast ? 'yes' : 'no'),
           renderMetric('Face Late', result.semantic.headFeatureLate ? 'yes' : 'no')
         ].join('');
@@ -665,6 +668,13 @@
         note.className = 'status-note';
         note.textContent = `Semantic Gates: ${result.semantic.gateSummary}`;
         card.appendChild(note);
+
+        if (result.semantic.failureReason) {
+          const reason = document.createElement('p');
+          reason.className = `status-note ${result.ok ? 'status ok' : 'status bad'}`;
+          reason.textContent = `Failure Reason: ${result.semantic.failureReason}`;
+          card.appendChild(reason);
+        }
 
         const semanticTable = document.createElement('div');
         semanticTable.className = 'meta';
@@ -707,6 +717,8 @@
           nameCoverage: semanticParts.length ? 100 : 0,
           ornamentLast: true,
           headFeatureLate: true,
+          orderingMatchesExpected: true,
+          recognizabilityOk: true,
           gateSummary: 'n/a',
           failureReason: ''
         };
@@ -733,6 +745,10 @@
         orderingMatchesExpected = firstPartName === '몸통';
       } else if (family === 'longneck_animal') {
         orderingMatchesExpected = ['몸통', '머리', '목'].includes(firstPartName);
+      } else if (family === 'quadruped_animal') {
+        orderingMatchesExpected = ['몸통', '머리'].includes(firstPartName);
+      } else if (family === 'vehicle') {
+        orderingMatchesExpected = ['몸체', '창문'].includes(firstPartName);
       }
 
       const recognizabilityOk = semanticParts.length >= 2 && [semanticParts[0], semanticParts[1]].every((part) => part.label && part.category !== 'ornament');
@@ -750,14 +766,17 @@
       else if (!familyMatchesExpected) failureReason = 'semantic_family_mismatch';
       else if (!firstPartMatchesExpected) failureReason = 'semantic_first_part_mismatch';
       else if (nameCoverage < 100) failureReason = 'semantic_name_missing';
-      else if (!orderingMatchesExpected || !recognizabilityOk) failureReason = 'semantic_order_regressed';
+      else if (!orderingMatchesExpected) failureReason = 'semantic_order_regressed';
+      else if (!recognizabilityOk) failureReason = 'semantic_first_two_parts_not_recognizable';
       else if (!headFeatureLate) failureReason = 'semantic_face_too_early';
-      else if (!ornamentLast) failureReason = 'semantic_order_regressed';
+      else if (!ornamentLast) failureReason = 'semantic_ornament_too_early';
 
       const gateSummary = [
         `first:${firstPartOk ? 'ok' : 'fail'}`,
+        `family:${familyMatchesExpected ? 'ok' : 'fail'}`,
         `names:${nameCoverage}%`,
         `order:${orderingMatchesExpected ? 'ok' : 'fail'}`,
+        `recognize:${recognizabilityOk ? 'ok' : 'fail'}`,
         `ornament:${ornamentLast ? 'ok' : 'fail'}`,
         `face:${headFeatureLate ? 'ok' : 'fail'}`
       ].join(' · ');
@@ -772,6 +791,8 @@
         nameCoverage,
         ornamentLast,
         headFeatureLate,
+        orderingMatchesExpected,
+        recognizabilityOk,
         gateSummary,
         failureReason
       };
