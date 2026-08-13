@@ -39,4 +39,14 @@ export const ILLUSTRATION_FIXTURES = [
     expectedFamily: 'quadruped_animal',
     expectedFirstPart: '몸통',
   },
+  {
+    id: 'mascot-kirby-star-svg',
+    name: 'Mascot Kirby Star Fixture',
+    sourcePath: './fixtures/semantic-mascot-kirby-star.svg',
+    mode: 'illustration',
+    detail: 50,
+    verificationKind: 'semantic_fixture',
+    expectedFamily: 'mascot_character',
+    expectedFirstPart: '머리윗선',
+  },
 ];

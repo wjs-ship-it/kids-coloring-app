@@ -19,7 +19,21 @@ export function selectSemanticRegions(regions, metrics, family, helpers) {
     let drawOrder = 5;
     const attachSide = classifyAttachSide(region, metrics);
 
-    if (family === 'round_character') {
+    if (family === 'mascot_character') {
+      if (region.centerY > metrics.minY + metrics.height * 0.54) {
+        semanticCategory = 'limb';
+        drawOrder = region.centerX < metrics.minX + metrics.width / 2 ? 6 : 7;
+      } else if (region.centerY < metrics.minY + metrics.height * 0.44) {
+        semanticCategory = 'head_feature';
+        drawOrder = 8;
+      } else if (
+        region.centerX < metrics.minX + metrics.width * 0.22 ||
+        region.centerX > metrics.minX + metrics.width * 0.78
+      ) {
+        semanticCategory = 'limb';
+        drawOrder = region.centerX < metrics.minX + metrics.width / 2 ? 2 : 3;
+      }
+    } else if (family === 'round_character') {
       if (region.centerY > metrics.minY + metrics.height * 0.56) {
         semanticCategory = 'limb';
         drawOrder = 2;
@@ -79,6 +93,75 @@ export function selectSemanticRegions(regions, metrics, family, helpers) {
       shapeFamily: family,
     });
   }).filter(Boolean);
+}
+
+export function buildMascotSilhouetteParts(contour, metrics, w, detail, helpers) {
+  const { extractLongestRun, simplifyContour, evenlySampleContour, buildPart } = helpers;
+  const headTopY = metrics.minY + metrics.height * 0.28;
+  const midY = metrics.minY + metrics.height * 0.50;
+  const lowerY = metrics.minY + metrics.height * 0.72;
+  const leftStarX = metrics.minX + metrics.width * 0.28;
+  const rightBodyX = metrics.minX + metrics.width * 0.64;
+  const rightStarX = metrics.minX + metrics.width * 0.76;
+  const centerLeft = metrics.minX + metrics.width * 0.28;
+  const centerRight = metrics.minX + metrics.width * 0.72;
+  const defs = [
+    [
+      extractLongestRun(contour, w, (x, y) =>
+        y <= headTopY && x >= centerLeft && x <= centerRight
+      ),
+      'silhouette',
+      1,
+      '머리윗선',
+    ],
+    [
+      extractLongestRun(contour, w, (x, y) =>
+        x >= rightBodyX && y > headTopY && y <= midY
+      ),
+      'silhouette',
+      2,
+      '오른쪽몸통',
+    ],
+    [
+      extractLongestRun(contour, w, (x, y) =>
+        x >= rightStarX && y > midY
+      ),
+      'tail_feature',
+      3,
+      '오른쪽별',
+    ],
+    [
+      extractLongestRun(contour, w, (_x, y) =>
+        y >= lowerY
+      ),
+      'silhouette',
+      4,
+      '아래별',
+    ],
+    [
+      extractLongestRun(contour, w, (x, y) =>
+        x <= leftStarX && y > midY
+      ),
+      'tail_feature',
+      5,
+      '왼쪽별',
+    ],
+  ];
+
+  return defs.flatMap(([boundaryPos, semanticCategory, drawOrder, semanticLabel]) => {
+    if (boundaryPos.length < 10) return [];
+    const simplified = evenlySampleContour(
+      simplifyContour(boundaryPos, w, Math.max(1.0, 2.4 - detail / 48)),
+      72
+    );
+    return [buildPart(simplified, w, {
+      semanticCategory,
+      semanticScore: simplified.length,
+      semanticLabel,
+      drawOrder,
+      shapeFamily: 'mascot_character',
+    })];
+  });
 }
 
 export function buildRoundCharacterSilhouette(contour, metrics, w, detail, family, helpers) {

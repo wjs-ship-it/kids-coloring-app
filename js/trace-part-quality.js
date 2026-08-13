@@ -47,6 +47,16 @@ function getThresholds(mode, part, w, h) {
   const minCanvasSpan = Math.max(12, Math.round(Math.min(w, h) * 0.04));
   const semanticCategory = part?.semanticCategory || '';
   const semantic = part?.traceStrategy === 'semantic';
+  const mascot = part?.shapeFamily === 'mascot_character';
+
+  if (semantic && mascot) {
+    return {
+      minBoundary: semanticCategory === 'head_feature' ? 8 : 10,
+      minSamples: semanticCategory === 'head_feature' ? 3 : 4,
+      minReach: Math.max(8, Math.round(minCanvasSpan * 0.62)),
+      minPathLength: Math.max(18, Math.round(minCanvasSpan * 0.9))
+    };
+  }
 
   if (semantic && semanticCategory === 'silhouette') {
     return { minBoundary: 18, minSamples: 5, minReach: minCanvasSpan, minPathLength: minCanvasSpan * 2.1 };
@@ -154,7 +164,8 @@ export function pruneTraceParts(parts, w, h, options = {}) {
       const thresholds = getThresholds(mode, part, w, h);
       const preserveSemanticCore = part.traceStrategy === 'semantic' && (
         part.semanticCategory === 'silhouette' ||
-        part.semanticCategory === 'head_feature'
+        part.semanticCategory === 'head_feature' ||
+        part.shapeFamily === 'mascot_character'
       );
       const weak = (
         metrics.boundaryCount < thresholds.minBoundary ||

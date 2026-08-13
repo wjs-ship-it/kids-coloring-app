@@ -80,6 +80,18 @@ export function detectIllustrationShapeFamily(metrics) {
   }
 
   if (
+    aspect > 0.78 &&
+    aspect < 1.45 &&
+    centered &&
+    centerMassRatio > 0.12 &&
+    topFeatureCount >= 2 &&
+    sideBalanced &&
+    lowerMassRatio > 0.10
+  ) {
+    return 'mascot_character';
+  }
+
+  if (
     aspect > 0.7 &&
     aspect < 1.4 &&
     centered &&
@@ -137,6 +149,16 @@ export function getSemanticLabel(family, semanticCategory, drawOrder) {
     if (drawOrder === 2) return '창문';
     if (drawOrder === 3) return '바퀴';
     if (semanticCategory === 'tail_feature') return '불꽃';
+  }
+  if (family === 'mascot_character') {
+    if (drawOrder === 1) return '머리윗선';
+    if (drawOrder === 2) return '오른쪽몸통';
+    if (drawOrder === 3) return '오른쪽별';
+    if (drawOrder === 4) return '아래별';
+    if (drawOrder === 5) return '왼쪽별';
+    if (semanticCategory === 'limb') return '발';
+    if (semanticCategory === 'head_feature') return '얼굴';
+    if (semanticCategory === 'tail_feature') return '별';
   }
   if (family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic') {
     if (drawOrder === 1) return '몸통';
@@ -240,6 +262,22 @@ function relabelVehiclePart(part, metrics) {
   return part.semanticLabel || '';
 }
 
+function relabelMascotPart(part, metrics) {
+  if (part.semanticCategory === 'head_feature') return '얼굴';
+  if (part.semanticCategory === 'ornament') return '장식';
+  if (part.semanticCategory === 'tail_feature') return part.semanticLabel || '별';
+  if (part.semanticCategory === 'limb') {
+    const centerX = metrics.minX + metrics.width / 2;
+    const midY = metrics.minY + metrics.height * 0.54;
+    if (part.centroid.y < midY) return part.centroid.x < centerX ? '왼손' : '오른손';
+    return part.centroid.x < centerX ? '왼발' : '오른발';
+  }
+  if (part.semanticCategory === 'silhouette') {
+    return part.semanticLabel || getSemanticLabel('mascot_character', 'silhouette', part.drawOrder);
+  }
+  return part.semanticLabel || '';
+}
+
 export function applyFamilyOrdering(parts, family, metrics) {
   const cloned = parts.map((part) => ({ ...part }));
 
@@ -287,6 +325,21 @@ export function applyFamilyOrdering(parts, family, metrics) {
     }));
   }
 
+  if (family === 'mascot_character') {
+    const categoryRank = { silhouette: 0, tail_feature: 1, limb: 2, head_feature: 3, ornament: 4 };
+    cloned.sort((a, b) =>
+      (categoryRank[a.semanticCategory] ?? 9) - (categoryRank[b.semanticCategory] ?? 9) ||
+      a.drawOrder - b.drawOrder ||
+      a.centroid.x - b.centroid.x ||
+      a.centroid.y - b.centroid.y
+    );
+    return cloned.map((part, index) => ({
+      ...part,
+      drawOrder: part.drawOrder || index + 1,
+      semanticLabel: relabelMascotPart(part, metrics),
+    }));
+  }
+
   const roundLike = family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic';
   if (roundLike) {
     const categoryRank = { silhouette: 0, limb: 1, head_feature: 2, ornament: 3, tail_feature: 4 };
@@ -320,6 +373,7 @@ export function applyFamilyOrdering(parts, family, metrics) {
 }
 
 export function getFamilyPartCap(family) {
+  if (family === 'mascot_character') return 8;
   if (family === 'round_character') return 7;
   if (family === 'longneck_animal') return 7;
   if (family === 'quadruped_animal') return 7;

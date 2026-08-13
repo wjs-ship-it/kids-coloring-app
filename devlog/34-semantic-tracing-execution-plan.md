@@ -194,6 +194,8 @@ verification 하네스용 샘플 메타데이터는 아래 필드를 가져야 �
 - illustration semantic part에 `semanticId`, `displayName`, `hint`, `toleranceMultiplier` 메타데이터를 추가했다.
 - `app.js`는 semantic part가 제공한 `hint`와 `displayName`을 직접 사용하도록 연결했다.
 - tracing 시작/스냅/완료 판정 반경이 `toleranceMultiplier`를 반영하도록 바꿨다.
+- `mascot_character` family를 추가해 커비처럼 머리/몸통 분리가 없는 둥근 마스코트가 `몸통 -> 얼굴` 2단계로 무너지는 문제를 분리했다.
+- mascot 계열은 outer contour를 `머리윗선 / 몸통 / 별` 같은 연속 run으로 쪼개고, 하단 limb region을 별도 파트로 유지하도록 완화했다.
 
 ## 정리
 - UX 조사 노트는 방향성을 준다.

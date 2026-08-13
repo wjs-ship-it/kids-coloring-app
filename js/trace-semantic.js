@@ -6,6 +6,7 @@ import {
 } from './trace-shape-family.js';
 import { collectEdgeComponents } from './lineart-shape.js';
 import {
+  buildMascotSilhouetteParts,
   buildLongneckSilhouetteParts,
   buildQuadrupedContourParts,
   buildQuadrupedSilhouetteParts,
@@ -257,6 +258,36 @@ function contourMetrics(contour, w, h) {
   };
 }
 
+function promoteMascotFamily(initialFamily, regions, metrics) {
+  if (initialFamily === 'quadruped_animal' || initialFamily === 'longneck_animal' || initialFamily === 'vehicle') {
+    return initialFamily;
+  }
+  const innerRegions = regions.filter((region) => !region.touchesBorder);
+  if (innerRegions.length < 4) return initialFamily;
+
+  const upperFaceRegions = innerRegions.filter((region) =>
+    region.centerY < metrics.minY + metrics.height * 0.46 &&
+    region.area < metrics.width * metrics.height * 0.035 &&
+    region.centerX > metrics.minX + metrics.width * 0.24 &&
+    region.centerX < metrics.minX + metrics.width * 0.76
+  );
+  const lowerRoundedRegions = innerRegions.filter((region) =>
+    region.centerY > metrics.minY + metrics.height * 0.46 &&
+    region.area > metrics.width * metrics.height * 0.025 &&
+    region.centerX > metrics.minX + metrics.width * 0.18 &&
+    region.centerX < metrics.minX + metrics.width * 0.82
+  );
+  const aspect = metrics.height / Math.max(1, metrics.width);
+  const centeredX = metrics.centerX > metrics.minX + metrics.width * 0.36 &&
+    metrics.centerX < metrics.minX + metrics.width * 0.64;
+
+  if (upperFaceRegions.length >= 2 && lowerRoundedRegions.length >= 2 && aspect > 0.7 && aspect < 1.7 && centeredX) {
+    return 'mascot_character';
+  }
+
+  return initialFamily;
+}
+
 function extractLongestRun(contour, w, predicate) {
   if (!contour.length) return [];
   const doubled = contour.concat(contour);
@@ -400,7 +431,7 @@ function sortSemanticParts(parts, family, metrics) {
 }
 
 function normalizeFamilyParts(parts, family) {
-  if (family !== 'quadruped_animal' && family !== 'vehicle') return parts;
+  if (family !== 'quadruped_animal' && family !== 'vehicle' && family !== 'mascot_character') return parts;
 
   const deduped = [];
   const seenLabels = new Set();
@@ -447,11 +478,14 @@ export function detectSemanticTraceParts(lineartData, w, h, options = {}) {
   metrics.canvasH = h;
   const regions = collectVoidRegions(isEdge, w, h);
   const familyMetrics = buildFamilyMetrics(regions, metrics);
-  const family = detectIllustrationShapeFamily(familyMetrics);
+  const detectedFamily = detectIllustrationShapeFamily(familyMetrics);
+  const family = promoteMascotFamily(detectedFamily, regions, metrics);
   const helpers = buildSemanticHelpers();
 
   let silhouetteParts = [];
-  if (family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic') {
+  if (family === 'mascot_character') {
+    silhouetteParts = buildMascotSilhouetteParts(contour, metrics, w, detail, helpers);
+  } else if (family === 'round_character' || family === 'sticker_object' || family === 'illustration_generic') {
     silhouetteParts = [buildRoundCharacterSilhouette(contour, metrics, w, detail, family, helpers)];
   } else if (family === 'longneck_animal') {
     silhouetteParts = buildLongneckSilhouetteParts(contour, metrics, w, detail, helpers);
