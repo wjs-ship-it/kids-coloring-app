@@ -522,12 +522,13 @@ function snapToLine(tx, ty, part) {
   const snapRadius = Math.max(12, Math.round(SNAP_RADIUS * (part?.toleranceMultiplier || 1)));
   const traceTolerance = Math.max(snapRadius + 4, Math.round(TRACE_TOLERANCE * (part?.toleranceMultiplier || 1)));
   let minDist = Infinity, snapX = tx, snapY = ty;
-  for (let i = 0; i < part.boundaryPos.length; i += 3) {
-    const pos = part.boundaryPos[i];
-    const bx = (pos % laW) + offX;
-    const by = Math.floor(pos / laW) + offY;
-    const d = Math.sqrt((tx - bx) ** 2 + (ty - by) ** 2);
-    if (d < minDist) { minDist = d; snapX = bx; snapY = by; }
+  const tracePoints = getTraceCanvasPoints(part, {
+    maxStep: Math.max(4, Math.round(traceTolerance * 0.45))
+  });
+  for (let i = 0; i < tracePoints.length; i += 2) {
+    const point = tracePoints[i];
+    const d = Math.sqrt((tx - point.x) ** 2 + (ty - point.y) ** 2);
+    if (d < minDist) { minDist = d; snapX = point.x; snapY = point.y; }
   }
   if (minDist < snapRadius) return { x: snapX, y: snapY, valid: true };
   if (minDist < traceTolerance) {
@@ -541,9 +542,12 @@ function buildTraceZone(part) {
   const cw = DC.width, ch = DC.height;
   const zone = new Uint8Array(cw * ch);
   const traceTolerance = Math.max(14, Math.round(TRACE_TOLERANCE * (part?.toleranceMultiplier || 1)));
-  for (const pos of part.boundaryPos) {
-    const lx = pos % laW, ly = Math.floor(pos / laW);
-    const cx = lx + offX, cy = ly + offY;
+  const tracePoints = getTraceCanvasPoints(part, {
+    maxStep: Math.max(4, Math.round(traceTolerance * 0.4))
+  });
+  for (const point of tracePoints) {
+    const cx = point.x;
+    const cy = point.y;
     for (let dy = -traceTolerance; dy <= traceTolerance; dy++) {
       for (let dx = -traceTolerance; dx <= traceTolerance; dx++) {
         if (dx * dx + dy * dy <= traceTolerance * traceTolerance) {
@@ -781,6 +785,45 @@ function projectBoundaryToCanvas(boundaryPos) {
   }));
 }
 
+function getTraceCanvasPoints(part, options = {}) {
+  if (!part || !Array.isArray(part.boundaryPos) || part.boundaryPos.length === 0) return [];
+
+  const traceTolerance = Math.max(14, Math.round(TRACE_TOLERANCE * (part?.toleranceMultiplier || 1)));
+  const maxStep = Math.max(3, options.maxStep ?? Math.round(traceTolerance * 0.35));
+  const breakThreshold = Math.max(
+    traceTolerance * 2.4,
+    options.breakThreshold ?? Math.round(traceTolerance * 3.2)
+  );
+  const cacheKey = `${maxStep}:${breakThreshold}:${offX}:${offY}`;
+  if (part._traceCanvasPointCacheKey === cacheKey && Array.isArray(part._traceCanvasPoints)) {
+    return part._traceCanvasPoints;
+  }
+
+  const projected = projectBoundaryToCanvas(part.boundaryPos);
+  const expanded = [projected[0]];
+  for (let i = 1; i < projected.length; i++) {
+    const prev = projected[i - 1];
+    const point = projected[i];
+    const distance = Math.hypot(point.x - prev.x, point.y - prev.y);
+    if (distance > breakThreshold) {
+      expanded.push(point);
+      continue;
+    }
+    const steps = Math.max(1, Math.ceil(distance / maxStep));
+    for (let step = 1; step <= steps; step++) {
+      const t = step / steps;
+      expanded.push({
+        x: Math.round(prev.x + (point.x - prev.x) * t),
+        y: Math.round(prev.y + (point.y - prev.y) * t)
+      });
+    }
+  }
+
+  part._traceCanvasPointCacheKey = cacheKey;
+  part._traceCanvasPoints = expanded;
+  return expanded;
+}
+
 function collapseDenseTracePoints(points, gapThreshold) {
   if (points.length <= 2) return points;
   const collapsed = [points[0]];
@@ -826,7 +869,10 @@ function strokeTracePart(boundaryPos, {
   if (!Array.isArray(boundaryPos) || boundaryPos.length < 2) return;
 
   const gapThreshold = Math.max(16, TRACE_TOLERANCE * gapMultiplier);
-  const projected = projectBoundaryToCanvas(boundaryPos);
+  const projected = getTraceCanvasPoints({ boundaryPos }, {
+    maxStep: Math.max(4, Math.round(gapThreshold * 0.28)),
+    breakThreshold: Math.max(gapThreshold * 2.2, 96)
+  });
   cx.save();
   cx.strokeStyle = strokeStyle;
   cx.lineWidth = lineWidth;
