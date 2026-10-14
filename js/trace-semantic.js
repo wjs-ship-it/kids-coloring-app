@@ -380,9 +380,17 @@ function toSemanticId(label, category, drawOrder) {
     .toLowerCase();
 }
 
+function getTopicParticle(label) {
+  const last = String(label || '').trim().at(-1);
+  if (!last) return '는';
+  const code = last.charCodeAt(0);
+  if (code < 0xAC00 || code > 0xD7A3) return '는';
+  return (code - 0xAC00) % 28 === 0 ? '는' : '은';
+}
+
 function getPartHint(label, family, category) {
   if (!label) return '점선을 따라 그려봐요! ✏️';
-  if (category === 'head_feature') return `${label}는 나중에 또렷하게 그려봐요! ✏️`;
+  if (category === 'head_feature') return `${label}${getTopicParticle(label)} 나중에 또렷하게 그려봐요! ✏️`;
   if (category === 'ornament') return `${label}으로 마무리해봐요! ✨`;
   if (category === 'tail_feature') return `${label} 쪽으로 길게 이어 그려봐요! ✏️`;
   if (family === 'longneck_animal' && label === '목') return '목을 길게 이어서 따라 그려봐요! ✏️';

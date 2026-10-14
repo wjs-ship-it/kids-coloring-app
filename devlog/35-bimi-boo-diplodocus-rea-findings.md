@@ -64,6 +64,11 @@
 - Impact: Semantic QA now reports `semantic_background_too_early` when a decorative/background region appears before the target drawing is established.
 - Verification: `cli-jaw browser navigate "http://127.0.0.1:4177/verify-fill-regions.html"` followed by `Run Fixture Verification` returned `5/5 fixtures passed`, showed `Target First 2: yes` for every fixture, and reported no console entries. Screenshot evidence: `/home/sang/.cli-jaw/screenshots/screenshot_1791988231093.png`.
 
+### /home/sang/Projects/kids-coloring-app/js/trace-semantic.js — Korean topic particle in part hints
+- Changes: Added a small Hangul final-consonant check for head-feature hints so labels render as `얼굴은` instead of `얼굴는`.
+- Impact: Semantic trace hints remain natural when the part label ends with a final consonant.
+- Verification: `cli-jaw browser navigate "http://127.0.0.1:4177/index.html?no-sw=1&sw-reset=1&v=particle-fix"` then cat preset → trace mode → complete the first trace part. The second trace part displayed `얼굴은 나중에 또렷하게 그려봐요!` with no console entries. Screenshot evidence: `/home/sang/.cli-jaw/screenshots/screenshot_1791988907777.png`.
+
 ## Verification Evidence
 - `unzip -l /home/sang/Projects/kids-coloring-app/reference-apks/com.bimiboo.kids.drawing/base.apk` showed the Addressables catalog, drawing gameplay prefab bundle, `diplodocus.bundle`, and `finish-picture-5-(diplodocus).bundle`.
 - `file /home/sang/Projects/kids-coloring-app/reference-apks/com.bimiboo.kids.drawing/extracted-focus/unitypy-export/*diplodocus*.png /home/sang/Projects/kids-coloring-app/reference-apks/com.bimiboo.kids.drawing/extracted-focus/unitypy-export/*stroke.png` confirmed:
