@@ -659,6 +659,7 @@
           renderMetric('Family Gate', result.semantic.familyMatchesExpected ? 'yes' : 'no'),
           renderMetric('Order Gate', result.semantic.orderingMatchesExpected ? 'yes' : 'no'),
           renderMetric('Recognizable', result.semantic.recognizabilityOk ? 'yes' : 'no'),
+          renderMetric('Target First 2', result.semantic.targetFirstTwoClean ? 'yes' : 'no'),
           renderMetric('Ornament Last', result.semantic.ornamentLast ? 'yes' : 'no'),
           renderMetric('Face Late', result.semantic.headFeatureLate ? 'yes' : 'no')
         ].join('');
@@ -719,6 +720,7 @@
           headFeatureLate: true,
           orderingMatchesExpected: true,
           recognizabilityOk: true,
+          targetFirstTwoClean: true,
           gateSummary: 'n/a',
           failureReason: ''
         };
@@ -751,7 +753,9 @@
         orderingMatchesExpected = ['몸체', '창문'].includes(firstPartName);
       }
 
-      const recognizabilityOk = semanticParts.length >= 2 && [semanticParts[0], semanticParts[1]].every((part) => part.label && part.category !== 'ornament');
+      const firstTwoParts = semanticParts.slice(0, 2);
+      const recognizabilityOk = semanticParts.length >= 2 && firstTwoParts.every((part) => part.label);
+      const targetFirstTwoClean = firstTwoParts.every((part) => part.category !== 'ornament');
       const ok = firstPartOk
         && familyMatchesExpected
         && firstPartMatchesExpected
@@ -759,7 +763,8 @@
         && ornamentLast
         && headFeatureLate
         && orderingMatchesExpected
-        && recognizabilityOk;
+        && recognizabilityOk
+        && targetFirstTwoClean;
 
       let failureReason = '';
       if (!firstPartOk) failureReason = 'semantic_first_part_unknown';
@@ -768,6 +773,7 @@
       else if (nameCoverage < 100) failureReason = 'semantic_name_missing';
       else if (!orderingMatchesExpected) failureReason = 'semantic_order_regressed';
       else if (!recognizabilityOk) failureReason = 'semantic_first_two_parts_not_recognizable';
+      else if (!targetFirstTwoClean) failureReason = 'semantic_background_too_early';
       else if (!headFeatureLate) failureReason = 'semantic_face_too_early';
       else if (!ornamentLast) failureReason = 'semantic_ornament_too_early';
 
@@ -777,6 +783,7 @@
         `names:${nameCoverage}%`,
         `order:${orderingMatchesExpected ? 'ok' : 'fail'}`,
         `recognize:${recognizabilityOk ? 'ok' : 'fail'}`,
+        `target:${targetFirstTwoClean ? 'ok' : 'fail'}`,
         `ornament:${ornamentLast ? 'ok' : 'fail'}`,
         `face:${headFeatureLate ? 'ok' : 'fail'}`
       ].join(' · ');
@@ -793,6 +800,7 @@
         headFeatureLate,
         orderingMatchesExpected,
         recognizabilityOk,
+        targetFirstTwoClean,
         gateSummary,
         failureReason
       };

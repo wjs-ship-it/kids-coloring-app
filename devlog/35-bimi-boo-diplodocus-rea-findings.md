@@ -53,9 +53,16 @@
 
 ## Gaps To Close
 - Add a fixture or generated test source that better resembles the Bimi Boo diplodocus layout without copying the extracted artwork.
-- Add a semantic gate for background suppression: decorative/background regions should not appear before the target animal's first two semantic parts.
+- Add a fixture-level semantic gate for background suppression: decorative/background regions should not appear before the target animal's first two semantic parts.
 - Add a long-neck-specific QA expectation for body spots or ornaments appearing late.
 - Consider showing completed semantic parts with a distinct completed-state tint so the UI approximates the reference `step/mask/back` separation.
+
+## Implementation Follow-Up
+
+### /home/sang/Projects/kids-coloring-app/verify-fill-regions.html — target-first semantic gate
+- Changes: Split the existing first-two-parts recognizability check from the new `Target First 2` gate. The recognizability gate now checks that the first two semantic parts are named, while `Target First 2` checks that they are not `ornament`.
+- Impact: Semantic QA now reports `semantic_background_too_early` when a decorative/background region appears before the target drawing is established.
+- Verification: `cli-jaw browser navigate "http://127.0.0.1:4177/verify-fill-regions.html"` followed by `Run Fixture Verification` returned `5/5 fixtures passed`, showed `Target First 2: yes` for every fixture, and reported no console entries. Screenshot evidence: `/home/sang/.cli-jaw/screenshots/screenshot_1791988231093.png`.
 
 ## Verification Evidence
 - `unzip -l /home/sang/Projects/kids-coloring-app/reference-apks/com.bimiboo.kids.drawing/base.apk` showed the Addressables catalog, drawing gameplay prefab bundle, `diplodocus.bundle`, and `finish-picture-5-(diplodocus).bundle`.
