@@ -1,0 +1,1038 @@
+[
+  {
+    "name": "cbn-wild-animals-3",
+    "types": {
+      "Sprite": 56,
+      "Texture2D": 56,
+      "AssetBundle": 1,
+      "TextAsset": 1
+    },
+    "textures": [
+      {
+        "name": "image-21",
+        "width": 203,
+        "height": 106
+      },
+      {
+        "name": "image-29",
+        "width": 49,
+        "height": 48
+      },
+      {
+        "name": "image-43",
+        "width": 127,
+        "height": 124
+      },
+      {
+        "name": "image-48",
+        "width": 142,
+        "height": 137
+      },
+      {
+        "name": "image-44",
+        "width": 220,
+        "height": 154
+      },
+      {
+        "name": "image-47",
+        "width": 86,
+        "height": 66
+      },
+      {
+        "name": "image-5",
+        "width": 144,
+        "height": 140
+      },
+      {
+        "name": "image-17",
+        "width": 398,
+        "height": 42
+      },
+      {
+        "name": "image-10",
+        "width": 158,
+        "height": 153
+      },
+      {
+        "name": "image-19",
+        "width": 196,
+        "height": 85
+      },
+      {
+        "name": "image-33",
+        "width": 94,
+        "height": 388
+      },
+      {
+        "name": "image-42",
+        "width": 77,
+        "height": 134
+      },
+      {
+        "name": "image-37",
+        "width": 325,
+        "height": 358
+      },
+      {
+        "name": "image-3",
+        "width": 87,
+        "height": 85
+      },
+      {
+        "name": "image-25",
+        "width": 115,
+        "height": 191
+      },
+      {
+        "name": "image-8",
+        "width": 69,
+        "height": 67
+      },
+      {
+        "name": "image-51",
+        "width": 82,
+        "height": 59
+      },
+      {
+        "name": "image-18",
+        "width": 99,
+        "height": 94
+      },
+      {
+        "name": "image-36",
+        "width": 329,
+        "height": 318
+      },
+      {
+        "name": "image-41",
+        "width": 168,
+        "height": 88
+      },
+      {
+        "name": "image-15",
+        "width": 285,
+        "height": 75
+      },
+      {
+        "name": "image-31",
+        "width": 370,
+        "height": 123
+      },
+      {
+        "name": "image-22",
+        "width": 268,
+        "height": 62
+      },
+      {
+        "name": "image-16",
+        "width": 197,
+        "height": 102
+      },
+      {
+        "name": "image-38",
+        "width": 415,
+        "height": 300
+      },
+      {
+        "name": "image-52",
+        "width": 71,
+        "height": 69
+      },
+      {
+        "name": "image-9",
+        "width": 332,
+        "height": 285
+      },
+      {
+        "name": "image-12",
+        "width": 337,
+        "height": 71
+      },
+      {
+        "name": "image-50",
+        "width": 198,
+        "height": 183
+      },
+      {
+        "name": "image-55",
+        "width": 90,
+        "height": 67
+      },
+      {
+        "name": "image-23",
+        "width": 304,
+        "height": 103
+      },
+      {
+        "name": "image-45",
+        "width": 110,
+        "height": 196
+      },
+      {
+        "name": "image-30",
+        "width": 155,
+        "height": 237
+      },
+      {
+        "name": "image-53",
+        "width": 90,
+        "height": 88
+      },
+      {
+        "name": "image-26",
+        "width": 234,
+        "height": 111
+      },
+      {
+        "name": "image-34",
+        "width": 201,
+        "height": 175
+      },
+      {
+        "name": "stroke",
+        "width": 958,
+        "height": 962
+      },
+      {
+        "name": "image-27",
+        "width": 189,
+        "height": 147
+      },
+      {
+        "name": "image-11",
+        "width": 144,
+        "height": 141
+      },
+      {
+        "name": "image-46",
+        "width": 85,
+        "height": 91
+      },
+      {
+        "name": "image-7",
+        "width": 125,
+        "height": 187
+      },
+      {
+        "name": "image-28",
+        "width": 234,
+        "height": 235
+      },
+      {
+        "name": "image-2",
+        "width": 631,
+        "height": 127
+      },
+      {
+        "name": "image-39",
+        "width": 151,
+        "height": 179
+      },
+      {
+        "name": "image-32",
+        "width": 141,
+        "height": 239
+      },
+      {
+        "name": "image-6",
+        "width": 170,
+        "height": 115
+      },
+      {
+        "name": "image-1",
+        "width": 266,
+        "height": 196
+      },
+      {
+        "name": "image-20",
+        "width": 611,
+        "height": 161
+      },
+      {
+        "name": "image-13",
+        "width": 88,
+        "height": 102
+      },
+      {
+        "name": "image-49",
+        "width": 112,
+        "height": 96
+      },
+      {
+        "name": "image-14",
+        "width": 101,
+        "height": 110
+      },
+      {
+        "name": "image-4",
+        "width": 221,
+        "height": 138
+      },
+      {
+        "name": "image-35",
+        "width": 151,
+        "height": 235
+      },
+      {
+        "name": "image-40",
+        "width": 176,
+        "height": 170
+      },
+      {
+        "name": "image-54",
+        "width": 209,
+        "height": 111
+      },
+      {
+        "name": "image-24",
+        "width": 65,
+        "height": 97
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "coloring-princesses-11-(princess-1)",
+    "types": {
+      "Sprite": 11,
+      "Texture2D": 11,
+      "AssetBundle": 1
+    },
+    "textures": [
+      {
+        "name": "image-5",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-10",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-3",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-8",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "stroke",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-background",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-7",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-2",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-6",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-1",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-4",
+        "width": 920,
+        "height": 1080
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "diplodocus",
+    "types": {
+      "MeshFilter": 1,
+      "AudioClip": 2,
+      "Material": 1,
+      "MonoBehaviour": 3,
+      "Shader": 1,
+      "TextAsset": 2,
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "MonoScript": 3,
+      "Transform": 1,
+      "MeshRenderer": 1,
+      "GameObject": 1
+    },
+    "textures": [
+      {
+        "name": "diplodocus",
+        "width": 2048,
+        "height": 2048
+      }
+    ],
+    "atlas_regions": [
+      "back_0_0",
+      "back_1_0",
+      "back_2_0",
+      "back_3_0",
+      "back_4_0",
+      "back_5_0",
+      "back_6_0",
+      "back_7_0",
+      "back_8_0",
+      "back_9_0",
+      "mask_0_0",
+      "mask_1_0",
+      "mask_2_0",
+      "mask_3_0",
+      "mask_4_0",
+      "mask_5_0",
+      "mask_6_0",
+      "mask_7_0",
+      "mask_8_0",
+      "mask_9_0",
+      "step_0_0",
+      "step_1_0",
+      "step_2_0",
+      "step_3_0",
+      "step_4_0",
+      "step_5_0",
+      "step_6_0",
+      "step_7_0",
+      "step_8_0",
+      "step_9_0"
+    ]
+  },
+  {
+    "name": "dtd-18-(moon-bear)",
+    "types": {
+      "Sprite": 11,
+      "Texture2D": 11,
+      "AssetBundle": 1,
+      "TextAsset": 1
+    },
+    "textures": [
+      {
+        "name": "image-5",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-3",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-8",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-bg",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-9",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "stroke",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-7",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-2",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-6",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-1",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-4",
+        "width": 920,
+        "height": 1080
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "finish-picture-5-(diplodocus)",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 920,
+        "height": 1080
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "free-drawing-1",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "free-drawing-10",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "free-drawing-2",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "free-drawing-3",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "free-drawing-4",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "free-drawing-5",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "free-drawing-6",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "free-drawing-7",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "free-drawing-8",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "free-drawing-9",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "mandala-2-5",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 1040,
+        "height": 1040
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "mandala-8-1",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "mandala-8-2",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "mandala-8-3",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "mandala-8-4",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "mandala-8-5",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "mandala-8-6",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "mandala-8-7",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "mandala-8-8",
+    "types": {
+      "AssetBundle": 1,
+      "Texture2D": 1,
+      "Sprite": 1
+    },
+    "textures": [
+      {
+        "name": "stroke",
+        "width": 512,
+        "height": 512
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "pixel-shapes-4(deer)",
+    "types": {
+      "Texture2D": 2,
+      "TextAsset": 1,
+      "Sprite": 2,
+      "AssetBundle": 1
+    },
+    "textures": [
+      {
+        "name": "icon",
+        "width": 388,
+        "height": 388
+      },
+      {
+        "name": "pixel-art-10px",
+        "width": 10,
+        "height": 10
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "scratch-2-(excavator)",
+    "types": {
+      "Sprite": 14,
+      "Texture2D": 14,
+      "AssetBundle": 1
+    },
+    "textures": [
+      {
+        "name": "image-5",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-10",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-3",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-8",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-9",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "stroke",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-background",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-11",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-7",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-2",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-6",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-1",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-4",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-progress",
+        "width": 920,
+        "height": 1080
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "scratch_coloring_bimi_scholar_25_bts",
+    "types": {
+      "Sprite": 18,
+      "Texture2D": 18,
+      "AssetBundle": 1
+    },
+    "textures": [
+      {
+        "name": "image-5",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-10",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-3",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-8",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-15",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-9",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-12",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "stroke",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-background",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-11",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-7",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-2",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-6",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-1",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-13",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-14",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-4",
+        "width": 920,
+        "height": 1080
+      },
+      {
+        "name": "image-progress",
+        "width": 920,
+        "height": 1080
+      }
+    ],
+    "atlas_regions": []
+  },
+  {
+    "name": "stars-polar-bear",
+    "types": {
+      "AudioClip": 2,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "textures": [
+      {
+        "name": "spine",
+        "width": 2048,
+        "height": 2048
+      }
+    ],
+    "atlas_regions": [
+      "back-0",
+      "back-1",
+      "back-2",
+      "back-3",
+      "back-4",
+      "back-5",
+      "back-6",
+      "back-7",
+      "back-8"
+    ]
+  }
+]
