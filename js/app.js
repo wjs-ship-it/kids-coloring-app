@@ -8,8 +8,8 @@ import { exportAnalyticsSession, setAnalyticsContext, trackEvent } from './analy
 import { getBuiltinPresetPack } from './packs.js';
 import { pruneTraceParts } from './trace-part-quality.js';
 import { FILL_TOOLS, drawRegionFill } from './color-fill-tools.js';
-import { mountPresetGallery, renderContentPreset } from './preset-gallery.js?v=guided-trace-1';
-import { buildGuidedParts, startGuidedStroke, advanceGuidedStroke, getGuidedProgress, guidedStepComplete } from './guided-trace.js';
+import { mountPresetGallery, renderContentPreset } from './preset-gallery.js?v=recovered-guides-1';
+import { buildGuidedParts, startGuidedStroke, advanceGuidedStroke, getGuidedProgress, guidedStepComplete } from './guided-trace.js?v=recovered-guides-1';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];

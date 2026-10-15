@@ -1,4 +1,5 @@
 import { ORIGINAL_DINOSAURS } from './original-dinosaurs.js';
+import { RECOVERED_CONTENT } from './recovered-content.js';
 
 export const FAMILY_CONTENT_PACK = {
   id: 'family-drawing-content',
@@ -17,6 +18,7 @@ export const FAMILY_CONTENT_PACK = {
   ],
   items: [
     ...ORIGINAL_DINOSAURS,
+    ...RECOVERED_CONTENT,
     {"id": "scratch_coloring_bimi_scholar_25_bts", "name": "학사모 곰돌이", "category": "friends", "src": "./assets/family-content/scratch_coloring_bimi_scholar_25_bts.png", "activity": "color"},
     {"id": "scratch-2-(excavator)", "name": "굴착기", "category": "friends", "src": "./assets/family-content/scratch-2-(excavator).png", "activity": "color"},
     {"id": "cbn-wild-animals-3", "name": "나뭇가지 위 올빼미", "category": "friends", "src": "./assets/family-content/cbn-wild-animals-3.png", "activity": "color"},

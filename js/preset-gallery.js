@@ -1,5 +1,5 @@
 import { PRESETS, renderPreset } from './presets.js';
-import { FAMILY_CONTENT_PACK } from './packs/family-content.js?v=guided-trace-1';
+import { FAMILY_CONTENT_PACK } from './packs/family-content.js?v=recovered-guides-1';
 
 export async function renderContentPreset(item, canvas, ctx) {
   const size = FAMILY_CONTENT_PACK.canvasSize;

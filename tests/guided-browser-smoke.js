@@ -1,4 +1,4 @@
-import { buildGuidedParts } from '../js/guided-trace.js';
+import { buildGuidedParts } from '../js/guided-trace.js?v=recovered-guides-1';
 
 function assert(value, message) {
   if (!value) throw new Error(message);
