@@ -1,4 +1,4 @@
-import { runFullPipeline, detectParts, buildFillRegions } from './edge-detect.js';
+import { runFullPipeline, detectParts, buildFillRegions } from './edge-detect.js?v=photo-conversion-2';
 
 self.onmessage = function(e) {
   const { imageData, w, h, mode, detail, task } = e.data;

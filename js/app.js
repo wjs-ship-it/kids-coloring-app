@@ -2,7 +2,7 @@ import { createDemoCatBlob } from './demo.js';
 import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonBg, rebuildPalette } from './creative.js';
 import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showScreen, setLoadingText } from './ui-utils.js';
 import { PRESETS, renderPreset } from './presets.js';
-import { detectParts, dilate, fuseLines, normalizeLineWidth, buildFillRegions, resolvePipelineMode } from './edge-detect.js';
+import { detectParts, dilate, fuseLines, normalizeLineWidth, buildFillRegions, resolvePipelineMode } from './edge-detect.js?v=photo-conversion-2';
 import { removeBackground } from './bg-remove.js';
 import { exportAnalyticsSession, setAnalyticsContext, trackEvent } from './analytics.js';
 import { getBuiltinPresetPack } from './packs.js';
@@ -336,7 +336,7 @@ function convertToLineart(img) {
 
 function runEdgeWorker(rawData, w, h, isFirstRun) {
   if (edgeWorker) edgeWorker.terminate();
-  edgeWorker = new Worker('./js/edge-worker.js', { type: 'module' });
+  edgeWorker = new Worker('./js/edge-worker.js?v=photo-conversion-2', { type: 'module' });
   debugMark('worker-start', { width: w, height: h, isFirstRun, edgeMode: getPipelineMode(), detailLevel });
 
   const sliderWrap = document.getElementById('detail-slider-wrap');
@@ -409,7 +409,7 @@ function runEdgeWorker(rawData, w, h, isFirstRun) {
 
 function analyzeLineartInWorker(lineart, w, h, task, onDone) {
   if (edgeWorker) edgeWorker.terminate();
-  edgeWorker = new Worker('./js/edge-worker.js', { type: 'module' });
+  edgeWorker = new Worker('./js/edge-worker.js?v=photo-conversion-2', { type: 'module' });
   debugMark('lineart-analysis-start', { width: w, height: h, task });
 
   edgeWorker.onmessage = (e) => {
