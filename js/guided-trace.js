@@ -18,18 +18,20 @@ export function buildGuidedParts(guide, width, height) {
       const pos = py * width + px;
       if (boundaryPos.at(-1) !== pos) boundaryPos.push(pos);
     }
-    if (boundaryPos[0] !== boundaryPos.at(-1)) boundaryPos.push(boundaryPos[0]);
-    const points = boundaryPos.slice(0, -1).map(pos => ({ x: pos % width, y: Math.floor(pos / width) }));
+    const closed = step.closed !== false;
+    if (closed && boundaryPos[0] !== boundaryPos.at(-1)) boundaryPos.push(boundaryPos[0]);
+    const samples = closed ? boundaryPos.slice(0, -1) : boundaryPos;
+    const points = samples.map(pos => ({ x: pos % width, y: Math.floor(pos / width) }));
     if (points.length < 3 || points.some((point, i) =>
-      Math.hypot(point.x - points[(i + 1) % points.length].x,
+      (closed || i < points.length - 1) && Math.hypot(point.x - points[(i + 1) % points.length].x,
         point.y - points[(i + 1) % points.length].y) > config.continuityLimit)) {
       throw new Error(`Discontinuous drawing path: ${index}`);
     }
     return {
-      boundaryPos, pixels: boundaryPos.slice(), samplePoints: boundaryPos.slice(0, -1),
+      boundaryPos, pixels: boundaryPos.slice(), samplePoints: samples.slice(),
       traceStrategy: 'guided', displayName: step.name,
       hint: `${step.name} 선을 따라 그려봐요!`, toleranceMultiplier: 1,
-      guided: { points, visited: new Uint8Array(points.length), index: null }
+      guided: { points, closed, visited: new Uint8Array(points.length), index: null }
     };
   });
 }
@@ -46,7 +48,8 @@ function route(points, from, to, direction) {
   return { indices, length };
 }
 
-function shortestRoute(points, from, to) {
+function shortestRoute(points, from, to, closed) {
+  if (!closed) return route(points, from, to, to >= from ? 1 : -1);
   const forward = route(points, from, to, 1);
   const backward = route(points, from, to, -1);
   return forward.length <= backward.length ? forward : backward;
@@ -76,7 +79,7 @@ export function advanceGuidedStroke(part, target) {
     const point = state.points[i];
     const distance = Math.hypot(target.x - point.x, target.y - point.y);
     if (distance > config.snapRadius || (best && distance >= best.distance)) continue;
-    const walk = shortestRoute(state.points, state.index, i);
+    const walk = shortestRoute(state.points, state.index, i, state.closed);
     if (walk.length <= maxArc) best = { distance, index: i, walk };
   }
   if (!best || best.index === state.index) return [];
