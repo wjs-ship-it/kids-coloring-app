@@ -8,6 +8,7 @@ import { exportAnalyticsSession, setAnalyticsContext, trackEvent } from './analy
 import { getBuiltinPresetPack } from './packs.js';
 import { pruneTraceParts } from './trace-part-quality.js';
 import { FILL_TOOLS, drawRegionFill } from './color-fill-tools.js';
+import { mountPresetGallery, renderContentPreset } from './preset-gallery.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -31,6 +32,7 @@ let lastProcessTime = 0;
 let edgeWorker = null;
 let creativeMode = null;
 let hasPhoto = false;
+let presetSelected = false;
 let edgeMode = 'object';
 let activeEdgeMode = 'object';
 let detailLevel = 50;
@@ -217,6 +219,7 @@ function goHome() {
   isProcessing = false;
   creativeMode = null;
   hasPhoto = false;
+  presetSelected = false;
   activeEdgeMode = edgeMode;
   resetColorMissionState();
   lineBoundary = null;
@@ -273,6 +276,7 @@ async function processPhoto(blob) {
 }
 
 function convertToLineart(img) {
+  presetSelected = false;
   const MAX = 800;
   let w = img.width, h = img.height;
   if (w > MAX || h > MAX) {
@@ -1939,7 +1943,7 @@ document.getElementById('btn-save').addEventListener('click', saveImage);
 document.getElementById('btn-export').addEventListener('click', exportSession);
 document.getElementById('btn-creative').addEventListener('click', () => { hasPhoto = false; showScreen('mode-screen'); });
 document.getElementById('btn-mode-back').addEventListener('click', () => {
-  showScreen(hasPhoto ? 'preview-screen' : 'upload-screen');
+  showScreen(presetSelected && hasPhoto ? 'preset-screen' : hasPhoto ? 'preview-screen' : 'upload-screen');
 });
 
 document.querySelectorAll('.mtbtn').forEach(btn => {
@@ -1986,17 +1990,38 @@ document.getElementById('btn-presets').addEventListener('click', () => showScree
 document.getElementById('btn-preset-back').addEventListener('click', () => showScreen('upload-screen'));
 
 function buildPresetGrid() {
-  const grid = document.getElementById('preset-grid');
-  const items = builtinPresetPack?.items || [];
-  items.forEach((item) => {
-    const preset = PRESETS[item.presetIndex];
-    if (!preset) return;
-    const card = document.createElement('button');
-    card.className = 'preset-card';
-    card.innerHTML = `<span class="preset-emoji">${preset.emoji}</span><span class="preset-name">${preset.name}</span>`;
-    card.addEventListener('click', () => loadPreset(item.presetIndex));
-    grid.appendChild(card);
+  mountPresetGallery(builtinPresetPack, async item => {
+    if (item.presetIndex !== undefined) return loadPreset(item.presetIndex);
+    const result = await renderContentPreset(item, SC, sx);
+    openPresetResult(result, item.name);
+    if (item.activity === 'trace') ensurePresetTraceReady(() => beginActivity());
+    if (item.activity === 'color') ensurePresetFillReady(() => beginColorDirect());
   });
+}
+
+function openPresetResult(result, name) {
+  lineartData = result.lineartData;
+  laW = result.size; laH = result.size;
+  _sourceImgData = null;
+  _sourceW = 0; _sourceH = 0;
+  activeEdgeMode = 'illustration';
+  setAnalyticsContext({
+    selectedMode: 'illustration', resolvedMode: 'illustration', detail: detailLevel
+  });
+  parts = [];
+  hydrateFillData(null);
+  const lp = document.getElementById('lineart-preview');
+  lp.width = result.size; lp.height = result.size;
+  lp.getContext('2d').putImageData(lineartData, 0, 0);
+  document.getElementById('preview-img').src = SC.toDataURL();
+  document.getElementById('detail-slider-wrap').style.display = 'none';
+  hasPhoto = true;
+  presetSelected = true;
+  isProcessing = false;
+  showScreen('mode-screen');
+  document.querySelector('#mode-screen .mode-card').focus({ preventScroll: true });
+  trackEvent('preview_opened', { detail: detailLevel, source: 'preset', presetName: name });
+  debugMark('preset-mode-screen-ready', { hasPhoto, name });
 }
 
 function loadPreset(idx) {
@@ -2004,29 +2029,7 @@ function loadPreset(idx) {
   try {
     const result = renderPreset(PRESETS[idx], SC, sx);
     debugMark('preset-rendered', { size: result.size });
-    lineartData = result.lineartData;
-    laW = result.size; laH = result.size;
-    activeEdgeMode = 'illustration';
-    setAnalyticsContext({
-      selectedMode: 'illustration',
-      resolvedMode: 'illustration',
-      detail: detailLevel
-    });
-    parts = [];
-    hydrateFillData(null);
-    const lp = document.getElementById('lineart-preview');
-    lp.width = result.size; lp.height = result.size;
-    lp.getContext('2d').putImageData(lineartData, 0, 0);
-    document.getElementById('preview-img').src = SC.toDataURL();
-    hasPhoto = true;
-    isProcessing = false;
-    showScreen('mode-screen');
-    trackEvent('preview_opened', {
-      detail: detailLevel,
-      source: 'preset',
-      presetName: PRESETS[idx]?.name || null
-    });
-    debugMark('preset-mode-screen-ready', { hasPhoto });
+    openPresetResult(result, PRESETS[idx].name);
   } catch (error) {
     debugMark('preset-error', { message: error?.message || String(error) });
     throw error;

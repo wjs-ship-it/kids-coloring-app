@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kids-coloring-v5';
+const CACHE_NAME = 'kids-coloring-v6';
 const WASM_CACHE = 'kids-coloring-wasm-v1';
 
 const CORE_ASSETS = [
@@ -15,6 +15,14 @@ const CORE_ASSETS = [
   './js/demo.js',
   './js/ai-bridge.js',
   './js/presets.js',
+  './js/preset-gallery.js',
+  './js/packs.js',
+  './js/packs/registry.js',
+  './js/packs/preset-packs.js',
+  './js/packs/family-content.js',
+  './js/packs/sample-packs.js',
+  './js/packs/theme-packs.js',
+  './js/packs/premium-packs.js',
   './js/particles.js',
   './icons/icon-192.png',
   './icons/icon-512.png'

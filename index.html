@@ -217,10 +217,24 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 .save-toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#4C3C36;color:#FFF;padding:14px 28px;border-radius:20px;font-size:17px;font-weight:800;z-index:200;display:none;box-shadow:0 12px 30px rgba(0,0,0,.17)}
 
 /* ═══ Preset ═══ */
-#preset-screen{background:linear-gradient(180deg,#FFF9EC,#FFF6E4);gap:16px;padding:28px 20px;justify-content:center}
+#preset-screen{background:var(--bg);gap:16px;padding:24px 20px max(32px,env(safe-area-inset-bottom));justify-content:flex-start}
 .preset-title{font-size:26px;font-weight:900;letter-spacing:-.7px}
-.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:340px;width:100%}
+.preset-header{position:sticky;top:-24px;z-index:2;background:var(--bg);padding:12px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;max-width:780px}
+.preset-header .demo-pill{padding:12px 18px;min-height:44px;flex-shrink:0}
+.preset-filters{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:780px}
+.preset-filter{min-height:44px;padding:10px 16px;border-radius:16px;background:#fff;color:var(--ink);font-size:14px;font-weight:800;border:2px solid transparent}
+.preset-filter[aria-pressed="true"]{background:var(--mint);border-color:var(--mint-deep)}
+.preset-filter:hover{border-color:var(--mint-deep)}
+.preset-status{font-size:14px;color:var(--sub);min-height:22px;text-align:center;word-break:keep-all}
+.preset-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:780px;width:100%}
 .preset-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;border-radius:24px;background:#FFF;box-shadow:0 7px 0 rgba(73,58,53,.06),0 14px 22px rgba(73,58,53,.06);transition:.18s ease}
+.preset-card img{width:100%;height:auto;aspect-ratio:1;object-fit:contain}
+.preset-card:hover{box-shadow:0 7px 0 rgba(73,58,53,.1),0 14px 22px rgba(73,58,53,.09)}
+.preset-card:disabled{opacity:.55;cursor:wait}
+.preset-card:focus-visible,.preset-filter:focus-visible,.preset-header button:focus-visible{outline:3px solid var(--coral-deep);outline-offset:4px}
+.preset-card .preset-name{text-align:center;word-break:keep-all}
+@media(min-width:640px){.preset-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){.preset-card{transition:none}}
 .preset-card:active{transform:translateY(5px);box-shadow:0 2px 0 rgba(73,58,53,.06),0 7px 12px rgba(73,58,53,.05)}
 .preset-card .preset-emoji{font-size:42px}
 .preset-card .preset-name{font-size:13px;font-weight:900;color:#745F55}
@@ -297,9 +311,13 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 </div>
 
 <div id="preset-screen" class="screen">
-  <div class="preset-title">그림을 골라봐! 🖼️</div>
+  <div class="preset-header">
+    <h1 class="preset-title">그림을 골라봐!</h1>
+    <button class="demo-pill" id="btn-preset-back">돌아가기</button>
+  </div>
+  <nav class="preset-filters" id="preset-filters" aria-label="그림 종류"></nav>
+  <p class="preset-status" id="preset-status" role="status" aria-live="polite"></p>
   <div class="preset-grid" id="preset-grid"></div>
-  <button class="demo-pill" id="btn-preset-back">↩️ 돌아가기</button>
 </div>
 
 <div id="processing-screen" class="screen">
