@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kids-coloring-v6';
+const CACHE_NAME = 'kids-coloring-v7';
 const WASM_CACHE = 'kids-coloring-wasm-v1';
 
 const CORE_ASSETS = [
@@ -6,7 +6,7 @@ const CORE_ASSETS = [
   './index.html',
   './verify-fill-regions.html',
   './manifest.json',
-  './js/app.js?v=family-content-1',
+  './js/app.js?v=guided-trace-1',
   './js/bg-remove.js',
   './js/edge-detect.js',
   './js/edge-worker.js',
@@ -15,11 +15,15 @@ const CORE_ASSETS = [
   './js/demo.js',
   './js/ai-bridge.js',
   './js/presets.js',
-  './js/preset-gallery.js',
+  './js/preset-gallery.js?v=guided-trace-1',
+  './js/guided-trace.js',
+  './js/config.js',
   './js/packs.js',
   './js/packs/registry.js',
   './js/packs/preset-packs.js',
-  './js/packs/family-content.js',
+  './js/packs/family-content.js?v=guided-trace-1',
+  './assets/family-content/diplodocus-guided-v1.json',
+  './assets/family-content/diplodocus-guided-v1.png',
   './js/packs/sample-packs.js',
   './js/packs/theme-packs.js',
   './js/packs/premium-packs.js',

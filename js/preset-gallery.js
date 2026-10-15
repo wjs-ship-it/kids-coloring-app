@@ -1,5 +1,5 @@
 import { PRESETS, renderPreset } from './presets.js';
-import { FAMILY_CONTENT_PACK } from './packs/family-content.js';
+import { FAMILY_CONTENT_PACK } from './packs/family-content.js?v=guided-trace-1';
 
 export async function renderContentPreset(item, canvas, ctx) {
   const size = FAMILY_CONTENT_PACK.canvasSize;
@@ -11,7 +11,13 @@ export async function renderContentPreset(item, canvas, ctx) {
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, size, size);
   ctx.drawImage(image, 0, 0, size, size);
-  return { lineartData: ctx.getImageData(0, 0, size, size), size };
+  let guide = null;
+  if (item.traceSrc) {
+    const response = await fetch(item.traceSrc);
+    if (!response.ok) throw new Error(`Drawing guide unavailable: ${response.status}`);
+    guide = await response.json();
+  }
+  return { lineartData: ctx.getImageData(0, 0, size, size), size, guide };
 }
 
 function getStarterItems(pack) {
@@ -74,7 +80,10 @@ export function mountPresetGallery(pack, onSelect) {
       const label = document.createElement('span');
       label.className = 'preset-name';
       label.textContent = item.name;
-      card.append(image, label);
+      const activity = document.createElement('small');
+      activity.className = 'preset-activity';
+      activity.textContent = item.traceSrc ? '따라 그리고 색칠해요' : item.activity === 'color' ? '색칠하기' : '그리기와 색칠하기';
+      card.append(image, label, activity);
       card.addEventListener('click', () => selectItem(item));
       grid.append(card);
     }

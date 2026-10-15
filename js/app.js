@@ -8,7 +8,8 @@ import { exportAnalyticsSession, setAnalyticsContext, trackEvent } from './analy
 import { getBuiltinPresetPack } from './packs.js';
 import { pruneTraceParts } from './trace-part-quality.js';
 import { FILL_TOOLS, drawRegionFill } from './color-fill-tools.js';
-import { mountPresetGallery, renderContentPreset } from './preset-gallery.js';
+import { mountPresetGallery, renderContentPreset } from './preset-gallery.js?v=guided-trace-1';
+import { buildGuidedParts, startGuidedStroke, advanceGuidedStroke, getGuidedProgress, guidedStepComplete } from './guided-trace.js';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -34,6 +35,7 @@ let creativeMode = null;
 let hasPhoto = false;
 let presetSelected = false;
 let activePresetCategory = null;
+let authoredTraceGuide = null;
 let edgeMode = 'object';
 let activeEdgeMode = 'object';
 let detailLevel = 50;
@@ -222,6 +224,7 @@ function goHome() {
   hasPhoto = false;
   presetSelected = false;
   activePresetCategory = null;
+  authoredTraceGuide = null;
   activeEdgeMode = edgeMode;
   resetColorMissionState();
   lineBoundary = null;
@@ -280,6 +283,7 @@ async function processPhoto(blob) {
 function convertToLineart(img) {
   presetSelected = false;
   activePresetCategory = null;
+  authoredTraceGuide = null;
   const MAX = 800;
   let w = img.width, h = img.height;
   if (w > MAX || h > MAX) {
@@ -585,9 +589,11 @@ function beginActivity() {
     parts = buildEmergencyParts(lineartData, laW, laH);
   }
 
-  parts = ensureFullCoverage(parts, lineartData, laW, laH);
-  parts = pruneTraceParts(parts, laW, laH, { mode: getPipelineMode() });
-  parts = limitParts(parts, 30, laW);
+  if (!authoredTraceGuide) {
+    parts = ensureFullCoverage(parts, lineartData, laW, laH);
+    parts = pruneTraceParts(parts, laW, laH, { mode: getPipelineMode() });
+    parts = limitParts(parts, 30, laW);
+  }
 
   curPartIdx = 0;
   appMode = 'trace';
@@ -807,6 +813,7 @@ function getTraceCanvasPoints(part, options = {}) {
   }
 
   const projected = projectBoundaryToCanvas(part.boundaryPos);
+  if (part.traceStrategy === 'guided') return projected;
   const expanded = [projected[0]];
   for (let i = 1; i < projected.length; i++) {
     const prev = projected[i - 1];
@@ -889,6 +896,15 @@ function strokeTracePart(boundaryPos, {
   cx.setLineDash(lineDash);
   cx.beginPath();
 
+  if (authoredTraceGuide) {
+    const points = projectBoundaryToCanvas(boundaryPos);
+    cx.moveTo(points[0].x, points[0].y);
+    for (const point of points.slice(1)) cx.lineTo(point.x, point.y);
+    cx.stroke();
+    cx.restore();
+    return;
+  }
+
   let segment = [projected[0]];
   for (let i = 1; i < projected.length; i++) {
     const prev = projected[i - 1];
@@ -926,6 +942,7 @@ function showCurrentPart() {
     });
   }
 
+  if (part.guided) historyStack = [];
   saveState();
   updateProgress(0);
   const semanticEmoji = {
@@ -936,8 +953,8 @@ function showCurrentPart() {
     ornament: '✨'
   };
   const isLetter = activePresetCategory === 'letters' || activePresetCategory === 'numbers';
-  const semanticLabel = !isLetter && part.traceStrategy === 'semantic' ? (part.displayName || part.semanticLabel || '') : '';
-  const suffix = isLetter ? '' : part.traceStrategy === 'semantic'
+  const semanticLabel = !isLetter && ['semantic', 'guided'].includes(part.traceStrategy) ? (part.displayName || part.semanticLabel || '') : '';
+  const suffix = part.traceStrategy === 'guided' ? ` ${part.displayName}` : isLetter ? '' : part.traceStrategy === 'semantic'
     ? ` ${semanticEmoji[part.semanticCategory] || '⭐'}${semanticLabel ? ` ${semanticLabel}` : ''}`
     : ' ⭐';
   document.getElementById('part-label').textContent = `${curPartIdx + 1}/${parts.length}${suffix}`;
@@ -948,6 +965,11 @@ function showCurrentPart() {
 function checkTraceCompletion() {
   if (curPartIdx >= parts.length) return;
   const part = parts[curPartIdx];
+  if (part.guided) {
+    updateProgress(getGuidedProgress(part));
+    if (guidedStepComplete(part)) advancePart();
+    return;
+  }
   const id = cx.getImageData(0, 0, DC.width, DC.height), d = id.data;
   let covered = 0;
   const R = Math.max(6, Math.round(8 * (part?.toleranceMultiplier || 1)));
@@ -1113,7 +1135,7 @@ function fitLineartToCanvas() {
   lineartData = sd;
   laW = newW;
   laH = newH;
-  parts = detectParts(sd, newW, newH, {
+  parts = authoredTraceGuide ? buildGuidedParts(authoredTraceGuide, newW, newH) : detectParts(sd, newW, newH, {
     mode: getPipelineMode(),
     detail: detailLevel
   });
@@ -1583,6 +1605,15 @@ function beginTraceStroke(x, y) {
   const part = getTracePart();
   if (!part) return false;
 
+  if (part.guided) {
+    const point = startGuidedStroke(part, { x: x - offX, y: y - offY });
+    if (!point) return false;
+    isDrawing = true;
+    lastX = point.x + offX;
+    lastY = point.y + offY;
+    return true;
+  }
+
   const snap = snapToLine(x, y, part);
   if (!snap.valid) return false;
 
@@ -1696,6 +1727,23 @@ function onMove(e) {
   if (appMode === 'trace') {
     const part = getTracePart();
     if (!part) return;
+
+    if (part.guided) {
+      const points = advanceGuidedStroke(part, { x: px - offX, y: py - offY });
+      if (!points.length) return;
+      cx.globalCompositeOperation = 'source-over';
+      cx.strokeStyle = currentColor;
+      cx.lineWidth = brushSize;
+      cx.beginPath();
+      cx.moveTo(points[0].x + offX, points[0].y + offY);
+      for (const point of points.slice(1)) cx.lineTo(point.x + offX, point.y + offY);
+      cx.stroke();
+      lastX = points.at(-1).x + offX;
+      lastY = points.at(-1).y + offY;
+      updateProgress(getGuidedProgress(part));
+      showTraceGuide(lastX, lastY, true);
+      return;
+    }
 
     const snap = snapToLine(px, py, part);
     if (!snap.valid) {
@@ -1861,7 +1909,9 @@ let particleThrottle = 0;
 function saveState() {
   historyStack.push({
     kind: 'snapshot',
-    imageData: cx.getImageData(0, 0, DC.width, DC.height)
+    imageData: cx.getImageData(0, 0, DC.width, DC.height),
+    guidedVisited: appMode === 'trace' && getTracePart()?.guided
+      ? getTracePart().guided.visited.slice() : null
   });
   if (historyStack.length > 10) historyStack.shift();
 }
@@ -1894,6 +1944,11 @@ function undo() {
     const snapshotEntry = historyStack[historyStack.length - 1];
     if (snapshotEntry?.kind === 'snapshot') {
       cx.putImageData(snapshotEntry.imageData, 0, 0);
+      if (appMode === 'trace' && snapshotEntry.guidedVisited && getTracePart()?.guided) {
+        getTracePart().guided.visited.set(snapshotEntry.guidedVisited);
+        getTracePart().guided.index = null;
+        updateProgress(getGuidedProgress(getTracePart()));
+      }
     }
     trackEvent('undo_used', {
       mode: appMode,
@@ -2005,6 +2060,7 @@ function buildPresetGrid() {
 
 function openPresetResult(result, name, category = null) {
   activePresetCategory = category;
+  authoredTraceGuide = result.guide || null;
   lineartData = result.lineartData;
   laW = result.size; laH = result.size;
   _sourceImgData = null;
@@ -2013,7 +2069,7 @@ function openPresetResult(result, name, category = null) {
   setAnalyticsContext({
     selectedMode: 'illustration', resolvedMode: 'illustration', detail: detailLevel
   });
-  parts = [];
+  parts = authoredTraceGuide ? buildGuidedParts(authoredTraceGuide, laW, laH) : [];
   hydrateFillData(null);
   const lp = document.getElementById('lineart-preview');
   lp.width = result.size; lp.height = result.size;

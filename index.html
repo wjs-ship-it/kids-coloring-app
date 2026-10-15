@@ -233,6 +233,7 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 .preset-card:disabled{opacity:.55;cursor:wait}
 .preset-card:focus-visible,.preset-filter:focus-visible,.preset-header button:focus-visible{outline:3px solid var(--coral-deep);outline-offset:4px}
 .preset-card .preset-name{text-align:center;word-break:keep-all}
+.preset-activity{font-size:11px;color:var(--sub);word-break:keep-all}
 @media(min-width:640px){.preset-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(prefers-reduced-motion:reduce){.preset-card{transition:none}}
 .preset-card:active{transform:translateY(5px);box-shadow:0 2px 0 rgba(73,58,53,.06),0 7px 12px rgba(73,58,53,.05)}
@@ -370,7 +371,7 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 <div class="stars-celebration" id="stars-celebration"></div>
 <div class="save-toast" id="save-toast">💾 저장 완료!</div>
 
-<script type="module" src="./js/app.js?v=family-content-1"></script>
+<script type="module" src="./js/app.js?v=guided-trace-1"></script>
 <script>
 const testParams = new URLSearchParams(location.search);
 const disableServiceWorker = testParams.get('no-sw') === '1';
