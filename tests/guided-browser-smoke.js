@@ -18,12 +18,12 @@ function until(predicate, description) {
 
 // Invoke through the existing CDP browser after opening the guided dinosaur.
 // Uses actual canvas mouse/touch handlers; it never calls app implementation functions.
-export async function runGuidedBrowserSmoke({ touch = false } = {}) {
-  const response = await fetch(new URL('../assets/family-content/diplodocus-guided-v1.json', import.meta.url));
+export async function runGuidedBrowserSmoke({ touch = false, guidePath = '../assets/family-content/diplodocus-guided-v1.json' } = {}) {
+  const response = await fetch(new URL(guidePath, import.meta.url));
   assert(response.ok, `Guide load failed: ${response.status}`);
   const guide = await response.json();
   const canvas = document.getElementById('drawing-canvas');
-  assert(document.getElementById('part-label').textContent.startsWith('1/10'), 'Start at guided step one');
+  assert(document.getElementById('part-label').textContent.startsWith(`1/${guide.steps.length}`), 'Start at guided step one');
   const size = Math.min(guide.width, canvas.width - 40, canvas.height - 160);
   const parts = buildGuidedParts(guide, size, size);
   const offset = { x: Math.floor((canvas.width - size) / 2), y: Math.floor((canvas.height - size) / 2) };
@@ -43,7 +43,7 @@ export async function runGuidedBrowserSmoke({ touch = false } = {}) {
   for (let step = 0; step < parts.length; step++) {
     const points = parts[step].guided.points;
     await until(() => !document.getElementById('part-done-overlay').classList.contains('active')
-      && document.getElementById('part-label').textContent.startsWith(`${step + 1}/10`), `step ${step + 1}`);
+      && document.getElementById('part-label').textContent.startsWith(`${step + 1}/${guide.steps.length}`), `step ${step + 1}`);
     send(touch ? 'touchstart' : 'mousedown', points[0]);
     // Events are deliberately sparse; the old 18px discard logic left holes here.
     for (let i = 18; i < points.length; i += 18) send(touch ? 'touchmove' : 'mousemove', points[i]);

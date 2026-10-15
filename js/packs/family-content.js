@@ -1,3 +1,5 @@
+import { ORIGINAL_DINOSAURS } from './original-dinosaurs.js';
+
 export const FAMILY_CONTENT_PACK = {
   id: 'family-drawing-content',
   type: 'preset-pack',
@@ -5,6 +7,7 @@ export const FAMILY_CONTENT_PACK = {
   premium: false,
   canvasSize: 600,
   categories: [
+    { id: 'dinosaurs', title: '새 공룡' },
     { id: 'friends', title: '동물과 친구들' },
     { id: 'shapes', title: '사물과 장난감' },
     { id: 'faces', title: '표정과 하트' },
@@ -13,6 +16,7 @@ export const FAMILY_CONTENT_PACK = {
     { id: 'numbers', title: '숫자' }
   ],
   items: [
+    ...ORIGINAL_DINOSAURS,
     {"id": "scratch_coloring_bimi_scholar_25_bts", "name": "학사모 곰돌이", "category": "friends", "src": "./assets/family-content/scratch_coloring_bimi_scholar_25_bts.png", "activity": "color"},
     {"id": "scratch-2-(excavator)", "name": "굴착기", "category": "friends", "src": "./assets/family-content/scratch-2-(excavator).png", "activity": "color"},
     {"id": "cbn-wild-animals-3", "name": "나뭇가지 위 올빼미", "category": "friends", "src": "./assets/family-content/cbn-wild-animals-3.png", "activity": "color"},

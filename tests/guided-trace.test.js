@@ -8,8 +8,8 @@ const guide = JSON.parse(fs.readFileSync(new URL('../assets/family-content/diplo
 
 test('only content with declared paths offers tracing', () => {
   const traced = FAMILY_CONTENT_PACK.items.filter(item => item.activity === 'trace');
-  assert.equal(traced.length, 1);
-  assert.ok(traced[0].traceSrc);
+  assert.equal(traced.length, 4);
+  assert.ok(traced.every(item => item.traceSrc));
   assert.equal(FAMILY_CONTENT_PACK.items.find(item => item.id === 'cbn-wild-animals-3').activity, 'color');
 });
 
