@@ -5,7 +5,7 @@
 - User requested adding the reference drawing content for their child.
 - C2 frontend product slice: extend the existing preset gallery and reuse the existing tracing/coloring engines.
 - Added 131 playable source drawings, preserving the 5 original presets (136 choices total).
-- No Git push or deployment performed. The instance instructions require an explicit same-turn request for Git push.
+- User authorized headless verification and GitHub Pages push/deployment on 2026-10-15 at 20:25 KST.
 
 ## Source discovery correction
 
@@ -62,3 +62,16 @@
 - Run headless browser verification after the user answers the pending approach question.
 - Verify gallery filters, content selection, representative tracing/coloring, back navigation, original presets and failed image loading at mobile/tablet/desktop sizes.
 - Public GitHub Pages update requires explicit Git push authorization under the user's instance instructions.
+
+## Headless verification and delivery follow-up
+
+- Headless Chrome launched successfully after user authorization.
+- Verified the gallery at 390×844, 768×1024 and 1440×900, with no horizontal overflow. Mobile uses two columns and tablet/desktop use four.
+- Screenshots: `/home/sang/.cli-jaw/screenshots/screenshot_1792063618694.png`, `/home/sang/.cli-jaw/screenshots/screenshot_1792063699063.png`, `/home/sang/.cli-jaw/screenshots/screenshot_1792063699316.png`.
+- Gallery count: 136. Alphabet filter: 26. Original preset filter: five; original cat opens mode selection and Back returns to the gallery.
+- Princess coloring: canvas pixel (190,490) changed from [255,255,255,255] to [239,68,68,255] after a brush gesture at mobile size.
+- Alphabet F tracing: mobile canvas opened with two semantic trace parts and the label `1/2`; body-part names and hints are suppressed for letters/numbers.
+- An experimental object-mode mapping for letters yielded zero mobile trace parts. Removed that mapping; the verified final version retains illustration analysis and adjusts labels only.
+- Deliberately substituted a missing image URL in browser memory: the gallery stayed open, showed its retry message, cleared aria-busy and re-enabled all cards. Reload restored the original manifest.
+- Detected stale app HTTP cache on the reused local origin. Added `?v=family-content-1` to the app module URL and matching service-worker precache entry.
+- Fresh `node --check` for changed scripts and `git diff --check` passed before delivery.

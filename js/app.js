@@ -33,6 +33,7 @@ let edgeWorker = null;
 let creativeMode = null;
 let hasPhoto = false;
 let presetSelected = false;
+let activePresetCategory = null;
 let edgeMode = 'object';
 let activeEdgeMode = 'object';
 let detailLevel = 50;
@@ -220,6 +221,7 @@ function goHome() {
   creativeMode = null;
   hasPhoto = false;
   presetSelected = false;
+  activePresetCategory = null;
   activeEdgeMode = edgeMode;
   resetColorMissionState();
   lineBoundary = null;
@@ -277,6 +279,7 @@ async function processPhoto(blob) {
 
 function convertToLineart(img) {
   presetSelected = false;
+  activePresetCategory = null;
   const MAX = 800;
   let w = img.width, h = img.height;
   if (w > MAX || h > MAX) {
@@ -932,12 +935,13 @@ function showCurrentPart() {
     tail_feature: '🦕',
     ornament: '✨'
   };
-  const semanticLabel = part.traceStrategy === 'semantic' ? (part.displayName || part.semanticLabel || '') : '';
-  const suffix = part.traceStrategy === 'semantic'
+  const isLetter = activePresetCategory === 'letters' || activePresetCategory === 'numbers';
+  const semanticLabel = !isLetter && part.traceStrategy === 'semantic' ? (part.displayName || part.semanticLabel || '') : '';
+  const suffix = isLetter ? '' : part.traceStrategy === 'semantic'
     ? ` ${semanticEmoji[part.semanticCategory] || '⭐'}${semanticLabel ? ` ${semanticLabel}` : ''}`
     : ' ⭐';
   document.getElementById('part-label').textContent = `${curPartIdx + 1}/${parts.length}${suffix}`;
-  showHint(part.hint || (semanticLabel ? `${semanticLabel}부터 따라 그려봐요! ✏️` : '점선을 따라 그려봐요! ✏️'));
+  showHint(isLetter ? '점선을 따라 글자를 그려봐요!' : part.hint || (semanticLabel ? `${semanticLabel}부터 따라 그려봐요! ✏️` : '점선을 따라 그려봐요! ✏️'));
   currentColor = '#1e293b'; brushSize = 6; isEraser = false;
 }
 
@@ -1993,13 +1997,14 @@ function buildPresetGrid() {
   mountPresetGallery(builtinPresetPack, async item => {
     if (item.presetIndex !== undefined) return loadPreset(item.presetIndex);
     const result = await renderContentPreset(item, SC, sx);
-    openPresetResult(result, item.name);
+    openPresetResult(result, item.name, item.category);
     if (item.activity === 'trace') ensurePresetTraceReady(() => beginActivity());
     if (item.activity === 'color') ensurePresetFillReady(() => beginColorDirect());
   });
 }
 
-function openPresetResult(result, name) {
+function openPresetResult(result, name, category = null) {
+  activePresetCategory = category;
   lineartData = result.lineartData;
   laW = result.size; laH = result.size;
   _sourceImgData = null;

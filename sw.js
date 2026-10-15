@@ -6,7 +6,7 @@ const CORE_ASSETS = [
   './index.html',
   './verify-fill-regions.html',
   './manifest.json',
-  './js/app.js',
+  './js/app.js?v=family-content-1',
   './js/bg-remove.js',
   './js/edge-detect.js',
   './js/edge-worker.js',
