@@ -20,5 +20,6 @@
 - Generation: trex 7 steps; triceratops 9 steps; stegosaurus 9 steps.
 - Existing guided-trace tests: 7/7 passed after updating only the expected reviewed-content count from one to four.
 - Original dinosaur tests: 3/3 passed, covering all 25 steps at three sizes in both directions.
-- Actual rendered/browser verification is pending: cli-jaw browser start --agent failed because there is no X server / DISPLAY. User was asked before switching to headless in accordance with their failure-routing rule.
-- These are original pilot drawings. Unit completion does not establish visual quality or physical-phone usability. No push or deployment is authorized in this turn.
+- On 2026-10-16, headless Chrome started successfully. At 390x844, the actual canvas touch-event smoke completed all 7 Tyrannosaurus, 9 Triceratops and 9 Stegosaurus steps, each with 100% rendered coverage, and transitioned to coloring.
+- Visually inspected starting Tyrannosaurus and completed Triceratops screenshots. The existing right-hand coloring palette overlaps the rightmost artwork on this small viewport; tracing coverage is verified, but this coloring-layout limitation remains.
+- These are original pilot drawings. Synthetic touch-event verification does not establish physical-phone usability. No push or deployment is authorized in this turn.
