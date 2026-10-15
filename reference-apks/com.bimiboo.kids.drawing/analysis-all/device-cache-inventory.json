@@ -1,0 +1,465 @@
+[
+  {
+    "name": "c0bced6fd6659a3ff70c0ee40a511e1e_unitybuiltinshaders",
+    "types": {
+      "Shader": 8,
+      "AssetBundle": 1
+    },
+    "bytes": 95777
+  },
+  {
+    "name": "coloring-by-number-collection",
+    "types": {
+      "AudioClip": 1,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "bytes": 242362
+  },
+  {
+    "name": "coloring-by-number-collection-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 38572
+  },
+  {
+    "name": "coloring-collection",
+    "types": {
+      "AudioClip": 1,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "bytes": 141344
+  },
+  {
+    "name": "coloring-collection-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 26034
+  },
+  {
+    "name": "d28b04a0d7ce307b8d361c348b383630",
+    "types": {
+      "RectTransform": 1362,
+      "MonoBehaviour": 2286,
+      "CanvasRenderer": 930,
+      "GameObject": 1362,
+      "Canvas": 27,
+      "MonoScript": 16,
+      "Sprite": 27,
+      "CanvasGroup": 21,
+      "SpriteAtlas": 2,
+      "Texture2D": 3,
+      "AssetBundle": 1
+    },
+    "bytes": 741457
+  },
+  {
+    "name": "dot-to-dot-collection",
+    "types": {
+      "AudioClip": 1,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "bytes": 152597
+  },
+  {
+    "name": "dot-to-dot-collection-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 10381
+  },
+  {
+    "name": "drawing-coloring-collection",
+    "types": {
+      "AudioClip": 1,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "bytes": 202747
+  },
+  {
+    "name": "drawing-coloring-collection-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 32804
+  },
+  {
+    "name": "free-drawing-category-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 8096
+  },
+  {
+    "name": "free-drawing-collection",
+    "types": {
+      "AudioClip": 1,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "bytes": 140811
+  },
+  {
+    "name": "free-drawing-collection-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 24202
+  },
+  {
+    "name": "halloween-2026-collection",
+    "types": {
+      "AudioClip": 1,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "bytes": 169361
+  },
+  {
+    "name": "halloween-2026-collection-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 16651
+  },
+  {
+    "name": "mandala-collection",
+    "types": {
+      "AudioClip": 1,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "bytes": 163731
+  },
+  {
+    "name": "mandala-collection-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 16253
+  },
+  {
+    "name": "pixel-circles-category-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 23557
+  },
+  {
+    "name": "pixel-drawing-collection",
+    "types": {
+      "AudioClip": 1,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "bytes": 102468
+  },
+  {
+    "name": "pixel-drawing-collection-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 14009
+  },
+  {
+    "name": "pixel-numbers-category-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 10234
+  },
+  {
+    "name": "pixel-shapes-1(bird)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7375
+  },
+  {
+    "name": "pixel-shapes-10(house)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 6942
+  },
+  {
+    "name": "pixel-shapes-11(ladybug)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7847
+  },
+  {
+    "name": "pixel-shapes-12(lion)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7947
+  },
+  {
+    "name": "pixel-shapes-13(monster)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7356
+  },
+  {
+    "name": "pixel-shapes-14(penguin)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7029
+  },
+  {
+    "name": "pixel-shapes-15(pig)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7341
+  },
+  {
+    "name": "pixel-shapes-16(police)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7094
+  },
+  {
+    "name": "pixel-shapes-17(pony)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 6852
+  },
+  {
+    "name": "pixel-shapes-18(rocket)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7652
+  },
+  {
+    "name": "pixel-shapes-19(squirrel)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7712
+  },
+  {
+    "name": "pixel-shapes-2(cactus)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7110
+  },
+  {
+    "name": "pixel-shapes-20(whale)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7664
+  },
+  {
+    "name": "pixel-shapes-21(bat)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 6731
+  },
+  {
+    "name": "pixel-shapes-22(bee)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 6826
+  },
+  {
+    "name": "pixel-shapes-23(cow)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 6963
+  },
+  {
+    "name": "pixel-shapes-24(frog)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 6643
+  },
+  {
+    "name": "pixel-shapes-4(deer)",
+    "types": {
+      "Texture2D": 2,
+      "TextAsset": 1,
+      "Sprite": 2,
+      "AssetBundle": 1
+    },
+    "bytes": 8097
+  },
+  {
+    "name": "pixel-shapes-4(deer)-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 7956
+  },
+  {
+    "name": "pixel-shapes-category-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 11147
+  },
+  {
+    "name": "scratch-coloring-collection",
+    "types": {
+      "AudioClip": 1,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "bytes": 183287
+  },
+  {
+    "name": "scratch-coloring-collection-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 29300
+  },
+  {
+    "name": "stars-drawing-collection",
+    "types": {
+      "AudioClip": 1,
+      "MonoBehaviour": 2,
+      "TextAsset": 2,
+      "Shader": 1,
+      "AssetBundle": 1,
+      "MonoScript": 2,
+      "Texture2D": 1,
+      "Material": 1
+    },
+    "bytes": 171390
+  },
+  {
+    "name": "stars-drawing-collection-icon",
+    "types": {
+      "Texture2D": 1,
+      "Sprite": 1,
+      "AssetBundle": 1
+    },
+    "bytes": 41963
+  }
+]
