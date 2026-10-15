@@ -1,5 +1,6 @@
 import { selectMeaningfulEdges } from './lineart-shape.js';
 import { detectTraceParts } from './trace-path.js';
+import { ILLUSTRATION_CONFIG as illustrationConfig } from './config.js?v=photo-conversion-2';
 
 export function applyCLAHE(gray, w, h, tileSize = 8, clipLimit = 2.0) {
   const out = new Float32Array(w * h);
@@ -229,11 +230,14 @@ export function analyzeInputStyle(imageData, w, h) {
   const vividRatio = sampled ? vividCount / sampled : 0;
   const paletteBuckets = buckets.size;
   const textureScore = contrastSamples ? contrastSum / contrastSamples : 0;
+  const flatColorArtwork = paletteBuckets < illustrationConfig.flatMaxPaletteBuckets
+    && textureScore < illustrationConfig.flatMaxTextureScore
+    && vividRatio > illustrationConfig.flatMinVividRatio;
   const illustrationLike = (
-    whiteRatio > 0.20 &&
+    (whiteRatio > 0.20 || flatColorArtwork) &&
     paletteBuckets < 140 &&
     textureScore < 28 &&
-    darkRatio < 0.25 &&
+    (darkRatio < 0.25 || flatColorArtwork) &&
     (vividRatio > 0.015 || whiteRatio > 0.42)
   );
 
@@ -263,7 +267,7 @@ export function resolvePipelineMode(selectedMode, imageData, w, h) {
   };
 }
 
-function extractIllustrationEdges(px, w, h, detail = 50) {
+function extractIllustrationEdges(px, w, h, detail = 50, colorAware = false) {
   const detailBias = Math.max(0, Math.min(1, detail / 100));
   const darkThreshold = 176 - Math.round(detailBias * 24);
   const contrastThreshold = 44 - detailBias * 12;
@@ -293,6 +297,13 @@ function extractIllustrationEdges(px, w, h, detail = 50) {
         Math.abs(lum - luminance[pos - w]),
         Math.abs(lum - luminance[pos + w])
       );
+      // Different colors can have identical luminance; retain their shared edge.
+      let colorContrast = 0;
+      for (const neighbor of colorAware ? [pos - 1, pos + 1, pos - w, pos + w] : []) {
+        const color = readAlphaAwareRgb(px, neighbor * 4);
+        colorContrast = Math.max(colorContrast, Math.abs(r - color.r),
+          Math.abs(g - color.g), Math.abs(b - color.b));
+      }
       const neighborDark = (
         luminance[pos - 1] < 170 ||
         luminance[pos + 1] < 170 ||
@@ -300,9 +311,9 @@ function extractIllustrationEdges(px, w, h, detail = 50) {
         luminance[pos + w] < 170
       );
 
-      const isInk = lum < darkThreshold && sat < 0.92;
+      const isInk = lum < darkThreshold && sat < (colorAware ? illustrationConfig.inkMaxSaturation : 0.92);
       const isContour = localContrast > contrastThreshold && (lum < 215 || neighborDark);
-      if (isInk || isContour) edges[pos] = 1;
+      if (isInk || isContour || (colorAware && colorContrast > contrastThreshold)) edges[pos] = 1;
     }
   }
 
@@ -838,7 +849,9 @@ export function runFullPipeline(imageData, w, h, mode = 'object', detail = 50) {
     : renderLineartVariant(smoothed, w, h, mode, detail);
 
   if (mode === 'illustration') {
-    const illustrationEdge = extractIllustrationEdges(px, w, h, detail);
+    const profile = analyzeInputStyle(px, w, h);
+    const colorAware = profile.whiteRatio <= illustrationConfig.flatMaxWhiteRatio && profile.illustrationLike;
+    const illustrationEdge = extractIllustrationEdges(px, w, h, detail, colorAware);
     const fusedIllustration = morphClose(fuseLines(dilate(illustrationEdge, w, h, 1), w, h, 1, 0.18), w, h, 2);
     const cleanedIllustration = removeSmallComponents(fusedIllustration, w, h, 4);
     const meaningfulIllustration = selectMeaningfulEdges(cleanedIllustration, w, h, { mode, detail });
