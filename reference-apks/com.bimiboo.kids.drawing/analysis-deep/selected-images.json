@@ -1,0 +1,635 @@
+{
+  "extra-artwork": [
+    {
+      "name": "img-robots",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 27
+    },
+    {
+      "name": "img-nicole-screen-4",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 29
+    },
+    {
+      "name": "img-school",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 36
+    },
+    {
+      "name": "cow_in_frame",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 37
+    },
+    {
+      "name": "rocking horse",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 39
+    },
+    {
+      "name": "bee",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 40
+    },
+    {
+      "name": "Group 1",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 41
+    },
+    {
+      "name": "img-bimi-screen-8",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 42
+    },
+    {
+      "name": "img-bimi-screen",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 43
+    },
+    {
+      "name": "fire",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 45
+    },
+    {
+      "name": "Group-1",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 48
+    },
+    {
+      "name": "img-bimi-screen-2",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 51
+    },
+    {
+      "name": "dragonfly",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 54
+    },
+    {
+      "name": "tree",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 56
+    },
+    {
+      "name": "bee",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 58
+    },
+    {
+      "name": "bee_in_frame",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 60
+    },
+    {
+      "name": "horse",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 68
+    },
+    {
+      "name": "burger_in_frame",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 71
+    },
+    {
+      "name": "Group",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 81
+    },
+    {
+      "name": "img-bimi-screen-5",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 87
+    },
+    {
+      "name": "squid",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 95
+    },
+    {
+      "name": "christmas_icon",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 377
+    },
+    {
+      "name": "carnival_icon",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 379
+    },
+    {
+      "name": "temp-icon",
+      "bundle": "assets/bin/Data/data.unity3d",
+      "path_id": 380
+    }
+  ],
+  "category-icons": [
+    {
+      "name": "back-to-school-category",
+      "bundle": "assets/active/android/categories/back-to-school-category/back-to-school-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "color-by-number-category",
+      "bundle": "assets/active/android/categories/color-by-number-category/color-by-number-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-bimi-category",
+      "bundle": "assets/active/android/categories/coloring-bimi-category/coloring-bimi-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-dino-category",
+      "bundle": "assets/active/android/categories/coloring-dino-category/coloring-dino-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-fairy-tales-category",
+      "bundle": "assets/active/android/categories/coloring-fairy-tales-category/coloring-fairy-tales-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-farm-category",
+      "bundle": "assets/active/android/categories/coloring-farm-category/coloring-farm-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-monsters-category",
+      "bundle": "assets/active/android/categories/coloring-monsters-category/coloring-monsters-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-ocean-category",
+      "bundle": "assets/active/android/categories/coloring-ocean-category/coloring-ocean-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-pets-category",
+      "bundle": "assets/active/android/categories/coloring-pets-category/coloring-pets-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-princess-category",
+      "bundle": "assets/active/android/categories/coloring-princess-category/coloring-princess-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-professions-category",
+      "bundle": "assets/active/android/categories/coloring-professions-category/coloring-professions-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-vehicles-category",
+      "bundle": "assets/active/android/categories/coloring-vehicles-category/coloring-vehicles-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "coloring-wild-animals-category",
+      "bundle": "assets/active/android/categories/coloring-wild-animals-category/coloring-wild-animals-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "dot-to-dot-category",
+      "bundle": "assets/active/android/categories/dot-to-dot-category/dot-to-dot-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-arctic-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-arctic-category/drawing-coloring-arctic-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-christmas-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-christmas-category/drawing-coloring-christmas-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-desert-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-desert-category/drawing-coloring-desert-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-dinosaurs-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-dinosaurs-category/drawing-coloring-dinosaurs-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-farm-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-farm-category/drawing-coloring-farm-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-food-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-food-category/drawing-coloring-food-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-forest-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-forest-category/drawing-coloring-forest-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-friends-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-friends-category/drawing-coloring-friends-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-halloween-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-halloween-category/drawing-coloring-halloween-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-household-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-household-category/drawing-coloring-household-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-insects-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-insects-category/drawing-coloring-insects-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-jungle-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-jungle-category/drawing-coloring-jungle-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-letters-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-letters-category/drawing-coloring-letters-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-magical-world-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-magical-world-category/drawing-coloring-magical-world-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-monsters-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-monsters-category/drawing-coloring-monsters-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-music-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-music-category/drawing-coloring-music-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-nature-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-nature-category/drawing-coloring-nature-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-numbers-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-numbers-category/drawing-coloring-numbers-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-ocean-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-ocean-category/drawing-coloring-ocean-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-professions-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-professions-category/drawing-coloring-professions-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-robots-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-robots-category/drawing-coloring-robots-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-savanna-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-savanna-category/drawing-coloring-savanna-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-shapes-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-shapes-category/drawing-coloring-shapes-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-space-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-space-category/drawing-coloring-space-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-toys-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-toys-category/drawing-coloring-toys-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "drawing-coloring-vehicles-category",
+      "bundle": "assets/active/android/categories/drawing-coloring-vehicles-category/drawing-coloring-vehicles-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "favorites-category",
+      "bundle": "assets/active/android/categories/favorites-category/favorites-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "free-category",
+      "bundle": "assets/active/android/categories/free-category/free-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "free-drawing-canvas-category",
+      "bundle": "assets/active/android/categories/free-drawing-canvas-category/free-drawing-canvas-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "free-drawing-category",
+      "bundle": "assets/active/android/categories/free-drawing-category/free-drawing-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "free-drawing-emoji-category",
+      "bundle": "assets/active/android/categories/free-drawing-emoji-category/free-drawing-emoji-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "free-drawing-letters-category",
+      "bundle": "assets/active/android/categories/free-drawing-letters-category/free-drawing-letters-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "free-drawing-numbers-category",
+      "bundle": "assets/active/android/categories/free-drawing-numbers-category/free-drawing-numbers-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "free-drawing-prints-category",
+      "bundle": "assets/active/android/categories/free-drawing-prints-category/free-drawing-prints-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "free-drawing-scenery-category",
+      "bundle": "assets/active/android/categories/free-drawing-scenery-category/free-drawing-scenery-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "free-drawing-shape-art-category",
+      "bundle": "assets/active/android/categories/free-drawing-shape-art-category/free-drawing-shape-art-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "mandala-canvas-category",
+      "bundle": "assets/active/android/categories/mandala-canvas-category/mandala-canvas-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "mandala-double-category",
+      "bundle": "assets/active/android/categories/mandala-double-category/mandala-double-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "mandala-hexa-category",
+      "bundle": "assets/active/android/categories/mandala-hexa-category/mandala-hexa-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "mandala-quad-category",
+      "bundle": "assets/active/android/categories/mandala-quad-category/mandala-quad-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "pixel-circles-category",
+      "bundle": "assets/active/android/categories/pixel-circles-category/pixel-circles-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "pixel-numbers-category",
+      "bundle": "assets/active/android/categories/pixel-numbers-category/pixel-numbers-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "pixel-shapes-category",
+      "bundle": "assets/active/android/categories/pixel-shapes-category/pixel-shapes-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "recent-category",
+      "bundle": "assets/active/android/categories/recent-category/recent-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "scratch-category",
+      "bundle": "assets/active/android/categories/scratch-category/scratch-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "stars-fairy-tales-category",
+      "bundle": "assets/active/android/categories/stars-fairy-tales-category/stars-fairy-tales-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "stars-farm-category",
+      "bundle": "assets/active/android/categories/stars-farm-category/stars-farm-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "stars-food-category",
+      "bundle": "assets/active/android/categories/stars-food-category/stars-food-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "stars-insects-category",
+      "bundle": "assets/active/android/categories/stars-insects-category/stars-insects-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "stars-nature-category",
+      "bundle": "assets/active/android/categories/stars-nature-category/stars-nature-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "stars-ocean-category",
+      "bundle": "assets/active/android/categories/stars-ocean-category/stars-ocean-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "stars-space-category",
+      "bundle": "assets/active/android/categories/stars-space-category/stars-space-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "stars-toys-category",
+      "bundle": "assets/active/android/categories/stars-toys-category/stars-toys-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "stars-vehicles-category",
+      "bundle": "assets/active/android/categories/stars-vehicles-category/stars-vehicles-category-icon.bundle",
+      "path_id": -8382918874331339421
+    },
+    {
+      "name": "stars-wild-category",
+      "bundle": "assets/active/android/categories/stars-wild-category/stars-wild-category-icon.bundle",
+      "path_id": -8382918874331339421
+    }
+  ],
+  "gallery-backgrounds": [
+    {
+      "name": "arctic_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/arctic_gallary_bg.png_05b72d37b3f7e3cf47f0edc0be8e4fdb.bundle",
+      "path_id": -882274934879037395
+    },
+    {
+      "name": "carnival_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/carnival_gallary_bg.png_71ead0f44ae8369ad3d93ee43fb588e7.bundle",
+      "path_id": 1363975454935122094
+    },
+    {
+      "name": "christmas_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/christmas_gallary_bg.png_f4e43e1b9c6208a8a06b3d09186b93a2.bundle",
+      "path_id": -1428141634153356718
+    },
+    {
+      "name": "desert_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/desert_gallary_bg.png_c3891a8381583e9da7134bacdd37d60d.bundle",
+      "path_id": 1242513501966454807
+    },
+    {
+      "name": "dinosaurs_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/dinosaurs_gallary_bg.png_17ca9f6657b7f759bd3eb584430fc5c6.bundle",
+      "path_id": -7047611599715937161
+    },
+    {
+      "name": "easter_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/easter_gallary_bg.png_144da692c71a4ff20c1a955a1e152c8e.bundle",
+      "path_id": -7282224831386330741
+    },
+    {
+      "name": "farm_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/farm_gallary_bg.png_dc7cab8db467d8fbf13e809b66eded18.bundle",
+      "path_id": 1630565357387734007
+    },
+    {
+      "name": "food_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/food_gallary_bg.png_4bae69e3ff1163941c336ed4f2f08a3d.bundle",
+      "path_id": -3361903708839392326
+    },
+    {
+      "name": "forest_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/forest_gallary_bg.png_08adb6eb377b88fd994e82edead96ae8.bundle",
+      "path_id": -3324766620464578918
+    },
+    {
+      "name": "friends_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/friends_gallary_bg.png_30975bac84ed0f3f2b4a13c9345b286f.bundle",
+      "path_id": -6806740887309728851
+    },
+    {
+      "name": "halloween_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/halloween_gallary_bg.png_1e1aa357c15a6adb0ba0535cb8c361c5.bundle",
+      "path_id": -6198938702723456072
+    },
+    {
+      "name": "household_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/household_gallary_bg.png_f4100bfcab5ac004979101f253f94ca5.bundle",
+      "path_id": 8733444587388862476
+    },
+    {
+      "name": "insects_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/insects_gallary_bg.png_43cbbae92a3ffc0dded3b6823b3074e4.bundle",
+      "path_id": 6765993289537056202
+    },
+    {
+      "name": "jungle_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/jungle_gallary_bg.png_bbf2453f966db617117654bdc333f257.bundle",
+      "path_id": -3299273641058060809
+    },
+    {
+      "name": "letters_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/letters_gallary_bg.png_71e34d1d66f864d2882d9ba1350760e2.bundle",
+      "path_id": 3244297132974462077
+    },
+    {
+      "name": "magical-world_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/magical-world_gallary_bg.png_b2f8df2f086c4397c6f088d612aa9522.bundle",
+      "path_id": -2197232589984704208
+    },
+    {
+      "name": "monsters_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/monsters_gallary_bg.png_0a4ccac38ec0fc625bac0732a1fe17b4.bundle",
+      "path_id": -4695976411697913422
+    },
+    {
+      "name": "music_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/music_gallary_bg.png_94f48ccd356b8799cd6439237d5950d1.bundle",
+      "path_id": 2325056787501683625
+    },
+    {
+      "name": "nature_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/nature_gallary_bg.png_5c4caf43c15d153e1db0e94fdf4253b3.bundle",
+      "path_id": 5293348248420831598
+    },
+    {
+      "name": "numbers_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/numbers_gallary_bg.png_32cd6ce3567e7d71ec435d3dd27e03bc.bundle",
+      "path_id": -2308574468725037553
+    },
+    {
+      "name": "ocean_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/ocean_gallary_bg.png_99c340a1a1efbb6c768bcf5f739276cb.bundle",
+      "path_id": -372190870651987382
+    },
+    {
+      "name": "professions_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/professions_gallary_bg.png_7819d25af492bd79931dc0b50b457890.bundle",
+      "path_id": -2881911002929961153
+    },
+    {
+      "name": "robots_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/robots_gallary_bg.png_56702006ead0e2ffca14a115af6d52da.bundle",
+      "path_id": 4340489147270917397
+    },
+    {
+      "name": "savanna_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/savanna_gallary_bg.png_5194331148dbd9f3d7a94a0bd304e080.bundle",
+      "path_id": -7301324319787418345
+    },
+    {
+      "name": "shapes_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/shapes_gallary_bg.png_9f93ce0aa84abc1caae5098746f27d6a.bundle",
+      "path_id": -7519659546050110212
+    },
+    {
+      "name": "space_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/space_gallary_bg.png_9e423e9946766a3be41759d4b4a02ebf.bundle",
+      "path_id": -6656625016379084605
+    },
+    {
+      "name": "st.Patrick\u2019s Day_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/st.patrick\u0393\u00c7\u00d6sday_gallary_bg.png_2816585b62512af883c3b19a305a2d1e.bundle",
+      "path_id": 1971836484019758894
+    },
+    {
+      "name": "toys_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/toys_gallary_bg.png_54056cca4a24bc91d3064bb2673a5240.bundle",
+      "path_id": -9113523575790097992
+    },
+    {
+      "name": "vehicles_gallary_bg",
+      "bundle": "assets/aa/Android/drawingcoloringgameplay_assets_assets/app/drawingcoloring/textures/categorybackgrounds/vehicles_gallary_bg.png_08b6d7f74e7b308a36b16405b3b89526.bundle",
+      "path_id": -1074043252275211940
+    }
+  ],
+  "path-atlases": [
+    {
+      "name": "stars-snake",
+      "bundle": "assets/aa/Android/duplicateassetisolation_assets_all_deb9738583f94647cc9b1cece0fb538f.bundle",
+      "path_id": -6159398820144439083
+    },
+    {
+      "name": "diplodocus",
+      "bundle": "assets/active/android/bundles/diplodocus/diplodocus.bundle",
+      "path_id": 411863299404231606
+    },
+    {
+      "name": "polar-bear",
+      "bundle": "assets/active/android/bundles/stars-polar-bear/stars-polar-bear.bundle",
+      "path_id": 1496819592625280279
+    }
+  ]
+}
