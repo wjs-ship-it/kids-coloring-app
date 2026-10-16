@@ -45,6 +45,16 @@ export async function runPhotoConversionSmoke() {
   const outside = [...ctx.getImageData(outsideX, y, 1, 1).data];
   assert(body[0] === 239 && body[1] === 68 && body[2] === 68, 'Body must receive red brush paint');
   assert(outside.slice(0, 3).every(value => value === 255), 'Brush must not leak into the background');
+  const otherColor = [...document.querySelectorAll('#side-palette .cdot')].find(node => !node.classList.contains('active'));
+  assert(otherColor, 'A second brush color must be available');
+  otherColor.click();
+  send('touchstart', outsideX);
+  for (let px = outsideX; px <= x; px += 4) send('touchmove', px);
+  send('touchend', x);
+  const paintedBackground = [...ctx.getImageData(outsideX, y, 1, 1).data];
+  const preservedBody = [...ctx.getImageData(x, y, 1, 1).data];
+  assert(paintedBackground.slice(0, 3).some(value => value !== 255), 'Background must accept brush paint');
+  assert(preservedBody.every((value, index) => value === body[index]), 'Background stroke must not repaint the body');
   return { width: canvas.width, fillRegions: conversion.fillRegions, runtimeMs: conversion.runtimeMs,
-    body, outside, contained: true };
+    body, outside, paintedBackground, preservedBody, contained: true };
 }

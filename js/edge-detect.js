@@ -1,6 +1,6 @@
 import { selectMeaningfulEdges } from './lineart-shape.js';
 import { detectTraceParts } from './trace-path.js';
-import { ILLUSTRATION_CONFIG as illustrationConfig } from './config.js?v=photo-conversion-2';
+import { ILLUSTRATION_CONFIG as illustrationConfig } from './config.js?v=background-color-1';
 
 export function applyCLAHE(gray, w, h, tileSize = 8, clipLimit = 2.0) {
   const out = new Float32Array(w * h);
@@ -620,61 +620,6 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
   const queue = new Int32Array(total);
   let nextRegionId = 1;
 
-  function markOutside(startPos) {
-    let head = 0;
-    let tail = 0;
-    queue[tail++] = startPos;
-    regionMap[startPos] = -2;
-
-    while (head < tail) {
-      const pos = queue[head++];
-      const cx = pos % w;
-      const cy = (pos / w) | 0;
-
-      if (cx + 1 < w) {
-        const nextPos = pos + 1;
-        if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
-          regionMap[nextPos] = -2;
-          queue[tail++] = nextPos;
-        }
-      }
-      if (cx > 0) {
-        const nextPos = pos - 1;
-        if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
-          regionMap[nextPos] = -2;
-          queue[tail++] = nextPos;
-        }
-      }
-      if (cy + 1 < h) {
-        const nextPos = pos + w;
-        if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
-          regionMap[nextPos] = -2;
-          queue[tail++] = nextPos;
-        }
-      }
-      if (cy > 0) {
-        const nextPos = pos - w;
-        if (!lineMask[nextPos] && regionMap[nextPos] === 0) {
-          regionMap[nextPos] = -2;
-          queue[tail++] = nextPos;
-        }
-      }
-    }
-  }
-
-  for (let x = 0; x < w; x++) {
-    const top = x;
-    const bottom = (h - 1) * w + x;
-    if (!lineMask[top] && regionMap[top] === 0) markOutside(top);
-    if (!lineMask[bottom] && regionMap[bottom] === 0) markOutside(bottom);
-  }
-  for (let y = 1; y < h - 1; y++) {
-    const left = y * w;
-    const right = left + (w - 1);
-    if (!lineMask[left] && regionMap[left] === 0) markOutside(left);
-    if (!lineMask[right] && regionMap[right] === 0) markOutside(right);
-  }
-
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const startPos = y * w + x;
@@ -728,7 +673,8 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
 
       const regionWidth = maxX - minX + 1;
       const regionHeight = maxY - minY + 1;
-      const keep = isSelectableFillRegion(tail, regionWidth, regionHeight, minArea, w, h);
+      const isBackground = minX === 0 || minY === 0 || maxX === w - 1 || maxY === h - 1;
+      const keep = isBackground || isSelectableFillRegion(tail, regionWidth, regionHeight, minArea, w, h);
       const regionId = keep ? nextRegionId++ : 0;
       for (let i = 0; i < tail; i++) {
         const pos = queue[i];
@@ -739,6 +685,7 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
       regions.push({
         id: regionId,
         area: tail,
+        isBackground,
         bounds: { minX, minY, maxX, maxY },
         width: regionWidth,
         height: regionHeight,
@@ -746,7 +693,7 @@ export function buildFillRegions(lineartData, w, h, minArea = 24) {
     }
   }
 
-  if (regions.length === 0 && minArea > 8) {
+  if (!regions.some(region => !region.isBackground) && minArea > 8) {
     return buildFillRegions(lineartData, w, h, 8);
   }
 

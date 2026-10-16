@@ -21,7 +21,10 @@ test('equal-brightness color boundaries produce a closed, selectable coloring re
   const { lineartData, fillRegions } = runFullPipeline(image.data, 120, 120, 'illustration', 50);
   const center = fillRegions.regionMap[60 * 120 + 60];
   assert.ok(center > 0, 'The colored circle must enclose a selectable region');
-  assert.equal(fillRegions.regionMap[5 * 120 + 5], -2, 'Outside background stays excluded');
+  const background = fillRegions.regionMap[5 * 120 + 5];
+  assert.ok(background > 0, 'Outside background must be selectable');
+  assert.notEqual(background, center, 'Background and foreground must remain separate');
+  assert.equal(fillRegions.regions.find(region => region.id === background).isBackground, true);
   assert.ok(fillRegions.regions.find(region => region.id === center).area > 2500);
   for (const [x, y] of [[24, 60], [96, 60], [60, 24], [60, 96]]) {
     let dark = false;

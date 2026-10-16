@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kids-coloring-v9';
+const CACHE_NAME = 'kids-coloring-v10';
 const WASM_CACHE = 'kids-coloring-wasm-v1';
 
 const CORE_ASSETS = [
@@ -6,10 +6,10 @@ const CORE_ASSETS = [
   './index.html',
   './verify-fill-regions.html',
   './manifest.json',
-  './js/app.js?v=photo-conversion-2',
+  './js/app.js?v=background-color-1',
   './js/bg-remove.js',
-  './js/edge-detect.js?v=photo-conversion-2',
-  './js/edge-worker.js?v=photo-conversion-2',
+  './js/edge-detect.js?v=background-color-1',
+  './js/edge-worker.js?v=background-color-1',
   './js/creative.js',
   './js/ui-utils.js',
   './js/demo.js',
@@ -18,7 +18,7 @@ const CORE_ASSETS = [
   './js/preset-gallery.js?v=recovered-guides-1',
   './js/guided-trace.js?v=recovered-guides-1',
   './js/config.js',
-  './js/config.js?v=photo-conversion-2',
+  './js/config.js?v=background-color-1',
   './js/packs.js',
   './js/packs/registry.js',
   './js/packs/preset-packs.js',
