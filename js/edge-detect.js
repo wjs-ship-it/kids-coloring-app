@@ -1,6 +1,6 @@
 import { selectMeaningfulEdges } from './lineart-shape.js';
 import { detectTraceParts } from './trace-path.js';
-import { ILLUSTRATION_CONFIG as illustrationConfig } from './config.js?v=background-color-1';
+import { ILLUSTRATION_CONFIG as illustrationConfig } from './config.js?v=background-color-2';
 
 export function applyCLAHE(gray, w, h, tileSize = 8, clipLimit = 2.0) {
   const out = new Float32Array(w * h);
