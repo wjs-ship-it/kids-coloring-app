@@ -101,6 +101,7 @@ export function rebuildPalette(colors, pickColorFn, toggleEraserFn) {
     const d = document.createElement('button');
     d.className = 'cdot' + (i === 0 ? ' active' : '');
     d.style.background = c;
+    d.setAttribute('aria-label',`색상 ${c}`);
     d.addEventListener('click', () => pickColorFn(c, d));
     p.appendChild(d);
   });

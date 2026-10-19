@@ -1,7 +1,16 @@
+import { getPaintStyle } from './paint-textures.js?v=textures-1';
+
 export const FILL_TOOLS = [
-  { id: 'solid', label: '페인트' },
+  { id: 'solid', label: '단색' },
   { id: 'marker', label: '붓' },
   { id: 'pencil', label: '연필' },
+  { id: 'crayon', label: '크레용' },
+  { id: 'glitter', label: '반짝이' },
+  { id: 'rainbow', label: '무지개' },
+  { id: 'rainbow-glitter', label: '무지개 반짝이' },
+  { id: 'hearts', label: '하트' },
+  { id: 'stars', label: '별' },
+  { id: 'dots', label: '물방울' },
 ];
 
 function hexToRgb(hex) {
@@ -60,7 +69,7 @@ export function drawRegionFill(ctx, region, regionMap, lineWidth, offset, color,
   const { offX, offY } = offset;
   const palette = getToolPalette(color, tool);
 
-  ctx.fillStyle = palette.base;
+  ctx.fillStyle = ['solid','marker','pencil'].includes(tool) ? palette.base : getPaintStyle(ctx,color,tool);
   for (let iy = minY; iy <= maxY; iy++) {
     const rowBase = iy * lineWidth;
     for (let ix = minX; ix <= maxX; ix++) {

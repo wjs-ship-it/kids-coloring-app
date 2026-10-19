@@ -1,5 +1,5 @@
 import { createDemoCatBlob } from './demo.js';
-import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonBg, rebuildPalette } from './creative.js';
+import { initFreeSketch, initKaleidoscope, initNeonGlow, getNeonColors, getNeonBg, rebuildPalette } from './creative.js?v=textures-1';
 import { celebrate, updateProgress, showHint, showPartDone, hidePartDone, showScreen, setLoadingText } from './ui-utils.js';
 import { PRESETS, renderPreset } from './presets.js';
 import { detectParts, dilate, fuseLines, normalizeLineWidth, buildFillRegions, resolvePipelineMode } from './edge-detect.js?v=background-color-2';
@@ -7,11 +7,12 @@ import { removeBackground } from './bg-remove.js';
 import { exportAnalyticsSession, setAnalyticsContext, trackEvent } from './analytics.js';
 import { getBuiltinPresetPack } from './packs.js';
 import { pruneTraceParts } from './trace-part-quality.js';
-import { FILL_TOOLS, drawRegionFill } from './color-fill-tools.js';
+import { FILL_TOOLS, drawRegionFill } from './color-fill-tools.js?v=textures-1';
+import { PAINT_COLORS, getPaintStyle } from './paint-textures.js?v=textures-1';
 import { mountPresetGallery, renderContentPreset } from './preset-gallery.js?v=writing-1';
 import { buildGuidedParts, startGuidedStroke, advanceGuidedStroke, getGuidedProgress, guidedStepComplete } from './guided-trace.js?v=writing-1';
 
-const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
+const COLORS = PAINT_COLORS;
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
 const SNAP_RADIUS = 30;
 const TRACE_TOLERANCE = 40;
@@ -171,6 +172,7 @@ function buildPalette() {
   BRUSHES.forEach((br, i) => {
     const btn = document.createElement('button');
     btn.className = 'brush-pick' + (i === 1 ? ' active' : '');
+    btn.setAttribute('aria-label', `붓 굵기 ${br.s}`);
     const dot = document.createElement('div');
     dot.className = 'bdot';
     dot.style.width = br.d + 'px';
@@ -189,13 +191,48 @@ function buildFillToolBar() {
   const bar = document.getElementById('fill-tool-bar');
   if (!bar) return;
   bar.innerHTML = '';
+  const paletteButton = document.createElement('button');
+  paletteButton.type = 'button';
+  paletteButton.className = 'fill-tool-pick palette-toggle';
+  paletteButton.textContent = '색상표';
+  paletteButton.setAttribute('aria-expanded','false');
+  paletteButton.setAttribute('aria-controls','side-palette');
+  paletteButton.addEventListener('click',()=>{
+    const open=document.getElementById('side-palette').classList.toggle('expanded');
+    document.getElementById('side-palette').scrollTop = 0;
+    paletteButton.setAttribute('aria-expanded',String(open));
+  });
+  const palette = document.getElementById('side-palette');
+  palette.querySelector('.palette-close')?.remove();
+  const close = document.createElement('button');
+  close.type = 'button'; close.className = 'palette-close'; close.textContent = '색상표 닫기';
+  const closePalette = () => {
+    palette.classList.remove('expanded'); paletteButton.setAttribute('aria-expanded','false');
+    paletteButton.focus({preventScroll:true});
+  };
+  close.addEventListener('click',closePalette);
+  palette.onkeydown = event => { if(event.key === 'Escape') closePalette(); };
+  palette.prepend(close);
+  bar.appendChild(paletteButton);
   for (const tool of FILL_TOOLS) {
     const btn = document.createElement('button');
     btn.className = `fill-tool-pick${tool.id === currentFillTool ? ' active' : ''}`;
     btn.textContent = tool.label;
+    const swatch = document.createElement('canvas');
+    swatch.width = 24; swatch.height = 24;
+    swatch.setAttribute('aria-hidden','true');
+    const sample = swatch.getContext('2d');
+    sample.fillStyle = getPaintStyle(sample,currentColor,tool.id);
+    sample.fillRect(0,0,24,24);
+    btn.prepend(swatch);
+    btn.dataset.paintTool = tool.id;
+    btn.setAttribute('aria-pressed',String(tool.id === currentFillTool));
     btn.addEventListener('click', () => {
       currentFillTool = tool.id;
+      isEraser = false;
+      document.getElementById('eraser-btn').classList.remove('active');
       document.querySelectorAll('.fill-tool-pick').forEach((node) => node.classList.remove('active'));
+      bar.querySelectorAll('[data-paint-tool]').forEach(node=>node.setAttribute('aria-pressed',String(node===btn)));
       btn.classList.add('active');
       if (previewRegionId > 0) renderColorPreview(previewRegionId);
     });
@@ -208,6 +245,8 @@ function pickColor(c, el) {
   document.getElementById('eraser-btn').classList.remove('active');
   document.querySelectorAll('.cdot').forEach(d => d.classList.remove('active'));
   el.classList.add('active');
+  document.getElementById('side-palette').classList.remove('expanded');
+  document.querySelector('.palette-toggle')?.setAttribute('aria-expanded','false');
 }
 
 function toggleEraser() {
@@ -605,6 +644,7 @@ function beginActivity() {
   document.getElementById('side-palette').classList.add('hidden');
   document.getElementById('brush-bar').classList.add('hidden');
   document.getElementById('fill-tool-bar').classList.add('hidden');
+  document.getElementById('side-palette').classList.remove('expanded');
   drawTraceBackground();
   showCurrentPart();
   showScreen('canvas-screen');
@@ -1060,7 +1100,7 @@ function transitionToColor() {
   saveState();
   document.getElementById('side-palette').classList.remove('hidden');
   document.getElementById('brush-bar').classList.remove('hidden');
-  document.getElementById('fill-tool-bar').classList.add('hidden');
+  document.getElementById('fill-tool-bar').classList.remove('hidden');
   currentFillTool = 'solid';
   buildFillToolBar();
   updateProgress(1);
@@ -1691,6 +1731,7 @@ function onStart(e) {
 
     activeClip = true;
     isDrawing = true; lastX = p.x; lastY = p.y;
+    onMove(e); // A tap paints a dot with the selected texture, inside the same mask.
     return;
   }
 
@@ -1800,7 +1841,7 @@ function onMove(e) {
   if (activeClip) {
     const dc = _drawCvs.getContext('2d');
     dc.globalCompositeOperation = 'source-over';
-    dc.strokeStyle = currentColor;
+    dc.strokeStyle = getPaintStyle(dc,currentColor,currentFillTool);
     dc.lineWidth = brushSize;
     dc.beginPath(); dc.moveTo(lastX, lastY); dc.lineTo(p.x, p.y); dc.stroke();
 

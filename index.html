@@ -243,6 +243,7 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 .demo-pill:active{transform:scale(.92)}
 </style>
 <link rel="stylesheet" href="./gallery.css?v=playroom-1">
+<link rel="stylesheet" href="./painting.css?v=textures-1">
 </head>
 <body>
 
@@ -364,7 +365,7 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
   </div>
   <div class="side-palette hidden" id="side-palette"></div>
   <div class="brush-bar hidden" id="brush-bar"></div>
-  <div class="fill-tool-bar hidden" id="fill-tool-bar"></div>
+  <div class="fill-tool-bar hidden" id="fill-tool-bar" role="group" aria-label="색상과 질감"></div>
   <div class="hint-toast" id="hint-toast" style="display:none;"></div>
 </div>
 
@@ -372,7 +373,7 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 <div class="stars-celebration" id="stars-celebration"></div>
 <div class="save-toast" id="save-toast">💾 저장 완료!</div>
 
-<script type="module" src="./js/app.js?v=writing-1"></script>
+<script type="module" src="./js/app.js?v=textures-1"></script>
 <script>
 const testParams = new URLSearchParams(location.search);
 const disableServiceWorker = testParams.get('no-sw') === '1';

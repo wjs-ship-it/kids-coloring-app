@@ -1,17 +1,20 @@
-const CACHE_NAME = 'kids-coloring-v13';
+const CACHE_NAME = 'kids-coloring-v14';
 const WASM_CACHE = 'kids-coloring-wasm-v1';
 
 const CORE_ASSETS = [
   './',
   './index.html',
+  './painting.css?v=textures-1',
+  './js/paint-textures.js?v=textures-1',
+  './js/color-fill-tools.js?v=textures-1',
   './gallery.css?v=playroom-1',
   './verify-fill-regions.html',
   './manifest.json',
-  './js/app.js?v=writing-1',
+  './js/app.js?v=textures-1',
   './js/bg-remove.js',
   './js/edge-detect.js?v=background-color-2',
   './js/edge-worker.js?v=background-color-2',
-  './js/creative.js',
+  './js/creative.js?v=textures-1',
   './js/ui-utils.js',
   './js/demo.js',
   './js/ai-bridge.js',
