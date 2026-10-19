@@ -2066,7 +2066,7 @@ function buildPresetGrid() {
     if (item.presetIndex !== undefined) return loadPreset(item.presetIndex);
     const result = await renderContentPreset(item, SC, sx);
     openPresetResult(result, item.name, item.category);
-    if (item.activity === 'trace') ensurePresetTraceReady(() => beginActivity());
+    // Guided sheets keep the mode choice so children can also color directly.
     if (item.activity === 'color') ensurePresetFillReady(() => beginColorDirect());
   });
 }

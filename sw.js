@@ -1,9 +1,10 @@
-const CACHE_NAME = 'kids-coloring-v11';
+const CACHE_NAME = 'kids-coloring-v12';
 const WASM_CACHE = 'kids-coloring-wasm-v1';
 
 const CORE_ASSETS = [
   './',
   './index.html',
+  './gallery.css?v=playroom-1',
   './verify-fill-regions.html',
   './manifest.json',
   './js/app.js?v=background-color-2',

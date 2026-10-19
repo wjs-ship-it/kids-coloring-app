@@ -1,0 +1,103 @@
+/* Reference read: peach playroom, white picture frames, big yellow back button.
+   Portrait uses a two-column shelf; landscape uses a horizontally scrolling shelf. */
+#preset-screen {
+  --shelf-peach: #ffe3ce;
+  --shelf-border: #f3b88e;
+  --shelf-ink: #674532;
+  background: var(--shelf-peach);
+  background-image: radial-gradient(circle at 15px 15px, #fff5e980 2px, transparent 3px);
+  background-size: 38px 38px;
+  padding: max(16px, env(safe-area-inset-top)) 20px max(28px, env(safe-area-inset-bottom));
+  gap: 14px;
+  color: var(--shelf-ink);
+}
+.preset-header {
+  position: relative;
+  top: auto;
+  max-width: 1100px;
+  background: transparent;
+  justify-content: flex-start;
+  gap: 18px;
+  padding: 4px 0 10px;
+}
+.preset-title { font-size: clamp(22px, 3vw, 30px); word-break: keep-all; }
+.preset-header .demo-pill {
+  width: 60px;
+  min-width: 60px;
+  height: 60px;
+  padding: 0;
+  border: 4px solid white;
+  border-radius: 50%;
+  background: #ffda55;
+  color: #684b00;
+  font-size: 36px;
+  line-height: 1;
+  box-shadow: 0 4px 0 #dba635, 0 5px 12px #94623b25;
+}
+.preset-filters {
+  width: 100%;
+  max-width: 1100px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  padding: 4px 4px 9px;
+}
+.preset-filter {
+  flex-shrink: 0;
+  border: 2px solid #efc4a6;
+  border-radius: 18px;
+  color: #674532;
+  min-height: 48px;
+}
+.preset-filter[aria-pressed="true"] { background: #ffdc65; border-color: #b87a19; }
+.preset-status { color: #674532; font-weight: 700; }
+.preset-grid { max-width: 1100px; gap: 20px; padding: 4px 4px 12px; }
+.preset-card {
+  border: 4px solid #fff4eb;
+  outline: 2px solid var(--shelf-border);
+  border-radius: 28px;
+  padding: 12px 10px 14px;
+  box-shadow: 0 5px 0 #e8b797, 0 8px 16px #94623b18;
+  color: var(--shelf-ink);
+  min-width: 0;
+}
+.preset-card img { border-radius: 16px; background: white; }
+.preset-card .preset-name { color: #674532; font-size: 16px; line-height: 1.4; }
+.preset-activity { color: #79523d; font-size: 11px; text-wrap: balance; }
+.preset-card[data-guided="true"] .preset-activity {
+  background: #fff0ae;
+  border-radius: 10px;
+  padding: 5px 7px;
+}
+.preset-card:focus-visible, .preset-filter:focus-visible, .preset-header button:focus-visible {
+  outline: 3px solid #754500;
+  outline-offset: 5px;
+}
+#btn-presets { order: -1; background: #ffdda0; }
+@media (orientation: landscape) and (min-width: 640px) {
+  #preset-screen { overflow: hidden; }
+  .preset-header { padding-bottom: 0; }
+  .preset-header .demo-pill { width: 52px; min-width: 52px; height: 52px; }
+  .preset-grid {
+    max-width: none;
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: none;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: clamp(140px, 23vh, 240px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    gap: 18px;
+    padding: 6px 5px 14px;
+  }
+  .preset-card { scroll-snap-align: start; padding: 8px; gap: 3px; }
+  .preset-card img { flex: 1; min-height: 0; width: 100%; height: 0; }
+  .preset-card .preset-name { font-size: 14px; }
+  .preset-activity { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

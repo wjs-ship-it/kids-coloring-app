@@ -26,11 +26,13 @@ export async function runGalleryBackgroundSmoke() {
     assert(card, `Missing card: ${id}`);
     const name = card.querySelector('.preset-name').textContent;
     card.click();
+    await until(() => document.getElementById('preset-grid').getAttribute('aria-busy') !== 'true', `Load ${id}`);
     await until(() => ['mode-screen', 'canvas-screen'].includes(document.querySelector('.screen.active')?.id), `Open ${id}`);
     if (document.querySelector('.screen.active').id === 'mode-screen') {
       document.querySelector('[data-mode="color"]').click();
     }
     await until(() => document.querySelector('.screen.active')?.id === 'canvas-screen', `Color ${id}`);
+    await until(() => !document.getElementById('side-palette').classList.contains('hidden'), `Color tools ${id}`);
     const canvas = document.getElementById('drawing-canvas');
     const rect = canvas.getBoundingClientRect();
     const ctx = canvas.getContext('2d');

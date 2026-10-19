@@ -36,6 +36,7 @@ export function mountPresetGallery(pack, onSelect) {
   const items = [...FAMILY_CONTENT_PACK.items, ...getStarterItems(pack)];
   const categories = [
     { id: 'all', title: '모두' },
+    { id: 'guided', title: '따라그리기' },
     ...FAMILY_CONTENT_PACK.categories,
     { id: 'starter', title: '기본 그림' }
   ];
@@ -62,7 +63,8 @@ export function mountPresetGallery(pack, onSelect) {
   }
 
   function renderItems() {
-    const visible = items.filter(item => selected === 'all' || item.category === selected);
+    const visible = items.filter(item => selected === 'all'
+      || (selected === 'guided' ? Boolean(item.traceSrc) : item.category === selected));
     grid.replaceChildren();
     status.textContent = `${visible.length}개의 그림이 있어요`;
     for (const item of visible) {
@@ -70,6 +72,7 @@ export function mountPresetGallery(pack, onSelect) {
       card.type = 'button';
       card.className = 'preset-card';
       card.dataset.contentId = item.id;
+      card.dataset.guided = String(Boolean(item.traceSrc));
       const image = document.createElement('img');
       image.src = item.src;
       image.alt = '';
@@ -82,7 +85,7 @@ export function mountPresetGallery(pack, onSelect) {
       label.textContent = item.name;
       const activity = document.createElement('small');
       activity.className = 'preset-activity';
-      activity.textContent = item.traceSrc ? '따라 그리고 색칠해요' : item.activity === 'color' ? '색칠하기' : '그리기와 색칠하기';
+      activity.textContent = item.traceSrc ? '따라그리기 · 색칠하기' : '색칠하기';
       card.append(image, label, activity);
       card.addEventListener('click', () => selectItem(item));
       grid.append(card);
@@ -102,6 +105,7 @@ export function mountPresetGallery(pack, onSelect) {
         filter.setAttribute('aria-pressed', String(filter === button));
       });
       renderItems();
+      grid.scrollLeft = 0;
       document.getElementById('preset-screen').scrollTop = 0;
     });
     filters.append(button);

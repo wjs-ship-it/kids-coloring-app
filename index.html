@@ -242,6 +242,7 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 .demo-pill{padding:12px 28px;border-radius:50px;background:rgba(73,58,53,.08);color:var(--sub);font-size:15px;font-weight:800}
 .demo-pill:active{transform:scale(.92)}
 </style>
+<link rel="stylesheet" href="./gallery.css?v=playroom-1">
 </head>
 <body>
 
@@ -298,7 +299,7 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
   </div>
   <div class="home-modes">
     <button class="home-mode-card yellow" id="btn-demo"><span class="hm-icon">🐱</span><span><strong>체험해보기</strong><small>샘플 사진으로 먼저 변환해봐요</small></span><span class="chev"></span></button>
-    <button class="home-mode-card mint" id="btn-presets"><span class="hm-icon">🖼️</span><span><strong>그림 고르기</strong><small>준비된 색칠 그림 중 하나를 골라요</small></span><span class="chev"></span></button>
+    <button class="home-mode-card mint" id="btn-presets"><span class="hm-icon" aria-hidden="true">▧</span><span><strong>그림 고르기</strong><small>좋아하는 그림을 따라 그리고 색칠해요</small></span><span class="chev"></span></button>
     <button class="home-mode-card lav" id="btn-creative"><span class="hm-icon">✨</span><span><strong>자유롭게 놀기</strong><small>그리고, 칠하고, 마음껏 꾸며요</small></span><span class="chev"></span></button>
   </div>
   <section class="howto">
@@ -313,12 +314,12 @@ button{touch-action:manipulation;border:none;cursor:pointer;-webkit-tap-highligh
 
 <div id="preset-screen" class="screen">
   <div class="preset-header">
-    <h1 class="preset-title">그림을 골라봐!</h1>
-    <button class="demo-pill" id="btn-preset-back">돌아가기</button>
+    <button class="demo-pill" id="btn-preset-back" aria-label="처음으로 돌아가기">←</button>
+    <h1 class="preset-title">어떤 그림을 그릴까?</h1>
   </div>
   <nav class="preset-filters" id="preset-filters" aria-label="그림 종류"></nav>
   <p class="preset-status" id="preset-status" role="status" aria-live="polite"></p>
-  <div class="preset-grid" id="preset-grid"></div>
+  <div class="preset-grid" id="preset-grid" role="group" aria-label="그림 목록"></div>
 </div>
 
 <div id="processing-screen" class="screen">
