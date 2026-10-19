@@ -101,3 +101,16 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+@media (orientation: landscape) and (min-width: 640px) and (max-height: 520px) {
+  #preset-screen { padding: 8px 16px 12px; gap: 6px; overflow-y: auto; }
+  .preset-header { padding: 0; }
+  .preset-header .demo-pill { width: 44px; min-width: 44px; height: 44px; font-size: 30px; }
+  .preset-title { font-size: 22px; }
+  .preset-filters { padding: 2px 4px 4px; }
+  .preset-filter { min-height: 44px; padding: 6px 14px; }
+  .preset-status { min-height: 18px; font-size: 12px; }
+  .preset-grid { min-height: 234px; flex-shrink: 0; }
+  .preset-card { border-width: 3px; padding: 5px; }
+  .preset-card .preset-name { font-size: 12px; }
+  .preset-card[data-guided="true"] .preset-activity { padding: 2px 4px; }
+}
