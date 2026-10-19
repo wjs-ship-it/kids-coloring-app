@@ -19,6 +19,8 @@ function until(predicate, description) {
 // Invoke through the existing CDP browser after opening the guided dinosaur.
 // Uses actual canvas mouse/touch handlers; it never calls app implementation functions.
 export async function runGuidedBrowserSmoke({ touch = false, guidePath = '../assets/family-content/diplodocus-guided-v1.json' } = {}) {
+  const eventCount = name => window.__kidsAnalytics.events.filter(event => event.name === name).length;
+  const beforeTrace = eventCount('trace_completed'), beforeColor = eventCount('color_started');
   const response = await fetch(new URL(guidePath, import.meta.url));
   assert(response.ok, `Guide load failed: ${response.status}`);
   const guide = await response.json();
@@ -63,8 +65,8 @@ export async function runGuidedBrowserSmoke({ touch = false, guidePath = '../ass
     metrics.push({ step: step + 1, name: parts[step].displayName, coverage });
     send(touch ? 'touchend' : 'mouseup', points.at(-1));
   }
-  await until(() => window.__kidsAnalytics.events.some(event => event.name === 'trace_completed'), 'trace completion');
-  await until(() => window.__kidsAnalytics.events.some(event => event.name === 'color_started'), 'color transition');
+  await until(() => eventCount('trace_completed') > beforeTrace, 'trace completion');
+  await until(() => eventCount('color_started') > beforeColor, 'color transition');
   return { input: touch ? 'touch' : 'mouse', width: canvas.width, steps: metrics, completed: true };
 }
 

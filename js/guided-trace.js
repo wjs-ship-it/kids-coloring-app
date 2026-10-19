@@ -30,8 +30,8 @@ export function buildGuidedParts(guide, width, height) {
     return {
       boundaryPos, pixels: boundaryPos.slice(), samplePoints: samples.slice(),
       traceStrategy: 'guided', displayName: step.name,
-      hint: `${step.name} 선을 따라 그려봐요!`, toleranceMultiplier: 1,
-      guided: { points, closed, visited: new Uint8Array(points.length), index: null }
+      hint: guide.directional ? `${step.name}: 시작점부터 순서대로 써봐요!` : `${step.name} 선을 따라 그려봐요!`, toleranceMultiplier: 1,
+      guided: { points, closed, directional: guide.directional === true, visited: new Uint8Array(points.length), index: null }
     };
   });
 }
@@ -57,6 +57,13 @@ function shortestRoute(points, from, to, closed) {
 
 export function startGuidedStroke(part, target) {
   const points = part.guided.points;
+  if (part.guided.directional) {
+    // Resume only at the furthest visited point; a lift cannot skip a stroke.
+    const index = Math.max(0, part.guided.visited.lastIndexOf(1));
+    if (Math.hypot(target.x-points[index].x, target.y-points[index].y) > config.snapRadius) return null;
+    part.guided.index = index;
+    return points[index];
+  }
   let best = { distance: Infinity, index: 0 };
   for (let i = 0; i < points.length; i++) {
     const distance = Math.hypot(target.x - points[i].x, target.y - points[i].y);
@@ -76,6 +83,7 @@ export function advanceGuidedStroke(part, target) {
     movement * config.movementMultiplier + config.movementAllowance));
   let best = null;
   for (let i = 0; i < state.points.length; i++) {
+    if (state.directional && i < state.index) continue;
     const point = state.points[i];
     const distance = Math.hypot(target.x - point.x, target.y - point.y);
     if (distance > config.snapRadius || (best && distance >= best.distance)) continue;

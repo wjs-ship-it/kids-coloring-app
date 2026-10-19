@@ -1,5 +1,6 @@
 import { ORIGINAL_DINOSAURS } from './original-dinosaurs.js';
 import { RECOVERED_CONTENT } from './recovered-content.js';
+import { applyWritingGuides } from './writing-guides.js';
 
 export const FAMILY_CONTENT_PACK = {
   id: 'family-drawing-content',
@@ -16,7 +17,7 @@ export const FAMILY_CONTENT_PACK = {
     { id: 'letters', title: '알파벳' },
     { id: 'numbers', title: '숫자' }
   ],
-  items: [
+  items: applyWritingGuides([
     ...ORIGINAL_DINOSAURS,
     ...RECOVERED_CONTENT,
     {"id": "scratch_coloring_bimi_scholar_25_bts", "name": "학사모 곰돌이", "category": "friends", "src": "./assets/family-content/scratch_coloring_bimi_scholar_25_bts.png", "activity": "color"},
@@ -150,5 +151,5 @@ export const FAMILY_CONTENT_PACK = {
     {"id": "outlines-numbers-8", "name": "숫자 8", "category": "numbers", "activity": "color", "src": "./assets/family-content/outlines-numbers-8.png"},
     {"id": "outlines-numbers-9", "name": "숫자 9", "category": "numbers", "activity": "color", "src": "./assets/family-content/outlines-numbers-9.png"},
     {"id": "outlines-numbers-10", "name": "숫자 10", "category": "numbers", "activity": "color", "src": "./assets/family-content/outlines-numbers-10.png"},
-  ]
+  ])
 };

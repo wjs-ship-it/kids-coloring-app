@@ -17,6 +17,9 @@ async function until(predicate, description) {
 // Run on the real upload screen. Select every rendered gallery card by stable ID.
 export async function runGalleryBackgroundSmoke() {
   document.getElementById('btn-presets').click();
+  const allFilter = [...document.querySelectorAll('.preset-filter')].find(button => button.textContent === '모두');
+  assert(allFilter, 'All-category filter must exist');
+  allFilter.click();
   const ids = [...document.querySelectorAll('.preset-card')].map(card => card.dataset.contentId);
   assert(ids.length >= 141, 'Full gallery must be available');
   const results = [];

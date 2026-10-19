@@ -8,8 +8,8 @@ import { exportAnalyticsSession, setAnalyticsContext, trackEvent } from './analy
 import { getBuiltinPresetPack } from './packs.js';
 import { pruneTraceParts } from './trace-part-quality.js';
 import { FILL_TOOLS, drawRegionFill } from './color-fill-tools.js';
-import { mountPresetGallery, renderContentPreset } from './preset-gallery.js?v=playroom-1';
-import { buildGuidedParts, startGuidedStroke, advanceGuidedStroke, getGuidedProgress, guidedStepComplete } from './guided-trace.js?v=recovered-guides-1';
+import { mountPresetGallery, renderContentPreset } from './preset-gallery.js?v=writing-1';
+import { buildGuidedParts, startGuidedStroke, advanceGuidedStroke, getGuidedProgress, guidedStepComplete } from './guided-trace.js?v=writing-1';
 
 const COLORS = ['#ef4444','#f97316','#facc15','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#a16207','#1e293b','#fef3c7','#bbf7d0','#bae6fd','#e9d5ff','#fecdd3'];
 const BRUSHES = [{ s: 6, d: 8 }, { s: 14, d: 14 }, { s: 26, d: 22 }];
@@ -958,7 +958,14 @@ function showCurrentPart() {
     ? ` ${semanticEmoji[part.semanticCategory] || '⭐'}${semanticLabel ? ` ${semanticLabel}` : ''}`
     : ' ⭐';
   document.getElementById('part-label').textContent = `${curPartIdx + 1}/${parts.length}${suffix}`;
-  showHint(isLetter ? '점선을 따라 글자를 그려봐요!' : part.hint || (semanticLabel ? `${semanticLabel}부터 따라 그려봐요! ✏️` : '점선을 따라 그려봐요! ✏️'));
+  if (part.guided?.directional) {
+    const start = part.guided.points[0];
+    cx.save();
+    cx.fillStyle = '#3152bc';
+    cx.beginPath(); cx.arc(start.x + offX, start.y + offY, 9, 0, Math.PI * 2); cx.fill();
+    cx.restore();
+  }
+  showHint(part.guided?.directional ? part.hint : isLetter ? '점선을 따라 글자를 그려봐요!' : part.hint || (semanticLabel ? `${semanticLabel}부터 따라 그려봐요! ✏️` : '점선을 따라 그려봐요! ✏️'));
   currentColor = '#1e293b'; brushSize = 6; isEraser = false;
 }
 

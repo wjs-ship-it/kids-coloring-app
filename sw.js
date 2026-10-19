@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kids-coloring-v12';
+const CACHE_NAME = 'kids-coloring-v13';
 const WASM_CACHE = 'kids-coloring-wasm-v1';
 
 const CORE_ASSETS = [
@@ -7,7 +7,7 @@ const CORE_ASSETS = [
   './gallery.css?v=playroom-1',
   './verify-fill-regions.html',
   './manifest.json',
-  './js/app.js?v=playroom-1',
+  './js/app.js?v=writing-1',
   './js/bg-remove.js',
   './js/edge-detect.js?v=background-color-2',
   './js/edge-worker.js?v=background-color-2',
@@ -16,16 +16,19 @@ const CORE_ASSETS = [
   './js/demo.js',
   './js/ai-bridge.js',
   './js/presets.js',
-  './js/preset-gallery.js?v=playroom-1',
-  './js/guided-trace.js?v=recovered-guides-1',
+  './js/preset-gallery.js?v=writing-1',
+  './js/guided-trace.js?v=writing-1',
   './js/config.js',
   './js/config.js?v=background-color-2',
   './js/packs.js',
   './js/packs/registry.js',
   './js/packs/preset-packs.js',
-  './js/packs/family-content.js?v=recovered-guides-1',
+  './js/packs/family-content.js?v=writing-1',
   './assets/family-content/diplodocus-guided-v1.json',
   './assets/family-content/diplodocus-guided-v1.png',
+  './js/packs/writing-guides.js',
+  ...[...'ABCDEFGHIJKLMNOPQRSTUVWXYZ', ...Array.from({ length: 11 }, (_, i) => String(i))].flatMap(character =>
+    ['svg', 'json'].map(extension => `./assets/writing-guides/${character}.${extension}`)),
   './js/packs/original-dinosaurs.js',
   './js/packs/recovered-content.js',
   './assets/original-dinosaurs/trex.svg',
