@@ -32,8 +32,8 @@ export async function runGuidedBrowserSmoke({ touch = false, guidePath = '../ass
   const rect = canvas.getBoundingClientRect();
   const metrics = [];
   function send(type, point) {
-    const clientX = point.x + offset.x + rect.left;
-    const clientY = point.y + offset.y + rect.top;
+    const clientX = (point.x + offset.x) * rect.width / canvas.width + rect.left;
+    const clientY = (point.y + offset.y) * rect.height / canvas.height + rect.top;
     if (touch) {
       const eventTouch = new Touch({ identifier: 1, target: canvas, clientX, clientY });
       canvas.dispatchEvent(new TouchEvent(type, { bubbles: true, cancelable: true,

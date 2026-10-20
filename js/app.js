@@ -9,6 +9,7 @@ import { getBuiltinPresetPack } from './packs.js';
 import { pruneTraceParts } from './trace-part-quality.js';
 import { FILL_TOOLS, drawRegionFill } from './color-fill-tools.js?v=textures-1';
 import { PAINT_COLORS, getPaintStyle } from './paint-textures.js?v=textures-1';
+import { applyCanvasView, clientToCanvas, canvasToClient } from './canvas-view.js?v=rotation-1';
 import { mountPresetGallery, renderContentPreset } from './preset-gallery.js?v=writing-1';
 import { buildGuidedParts, startGuidedStroke, advanceGuidedStroke, getGuidedProgress, guidedStepComplete } from './guided-trace.js?v=writing-1';
 
@@ -24,6 +25,12 @@ const SMART_MISSION_HINT_COOLDOWN_MS = 3200;
 const ALMOST_COMPLETE_REMAINING_COUNT = 1;
 
 let appMode = 'trace', parts = [], curPartIdx = 0;
+let drawingFocus = null;
+
+function updateDrawingView() {
+  if (!drawingFocus) return;
+  applyCanvasView(DC,drawingFocus,{width:window.innerWidth,height:window.innerHeight});
+}
 let traceZone = null, colorMask = null;
 let lineartData = null, laW = 0, laH = 0, offX = 0, offY = 0;
 let isDrawing = false, lastX = 0, lastY = 0;
@@ -614,6 +621,8 @@ function beginActivity() {
   DC.width = window.innerWidth; DC.height = window.innerHeight;
   cx.lineCap = 'round'; cx.lineJoin = 'round';
   fitLineartToCanvas();
+  drawingFocus = {width:laW,height:laH};
+  updateDrawingView();
   offX = Math.floor((DC.width - laW) / 2);
   offY = Math.floor((DC.height - laH) / 2);
 
@@ -1119,6 +1128,8 @@ function beginColorDirect() {
   DC.width = window.innerWidth; DC.height = window.innerHeight;
   cx.lineCap = 'round'; cx.lineJoin = 'round';
   fitLineartToCanvas();
+  drawingFocus = {width:laW,height:laH};
+  updateDrawingView();
   offX = Math.floor((DC.width - laW) / 2);
   offY = Math.floor((DC.height - laH) / 2);
   creativeMode = null;
@@ -1156,6 +1167,8 @@ function startCreativeMode(mode) {
   document.getElementById('side-palette').classList.remove('hidden');
   document.getElementById('brush-bar').classList.remove('hidden');
   document.getElementById('fill-tool-bar').classList.add('hidden');
+  drawingFocus = {width:DC.width,height:DC.height};
+  updateDrawingView();
   document.getElementById('progress-fill').style.width = '100%';
   document.getElementById('part-label').textContent = mode === 'neon' ? '✨' : mode === 'kaleidoscope' ? '🔮' : '🖍️';
   saveState();
@@ -1631,7 +1644,7 @@ function saveRegionFillAction(regionId, prevColor, prevTool, nextColor, nextTool
 function getPos(e) {
   const r = DC.getBoundingClientRect();
   const t = e.touches ? e.touches[0] : e;
-  return { x: t.clientX - r.left, y: t.clientY - r.top };
+  return clientToCanvas(DC,r,{x:t.clientX,y:t.clientY});
 }
 
 function getTracePart() {
@@ -1646,6 +1659,8 @@ function showTraceHint(message) {
 }
 
 function showTraceGuide(x, y, valid) {
+  const point = canvasToClient(DC,DC.getBoundingClientRect(),{x,y});
+  x = point.x; y = point.y;
   traceGuideVisible = true;
   TG.style.display = 'block';
   TG.style.transform = `translate(${x}px, ${y}px) scale(${valid ? 1 : 0.72})`;
@@ -1945,6 +1960,8 @@ class Particle {
 }
 
 function spawnParticles(x, y, count, options = {}) {
+  const point = canvasToClient(DC,DC.getBoundingClientRect(),{x,y});
+  x = point.x; y = point.y;
   for (let i = 0; i < count; i++) particles.push(new Particle(x, y, options));
   if (!particleAnimId) particleLoop();
 }
@@ -2163,19 +2180,18 @@ DC.addEventListener('mousedown', onStart);
 DC.addEventListener('touchmove', onMove, { passive: false });
 DC.addEventListener('mousemove', onMove);
 DC.addEventListener('touchend', onEnd);
+DC.addEventListener('touchcancel', onEnd);
 DC.addEventListener('mouseup', onEnd);
 DC.addEventListener('mouseleave', onEnd);
 
 let resizeTimer = null;
 window.addEventListener('resize', () => {
   if (!document.getElementById('canvas-screen').classList.contains('active')) return;
+  if (isDrawing) onEnd();
+  hideTraceGuide();
   if (resizeTimer) clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    const saved = cx.getImageData(0, 0, DC.width, DC.height);
-    DC.width = window.innerWidth; DC.height = window.innerHeight;
-    cx.fillStyle = '#fff'; cx.fillRect(0, 0, DC.width, DC.height);
-    cx.putImageData(saved, 0, 0);
-    cx.lineCap = 'round'; cx.lineJoin = 'round';
+    updateDrawingView();
     resizeTimer = null;
   }, 250);
 });

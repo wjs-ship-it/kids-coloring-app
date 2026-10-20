@@ -1,0 +1,17 @@
+#canvas-screen { overflow: hidden; background: white; }
+@media (orientation:landscape) and (min-width:640px) {
+  #canvas-screen .side-palette:not(.expanded) {
+    right:12px; top:104px; transform:none;
+    max-height:calc(100dvh - 184px);
+  }
+  #canvas-screen .fill-tool-bar {
+    left:auto; right:70px; top:104px; bottom:auto;
+    transform:none; width:200px; max-height:calc(100dvh - 184px);
+    flex-wrap:wrap; overflow-y:auto; overflow-x:hidden;
+  }
+  #canvas-screen .fill-tool-bar.hidden { opacity:0; pointer-events:none; }
+  #canvas-screen .fill-tool-pick { flex:1 0 auto; min-width:76px; justify-content:center; }
+  #canvas-screen .brush-bar { left:auto; right:12px; transform:none; bottom:12px; }
+  #canvas-screen .side-palette.expanded { top:84px; bottom:auto; max-height:calc(100dvh - 100px); }
+  #canvas-screen .hint-toast { top:18px; left:calc((100% - 280px)/2); max-width:clamp(120px,calc(100vw - 560px),420px); white-space:normal; text-align:center; font-size:13px; }
+}
